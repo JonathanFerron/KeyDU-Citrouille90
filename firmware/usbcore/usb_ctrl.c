@@ -224,9 +224,9 @@ void usb_process_ctrl_request(void)
     }
 }
 
-/* --- usb_task (polled EP0) --- */
+/* --- usb_ctrl_poll() (polled EP0) --- */
 
-void usb_task(void)
+void usb_ctrl_poll()(void)
 {
     if (usb_device_state == USB_STATE_UNATTACHED) return;
 

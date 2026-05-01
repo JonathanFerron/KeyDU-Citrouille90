@@ -55,7 +55,7 @@ void usb_reset_interface(void);
 
 /* Poll EP0 for a pending SETUP packet and dispatch it.
    Must be called every main-loop iteration, ungated. */
-void usb_task(void);
+void usb_ctrl_poll()(void);
 
 /* --- Descriptor callback — implemented in usb_desc.c (App) or usb_vendor.c (BL) --- */
 

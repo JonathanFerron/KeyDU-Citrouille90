@@ -1,69 +1,66 @@
-// main.c - KeyDU.App Keyboard Firmware
-// Main entry point and system initialization
+/* main.c — KeyDU.App keyboard firmware entry point
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Jonathan Ferron
+ *
+ * System init order: clock first (fixes MCLKTIMEBASE for USB and TCA0),
+ * then TCB0, then all keyboard subsystems.
+ *
+ * Main loop: IDLE sleep gated on a TCB0 1 ms tick flag. USB is fully
+ * interrupt-driven; no usb_task() polling is needed in the loop body.
+ * sleep_cpu() wakes on any interrupt (TCB0 overflow, USB SOF, bus events).
+ */
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/wdt.h>
-#include <util/delay.h>
-#include "config.h"
+#include <avr/sleep.h>
+#include <avr/wdt.h>     /* wdt_disable() — guards against a previously armed WDT */
+
+#include "clock.h"
 #include "keyboard.h"
+#include "usb_ctrl.h"
 
-// Millisecond counter for timing
-volatile uint32_t system_millis = 0;
+/* ── TCB0 1 ms tick flag ──────────────────────────────────────────────── */
+static volatile uint8_t s_tick_flag;
 
-// Timer interrupt for 1ms tick (using TCB0)
-ISR(TCB0_INT_vect) {
-    system_millis++;
-    TCB0.INTFLAGS = TCB_CAPT_bm;  // Clear interrupt flag
+ISR(TCB0_INT_vect)
+{
+    s_tick_flag = 1;
+    TCB0.INTFLAGS = TCB_CAPT_bm;    /* clear interrupt flag */
 }
 
-// Public function to get current milliseconds
-uint32_t millis(void) {
-    uint32_t ms;
-    cli();
-    ms = system_millis;
+/* ── system_init ──────────────────────────────────────────────────────── */
+static void system_init(void)
+{
+    /* clock_init() MUST be first: sets MCLKTIMEBASE=24, required by USB
+     * and TCA0 PWM.  TCB0 CCMP is also computed from F_CPU so the clock
+     * must be stable before the timer is configured.  */
+    clock_init();
+
+    /* TCB0: periodic interrupt, 1 ms period, CLK_PER (24 MHz), no prescaler.
+     * CCMP = (F_CPU / 1000) - 1 = 23999.                                 */
+    TCB0.CCMP    = (F_CPU / 1000UL) - 1;
+    TCB0.INTCTRL = TCB_CAPT_bm;
+    TCB0.CTRLA   = TCB_CLKSEL_CLKDIV1_gc | TCB_ENABLE_bm; // confirm the avr-libc header for your device exposes TCB_CLKSEL_CLKDIV1_gc under that exact name — some older pack versions use TCB_CLKSEL_DIV1_gc
+}
+
+/* ── main ─────────────────────────────────────────────────────────────── */
+int main(void)
+{
+    wdt_disable();
+
+    system_init();
+    keyboard_init();
+
+    set_sleep_mode(SLEEP_MODE_IDLE);
+    sleep_enable();
     sei();
-    return ms;
-}
 
-void system_init(void) {
-    // Configure system clock (AVR64DU32 defaults to 24MHz internal oscillator)
-    // No need to change if using default
-    
-    // Configure 1ms timer using TCB0
-    TCB0.CCMP = (F_CPU / 1000) - 1;  // 1ms period
-    TCB0.INTCTRL = TCB_CAPT_bm;      // Enable compare interrupt
-    TCB0.CTRLA = TCB_CLKSEL_DIV1_gc | TCB_ENABLE_bm;  // Enable with no prescaler
-    
-    // Enable global interrupts
-    sei();
-}
-
-int main(void) {
-  // Disable watchdog timer: necessary?
-  wdt_disable();
-  
-  // Initialize system
-  system_init();
-  
-  // Initialize keyboard
-  keyboard_init();  // split out usb_init()
-  
-  // Wait for USB to be ready
-  _delay_ms(100);
-  
-  
-  uint32_t last_tick = system_millis;
-
-  // Main loop
-  while (1) {
-  uint32_t now = millis();
-  if (now != last_tick) {
-    last_tick = now;
-    keyboard_task(); // split out usb_task()
+    while (1) {
+        usb_ctrl_poll();             /* ungated — polls EP0 for SETUP packets    */
+        if (s_tick_flag) {
+            s_tick_flag = 0;
+            keyboard_task();
+        }
+        sleep_cpu();    /* IDLE: wakes on TCB0, USB SOF, USB bus events    */
     }
-  // CPU idles here — add sleep_cpu() later for power saving
-  }
-    
-  return 0;
 }

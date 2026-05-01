@@ -39,7 +39,7 @@
 #include "led.h"
 #include "encoder.h"
 #include "usb_hid.h"
-#include "config.h"
+#include "usb_ctrl.h"
 
 /* ============================================================================
  * Internal constants
@@ -84,10 +84,13 @@ void keyboard_init(void)
 
     layer_init();
     matrix_init();
-    macro_init();
     led_init();
     encoder_init();
-    usb_init();
+
+    /* USB_OPT_VREG_ENABLE: internal 3.3V VUSB regulator used on this board.
+     * usb_init() configures the peripheral and attaches to the bus but does
+     * not complete enumeration — that happens via usb_task() in main(). */
+    usb_init(USB_OPT_VREG_ENABLE);
 }
 
 /* ============================================================================
@@ -116,12 +119,9 @@ void keyboard_task(void)
     /* --- 4. Update LEDs on layer change. --------------------------------- */
     static uint8_t last_layer = 0xFF;
     if (current_layer != last_layer) {
-        led_update_for_layer(current_layer);
+        led_update_layer(current_layer);
         last_layer = current_layer;
     }
-
-    /* --- 5. USB task. ----------------------------------------------------- */
-    usb_task();
 }
 
 /* ============================================================================
@@ -144,8 +144,8 @@ static void process_key_press(uint8_t row, uint8_t col)
     /* --- LED brightness ---------------------------------------------------- */
     if (IS_LED_KEY(keycode)) {
         switch (keycode) {
-            case LD_BRIU: led_brightness_increase(); break;
-            case LD_BRID: led_brightness_decrease(); break;
+            case LD_BRIU: led_step(true,  LED_BRIGHTNESS_STEP); break;
+            case LD_BRID: led_step(false, LED_BRIGHTNESS_STEP); break;
             default: break;
         }
         return;

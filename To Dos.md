@@ -1,32 +1,6 @@
 # Citrouille90 To Dos
 
-- Fix the following issues:
-
 ## Outstanding Firmware Issues — Implementation Order
-
-The grouping logic: fix what prevents the build first, then what breaks USB enumeration, then runtime logic bugs.
-
----
-
-### Build Blockers (fix before anything compiles)
-
-**#20 — `usb_init()` argument mismatch**
-`usb_ctrl.c` declares `void usb_init(uint8_t options)` but `keyboard.c` calls `usb_init()` with no argument. Add `USB_OPT_VREG_ENABLE` (or whatever the appropriate flag is) to the call site in `keyboard.c`.
-
-**#6 — Missing `led_brightness_increase()` / `led_brightness_decrease()`**
-`keyboard.c` calls these two functions; `led.h` only exports `led_step(bool dir, uint8_t step)`. Change the two call sites in `keyboard.c` to `led_step(true, LED_BRIGHTNESS_STEP)` and `led_step(false, LED_BRIGHTNESS_STEP)`.
-
-**#5 — `led_update_for_layer()` name mismatch**
-`keyboard.c` calls `led_update_for_layer(current_layer)`; the function defined in `led.c` is `led_update_layer(uint8_t layer)`. Rename one to match the other — `led_update_layer()` is the more consistent name.
-
----
-
-### Silent Hardware Failures (build succeeds, device doesn't work)
-
-**#3 / #4 — `clock_init()` never called; `MCLKTIMEBASE` never set**
-These two are one fix: call `clock_init()` as the very first statement in `system_init()` in `main.c`, before TCB0 or anything else is configured. Without it, `CLKCTRL.MCLKTIMEBASE` is never written (USB will malfunction) and the TCB0 `CCMP` value is computed against the wrong clock frequency.
-
----
 
 ### USB Protocol Correctness
 

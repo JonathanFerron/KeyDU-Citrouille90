@@ -148,13 +148,13 @@
 // Prefix: CC_ (Consumer Control)
 // ============================================================================
 #define CC_BASE         0x0100
-#define CC_MUTE         (CC_BASE | 0x00)
-#define CC_VOLU         (CC_BASE | 0x01)  // Volume Up
-#define CC_VOLD         (CC_BASE | 0x02)  // Volume Down
-#define CC_MNXT         (CC_BASE | 0x03)  // Next track
-#define CC_MPRV         (CC_BASE | 0x04)  // Previous track
-#define CC_MPLY         (CC_BASE | 0x05)  // Play/Pause
-#define CC_MSTP         (CC_BASE | 0x06)  // Stop
+#define CC_MUTE         (CC_BASE | 0x01)
+#define CC_VOLU         (CC_BASE | 0x02)  // Volume Up
+#define CC_VOLD         (CC_BASE | 0x03)  // Volume Down
+#define CC_MNXT         (CC_BASE | 0x04)  // Next track
+#define CC_MPRV         (CC_BASE | 0x05)  // Previous track
+#define CC_MPLY         (CC_BASE | 0x06)  // Play/Pause
+#define CC_MSTP         (CC_BASE | 0x07)  // Stop
 
 // ============================================================================
 // Layer switching keys - Range 0x0200-0x02FF
@@ -169,30 +169,30 @@
 // Prefix: MC_ (MaCro)
 // ============================================================================
 #define MC_BASE         0x0300
-#define MC_COPY         (MC_BASE | 0x00)  // Ctrl+C
-#define MC_PSTE         (MC_BASE | 0x01)  // Ctrl+V (Paste)
-#define MC_CUT          (MC_BASE | 0x02)  // Ctrl+X
-#define MC_UNDO         (MC_BASE | 0x03)  // Ctrl+Z
-#define MC_REDO         (MC_BASE | 0x04)  // Ctrl+Y
-#define MC_SAVE         (MC_BASE | 0x05)  // Ctrl+S
-#define MC_FIND         (MC_BASE | 0x06)  // Ctrl+F
-#define MC_SALL         (MC_BASE | 0x07)  // Ctrl+A (Select All)
+#define MC_COPY         (MC_BASE | 0x01)  // Ctrl+C
+#define MC_PSTE         (MC_BASE | 0x02)  // Ctrl+V (Paste)
+#define MC_CUT          (MC_BASE | 0x03)  // Ctrl+X
+#define MC_UNDO         (MC_BASE | 0x04)  // Ctrl+Z
+#define MC_REDO         (MC_BASE | 0x05)  // Ctrl+Y
+#define MC_SAVE         (MC_BASE | 0x06)  // Ctrl+S
+#define MC_FIND         (MC_BASE | 0x07)  // Ctrl+F
+#define MC_SALL         (MC_BASE | 0x08)  // Ctrl+A (Select All)
 
 // ============================================================================
 // LED control keys - Range 0x0400-0x04FF
 // Prefix: LD_ (LeD)
 // ============================================================================
 #define LD_BASE         0x0400
-#define LD_BRIU         (LD_BASE | 0x00)  // Brightness up
-#define LD_BRID         (LD_BASE | 0x01)  // Brightness down
+#define LD_BRIU         (LD_BASE | 0x01)  // Brightness up
+#define LD_BRID         (LD_BASE | 0x02)  // Brightness down
 
 // ============================================================================
 // System/Firmware keys - Range 0x0500-0x05FF
 // Prefix: SYS_ (SYStem)
 // ============================================================================
 #define SYS_BASE        0x0500
-#define SYS_RST         (SYS_BASE | 0x00)  // Soft reset
-#define SYS_BOOT        (SYS_BASE | 0x01)  // Enter bootloader
+#define SYS_RST         (SYS_BASE | 0x01)  // Soft reset
+#define SYS_BOOT        (SYS_BASE | 0x02)  // Enter bootloader
 
 // ============================================================================
 // Keycode type checking macros

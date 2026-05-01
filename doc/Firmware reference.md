@@ -2,8 +2,7 @@
 
 **Project:** Citrouille90 (AVRDU.Enc.Choc)  
 **MCU:** AVR64DU32 (TQFP-32), 64 KB flash, 8 KB SRAM, 24 MHz  
-**Status as of writing:** Non-USB modules largely final or near-final. USB stack not yet written. Bootloader at pseudocode/stub stage.  
-**Document purpose:** Personal working reference. Consolidates all firmware decisions, resolves prior contradictions, and provides a sequenced build plan.
+**Document purpose:** Personal working reference. Consolidates all firmware decisions and provides a sequenced build plan.
 
 ---
 
@@ -106,11 +105,11 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 | `led.c/.h`      | ✅ Good         | TCA0 PWM init and brightness control                                       |
 | `keymap.c/.h`   | 🔧 In progress | PROGMEM keymap array, layer lookup, `encoder_step()` impl, `keymap_tick()` |
 | `macros.c/.h`   | 🔧 Stub        | Macro dispatch and PROGMEM sequences                                       |
-| `keyboard.c/.h` | 🔧 Stub        | Main keyboard logic, `keyboard_task()`, key processing loop                |
-| `main.c`        | 🔧 Stub        | Entry point, system init, TCB0 gate loop                                   |
-| `usb_hid.c/.h`  | ❌ Not started  | Non-blocking report buffering, HID report structs, EP management           |
-| `usb_core.c/.h` | ❌ Not started  | USB device state machine, enumeration                                      |
-| `usb_desc.c/.h` | ❌ Not started  | All USB descriptor tables                                                  |
+| `keyboard.c/.h` | good        | Main keyboard logic, `keyboard_task()`, key processing loop                |
+| `main.c`        | good        | Entry point, system init, TCB0 gate loop                                   |
+| `usb_hid.c/.h`  | good | Non-blocking report buffering, HID report structs, EP management           |
+| `usb_core.c/.h` | good | USB device state machine, enumeration                                      |
+| `usb_desc.c/.h` | good  | All USB descriptor tables                                                  |
 
 *`keycode.h` needs the `_BASE | 0x01` fix applied to `CC_`, `LD_`, `SYS_` ranges before first compile against actual keymap.
 
@@ -118,10 +117,10 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 
 | File              | Status        | Owns                                          |
 | ----------------- | ------------- | --------------------------------------------- |
-| `main.c`          | 🔧 Pseudocode | Early GPR check, jump logic, BL state machine |
-| `usb_vendor.c/.h` | ❌ Not started | Vendor class USB, flash write protocol        |
-| `flash.c/.h`      | ❌ Not started | SPM flash write routines                      |
-| `linker.ld`       | ❌ Not started | Bootloader-specific linker script             |
+| `main.c`          | good | Early GPR check, jump logic, BL state machine |
+| `usb_vendor.c/.h` | good | Vendor class USB, flash write protocol        |
+| `flash.c/.h`      | good | SPM flash write routines                      |
+| `linker.ld`       | good | Bootloader-specific linker script             |
 
 ### 4.3 Not Compiled (`KeyDU-Examples` separate git repo)
 
@@ -238,7 +237,7 @@ uint8_t curr_ab = (GPIO_VPORT_READ(ENC_A_VPORT, ENC_A_PIN) << 1)
 
 ### 6.2 Rationale for 1 kHz
 
-USB FS HID polls every 1 ms — scanning at 1 kHz aligns cleanly with the report deadline. A full 90-key scan completes well under 100 µs at 24 MHz, leaving >90% of the 1 ms window for USB and other tasks. 1 kHz is a deliberate architectural choice for determinism, unlike QMK's "scan as fast as possible" which is a historical artifact.
+USB FS HID polls every 1 ms — scanning at 1 kHz aligns cleanly with the report deadline. A full 90-key scan completes well under 100 µs at 24 MHz, leaving >90% of the 1 ms window for USB and other tasks. 1 kHz is a deliberate architectural choice for determinism.
 
 ### 6.3 Port Allocation
 
@@ -414,8 +413,6 @@ it's cleaner because the key state struct becomes the single source of truth.
 - `process_matrix_events()` in `keyboard.c` changes from "look up keycode fresh on each event" to "look up on press, use stored value on release." This is maybe 5–10 lines of logic change.
 - `keymap_key_to_keycode()` itself doesn't change at all.
 - The layer logic (`s_active_layer`) doesn't change at all.
-
-**What you don't need:** Any concept of "sticky layers," layer locks, or more complex layer stacks. The layer index stays simple; the complexity moves to key state tracking, which is already something you need for debounce anyway.
 
 ---
 
@@ -640,11 +637,7 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 
 ### 12.2 LUFA RAMPZ Bug
 
-`LUFA/Platform/UC3/ClockManagement.h` (and possibly others) reference `RAMPZ`. The AVR64DU32 does not have `RAMPZ` — the register does not exist on this device. This is a LUFA bug. Fix: `#ifdef`-guard the `RAMPZ` references like the way it's done in the MCC generated code. Confirmed: `RAMPZ` is not required for AVR64DU32 operation.
-
-### 12.3 MCC Code Usage
-
-Trust MCC-generated register sequences for: clock init, TCA0 PWM, USB peripheral init. Do not trust MCC file organization — MCC scatters logic across many small files in deep folder hierarchies. Restructure aggressively into the project's own file layout while keeping the register-level code intact.
+`LUFA/Platform/UC3/ClockManagement.h` (and possibly others) reference `RAMPZ`. The AVR64DU32 does not have `RAMPZ` — the register does not exist on this device. This is a LUFA bug. Fix: `#ifdef`-guard the `RAMPZ` references like the way it's done in the MCC generated code.
 
 ### 12.4 What to Take from QMK
 
@@ -652,8 +645,6 @@ Trust MCC-generated register sequences for: clock init, TCA0 PWM, USB peripheral
 - HID report building: modifier byte packing, 6KRO key slot management
 - `process_keycode/` subdirectory: consumer control dispatch, media key routing
 - USB suspend/resume handling approach
-
-**Do not port:** VIA/VIAL, RGB matrix, audio, split keyboard support, NKRO (6KRO is sufficient and boot-protocol-compatible).
 
 ### 12.5 What to Take from TinyUSB
 
@@ -670,14 +661,7 @@ TinyUSB itself is not used — too much abstraction overhead for a single-target
 
 ### 13.1 TCA0 Configuration
 
-Split mode, driving both indicator LEDs independently:
-
-```c
-/* 1465 Hz PWM: f = 24 MHz / (64 prescaler × 256 period) */
-TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV64_gc;
-```
-
-TCA0 WO2 and WO3 (or WO4/WO5 depending on pin assignment via TCAROUTEA) drive the two PWM LED pins. See `tca0_pin_info` for pin-to-WO mapping per PORTMUX setting.
+Split mode, driving both indicator LEDs independently. See `tca0_pin_info` for pin-to-WO mapping per PORTMUX setting.
 
 ### 13.2 Brightness
 
@@ -688,10 +672,6 @@ TCA0 WO2 and WO3 (or WO4/WO5 depending on pin assignment via TCAROUTEA) drive th
 - Brightness step: 16 (out of 255)
 - Layer delta: +64 per active layer above 0 (visual feedback of active layer)
 
-### 13.3 EEPROM for Brightness Persistence
-
-Deferred — not in v1. Runtime brightness is lost on power cycle. If persistence is added later, EEPROM (256 bytes) is the right place: one byte for brightness level, survives resets but not power-on (exactly the right semantic). User Row (64 bytes, survives chip erase) is for unit identity and permanent calibration, not user preferences.
-
 ---
 
 ## 14. Reset and Bootloader
@@ -700,7 +680,7 @@ Deferred — not in v1. Runtime brightness is lost on power cycle. If persistenc
 
 | Method                    | Mechanism            | Enters BL? | GPR preserved? |
 | ------------------------- | -------------------- | ---------- | -------------- |
-| Hardware tact switch      | RESET pin assertion  | No         | Test on Nano   |
+| Hardware tact switch      | RESET pin assertion  | No         | No   |
 | `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        | Test on Nano   |
 | `SYS_RESET` key (Layer 2) | soft reset, no magic | No         | Test on Nano   |
 | Power-on reset            | —                    | No         | No             |
@@ -724,7 +704,7 @@ void software_reset(void) {
 }
 ```
 
-Bootloader startup (at the verybeginning of main()):
+Bootloader startup (at the very beginning of main()):
 
 ```c
 if (GPR.GPR0 == BOOT_MAGIC) { // may also check reset flag
@@ -789,7 +769,7 @@ On AVR Dx/DU, flash is memory-mapped — `const` data can be read like normal da
 
 ### 16.1 TCB0 Gate in main.c
 
-The main loop is gated on a TCB0 1 ms tick flag — not a busy-poll, not a `delay_ms()`:
+The main loop is gated on a TCB0 1 ms tick flag — not a busy-poll, not a `delay_ms()`.
 
 ```c
 /* main.c skeleton */
@@ -822,20 +802,12 @@ int main(void) {
 
 `tick_flag` is `volatile uint8_t`, set in `TCB0_INT_vect`, cleared in main loop before `keyboard_task()`.
 
-The USB peripheral on the AVR64DU32 fires distinct interrupt vectors for exactly the events `usb_task()` would otherwise poll:
-
-- `USB_BUSEVNT_vect` — bus reset, suspend, resume, connect/disconnect
-- `USB_SOF_vect` — start-of-frame (already in your plan for report flushing)
-- `USB_TRNCOMPL_vect` — transaction complete (control transfers, endpoint activity)
-
 Your three ISR responsibilities become:
 
 - `TCB0_INT_vect`: set `tick_flag`
 - `USB_SOF_vect`: flush queued report to endpoint buffer (already planned)
 - `USB_BUSEVNT_vect`: handle reset → re-enumerate, suspend → optionally drop to a deeper sleep mode later, resume → restore
 - `USB_TRNCOMPL_vect`: handle control EP0 transfers (GET_DESCRIPTOR, SET_REPORT for LED output, SET_IDLE, etc.)
-
-### ---
 
 ## 17. Build System
 
@@ -852,13 +824,6 @@ Your three ISR responsibilities become:
 - `UPDI`: never disable — critical for recovery
 - Clock: internal 24 MHz oscillator, no external crystal
 
-### 17.3 avrdude Command Pattern
-
-```bash
-avrdude -c serialupdi -p avr64du32 -P /dev/ttyUSBx \
-        -U flash:w:firmware.hex:i
-```
-
 ---
 
 ## 18. Open Items and Build Sequence
@@ -867,16 +832,13 @@ avrdude -c serialupdi -p avr64du32 -P /dev/ttyUSBx \
 
 These must happen in order; everything downstream depends on USB working:
 
-1. **Fix `keymap.c`:** Split into proper `.h`/`.c`; merge `keymap_alttab_addition_v2.c` in; fix `s_alt_idle_ticks` to `uint16_t`; apply `_BASE | 0x01` fix to `CC_`, `LD_`, `SYS_` ranges in `keycode.h`.
-2. **Strip LUFA EchoRomeo and Vendor demos** down to AVR64DU32-applicable code. Fix `RAMPZ` references. Reorganize into `usb_core.c/.h`, `usb_desc.c/.h`, `usb_hid.c/.h`.
-3. **Write `usb_hid.c`** — establish non-blocking `send_keyboard_report()` first, before anything else in that file. Document the non-blocking constraint in `usb_hid.h`.
-4. **Write `usb_desc.c`** — composite HID descriptor for 2 interfaces (boot keyboard + extended controls). Include EP1 OUT for LED output report.
-5. **Write `usb_core.c`** — device state machine, enumeration, `USB_SOF_vect` ISR (flush queued report; phase measurement stub for later).
-6. **Fix `main.c`** scan loop gate (TCB0 tick flag pattern from section 16.1).
-7. **Verify enumeration** on Curiosity Nano — confirm device appears as HID composite, check descriptor with USB descriptor viewer tool (e.g. USB Device Tree Viewer on Windows).
-8. **Verify keyboard reports** — confirm keystrokes reach host, modifiers work, 6KRO rollover correct.
-9. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
-10. **Verify consumer report** — confirm media keys reach host on Interface 1.
+1. **Fix `keymap.c`:** fix `s_alt_idle_ticks` to `uint16_t`.
+2. Fix `RAMPZ` references.
+3. Establish non-blocking `send_keyboard_report()`. Document the non-blocking constraint in `usb_hid.h`.
+4. **Verify enumeration** on Curiosity Nano — confirm device appears as HID composite, check descriptor with USB descriptor viewer tool (e.g. USB Device Tree Viewer on Windows).
+5. **Verify keyboard reports** — confirm keystrokes reach host, modifiers work, 6KRO rollover correct.
+6. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
+7. **Verify consumer report** — confirm media keys reach host on Interface 1.
 
 ### 18.2 Parallel — GPR Test
 
@@ -894,12 +856,10 @@ Results determine whether the dual-register check is needed and whether the hard
 11. **Measure scan duration** with GPIO toggle + logic analyzer. Confirm < 0.2 ms. Record actual value.
 12. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
 13. **Complete `keyboard.c`** — full key processing loop, report building, layer dispatch, `add/remove_key_to_report()`.
-14. **Write `firmware/bootloader/`** — vendor USB class, flash write routines, linker script. Port from bootloader pseudocode stubs.
-15. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
+14. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
 
 ### 18.4 Deferred (Post-v1)
 
-- EEPROM persistence for LED brightness
 - USB multipacket for bootloader upload speed
 - SOF phase lock optimization
 - Boot mouse interface (eg on Interface 2, EP3 IN)
