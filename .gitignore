@@ -1,41 +1,44 @@
-# For PCBs designed using KiCad: https://www.kicad.org/
-# Format documentation: https://kicad.org/help/file-formats/
+# ─── MPLAB X IDE ────────────────────────────────────────────────────────────
+nbproject/private/
+nbproject/Package-*.bash
+build/
+dist/
+*.d
+*.o
+*.p1
+*.elf
+*.hex
+*.map
+*.lss
+*.sym
 
-# Temporary files
-*.000
-*.bak
-*.bck
-*.kicad_pcb-bak
-*.kicad_sch-bak
-*-backups
-*-cache*
-*-bak
-*-bak*
+# MPLAB X project config that's machine-local (absolute paths, etc.)
+nbproject/Makefile-*
+
+# MCC-generated output (generated files; source-of-truth is the .mc3 config)
+mcc_generated_files/
+
+# ─── avr-gcc / avrdude ──────────────────────────────────────────────────────
+*.a
+*.srec
+*.bin
+*.eep
+
+# ─── Editor / IDE ───────────────────────────────────────────────────────────
+.vscode/
+*.swp
+*.swo
 *~
-~*
-_autosave-*
-\#auto_saved_files\#
-*.tmp
-*-save.pro
-*-save.kicad_pcb
-fp-info-cache
-~*.lck
-\#auto_saved_files#
+.DS_Store
+Thumbs.db
 
-# Netlist files (exported from Eeschema)
-*.net
+# ─── avrdude config artifacts ───────────────────────────────────────────────
+avrdude.conf.local
 
-# Autorouter files (exported from Pcbnew)
-*.dsn
-*.ses
-
-# Exported BOM files
-*.xml
-*.csv
-
-# Local project settings
-*.kicad_prl
-*.gdoc
+# ─── Misc ───────────────────────────────────────────────────────────────────
+*.log
+*.bak
+*.orig
 
 # Others
 
@@ -43,3 +46,4 @@ fp-info-cache
 *.geany
 *.zip
 *.gsheet
+*.gdoc
