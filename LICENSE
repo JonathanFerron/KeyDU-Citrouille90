@@ -1,0 +1,9 @@
+# Project Licensing
+
+This project is licensed under multiple licenses depending on the component:
+
+- **PCB and Case Design:** Licensed under CERN-OHL-S v2 (see LICENSE-HARDWARE)
+- **Firmware Source Code:** Licensed under GNU GPL v3 (see LICENSE-FIRMWARE)
+- **Artwork and Logos:** Licensed under CC BY-SA 4.0 (see LICENSE-ART)
+
+Full license texts are available in the root directory and linked above.
