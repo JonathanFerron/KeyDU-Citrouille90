@@ -1,4 +1,5 @@
 #include "usb_ep_stream.h"
+#include "usb_ctrl.h"    /* usb_ctrl_ep_size, usb_ctrl_req, usb_device_state */
 #include <avr/pgmspace.h>
 
 /* --- Non-control endpoint stream helper --- */
@@ -121,6 +122,19 @@ ep_ready_result_t ep_write_stream_P(const void *buf, uint16_t length,
  * (2) They auto-send the last partial packet rather than waiting for a full bank.
  * The caller is always responsible for clearing the status-stage packet after
  * these functions return.
+ *
+ * ZLP rule: a zero-length IN packet must follow any transfer whose total
+ * length is an exact multiple of the control EP bank size, so the host
+ * knows the transfer is complete.  The divisor is usb_ctrl_ep_size (the
+ * actual bank size configured for EP0, typically 8 for this device) — NOT
+ * EP_MAX_SIZE (64).  Using EP_MAX_SIZE was bug #14: for an 8-byte bank, a
+ * descriptor that is, say, 18 bytes would never trigger the ZLP even when
+ * its length happened to be a multiple of 8, because 18 % 64 != 0.
+ *
+ * The check uses the original `length` (unclamped), not `rem` (which may
+ * have been shortened to w_length).  This is intentional: if the host
+ * requested fewer bytes than the descriptor's actual size, the transfer
+ * ends short and no ZLP is required regardless of the descriptor length.
  */
 
 ep_ready_result_t ep_write_ctrl_stream(const void *buf, uint16_t length)
@@ -147,8 +161,9 @@ ep_ready_result_t ep_write_ctrl_stream(const void *buf, uint16_t length)
         ep_clear_in();
     }
 
-    /* If transfer was an exact multiple of bank size, send a ZLP */
-    if (length && (length % EP_MAX_SIZE == 0)) {
+    /* Send a ZLP if the descriptor length is an exact multiple of the
+     * control EP bank size — use usb_ctrl_ep_size, not EP_MAX_SIZE. */
+    if (length && (length % usb_ctrl_ep_size == 0)) {
         while (!ep_in_ready()) {
             if (usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
         }
@@ -179,7 +194,8 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void *buf, uint16_t length)
         ep_clear_in();
     }
 
-    if (length && (length % EP_MAX_SIZE == 0)) {
+    /* Same ZLP fix as ep_write_ctrl_stream above. */
+    if (length && (length % usb_ctrl_ep_size == 0)) {
         while (!ep_in_ready()) {
             if (usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
         }

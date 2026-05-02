@@ -21,7 +21,15 @@ void usb_event_sof(void)            {}
 
 /* --- Internal helpers --- */
 
-/* Build serial string descriptor from SIGROW into a local buffer and send it */
+/* Build serial string descriptor from SIGROW into a local buffer and send it.
+ *
+ * Bug #12 fix: the original implementation called ep_clear_setup() and
+ * ep_write_ctrl_stream() then ep_clear_out(), but never called
+ * ep_complete_ctrl_status().  Without the status stage the host's IN token
+ * for the status ZLP goes unacknowledged and the transaction stalls.
+ * ep_complete_ctrl_status() is now called at the end of the function,
+ * consistent with every other handled request path.
+ */
 static void send_internal_serial(void)
 {
     struct {
@@ -38,8 +46,8 @@ static void send_internal_serial(void)
     cli();
     const uint8_t *src = (const uint8_t *)USB_SERIAL_ADDR;
     for (uint8_t i = 0; i < USB_SERIAL_NUM_CHARS; i++) {
-        uint8_t byte = *src;
-        uint8_t nibble = (i & 1u) ? (byte >> 4) : (byte & 0x0Fu);
+        uint8_t byte    = *src;
+        uint8_t nibble  = (i & 1u) ? (byte >> 4) : (byte & 0x0Fu);
         if (i & 1u) src++;
         desc.unicode[i] = cpu_to_le16(nibble >= 10
                           ? ('A' - 10 + nibble)
@@ -49,11 +57,17 @@ static void send_internal_serial(void)
 
     ep_clear_setup();
     ep_write_ctrl_stream(&desc, sizeof(desc));
-    ep_clear_out();
+    ep_complete_ctrl_status();   /* was missing — bug #12 */
 }
 
 /* --- Standard request handlers --- */
 
+/* ctrl_get_descriptor
+ *
+ * Bug #12 fix: the original ended with ep_clear_out() and returned without
+ * calling ep_complete_ctrl_status().  Both paths (internal serial shortcut
+ * and normal descriptor lookup) now complete the status stage.
+ */
 static void ctrl_get_descriptor(void)
 {
     /* Internal serial number shortcut */
@@ -69,7 +83,7 @@ static void ctrl_get_descriptor(void)
 
     ep_clear_setup();
     ep_write_ctrl_stream_P(addr, size);
-    ep_clear_out();
+    ep_complete_ctrl_status();   /* was missing — bug #12 */
 }
 
 static void ctrl_set_address(void)
@@ -78,7 +92,7 @@ static void ctrl_set_address(void)
 
     /* AVR DU: set address register but do not enable it yet —
        address takes effect after the status IN packet completes */
-    (void)addr;  /* USB0.ADDR written in ep_complete_ctrl_status callback below */
+    (void)addr;  /* USB0.ADDR written after status IN below */
     ep_clear_setup();
     ep_complete_ctrl_status();
 
@@ -226,7 +240,7 @@ void usb_process_ctrl_request(void)
 
 /* --- usb_ctrl_poll() (polled EP0) --- */
 
-void usb_ctrl_poll()(void)
+void usb_ctrl_poll(void)
 {
     if (usb_device_state == USB_STATE_UNATTACHED) return;
 
