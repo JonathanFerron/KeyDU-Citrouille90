@@ -23,3 +23,5 @@ The return value is meaningless — every code path returns `true`. Either add r
 
 - consider enabling autotuning to USB SOF
 - consider timing the TCB0_INT_vect (that wakes up the MCU and sets the tick flag to the moment the SOF arrives (do this after enumeration) minus 200 microseconds)
+- consider enhancing documentation of hid report descriptors to make them easier to read
+- consider using software reset instead of watchdog reset for the entry to bootloader reset, and reducing the wdt wait time for the plain (not bootloader) SYS_Reset keycode.
