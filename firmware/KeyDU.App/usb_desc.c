@@ -6,6 +6,7 @@
 
 /* Boot-compatible keyboard — 8 bytes: modifier(1) reserved(1) keycodes(6)
    Includes LED output report for Num/Caps/Scroll/Compose/Kana             */
+   // TODO: use macros here, inspired from LUFA, instead of directly coding bytes in hex, and comment each line of the report descriptor better
 static const uint8_t PROGMEM rd_kbd[] = {
     0x05,0x01, 0x09,0x06, 0xA1,0x01,       /* Usage Page Generic Desktop, Keyboard  */
     /* Modifier byte */
@@ -24,6 +25,7 @@ static const uint8_t PROGMEM rd_kbd[] = {
 };
 
 /* Consumer/system — 4 bytes: report-id(1) consumer-usage(2) sys-bits(1)   */
+// TODO: use macros here, inspired from LUFA, instead of directly coding bytes in hex, and comment each line of the report descriptor better
 static const uint8_t PROGMEM rd_consumer[] = {
     0x05,0x0C, 0x09,0x01, 0xA1,0x01,       /* Usage Page Consumer Control           */
     0x85,0x01,                              /*   Report ID 1                         */

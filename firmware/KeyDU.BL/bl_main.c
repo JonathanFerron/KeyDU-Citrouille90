@@ -82,6 +82,7 @@ int main(void)
     bool magic_valid = (gpr0 == BOOT_MAGIC) && (gpr1 == BOOT_MAGIC_COMPL);
 
     if (soft_or_wdt && magic_valid) {
+      // TODO: figure out if we need to do a CCP write → CPUINT.CTRLA = IVSEL_BOOT_SECTION_gc here or not
         usb_vendor_init();   /* clock, USB hardware, state init, sei() */
         usb_vendor_task();   /* bare loop — never returns */
     }

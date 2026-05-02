@@ -4,26 +4,25 @@
  *
  * Owns:
  *   - PROGMEM keymap array (3 layers, 10 rows × 9 cols, electrical layout)
- *   - keymap_key_to_keycode()  — layer-aware lookup with transparent fallthrough
- *   - encoder_step()           — Alt-Tab / Alt-Shift-Tab on CW / CCW detent
- *   - keymap_tick()            — Alt-release timeout, call once per 1 kHz tick
+ *   - keymap_key_to_keycode()  layer-aware lookup with transparent fallthrough
+ *   - encoder_step()           Alt-Tab / Alt-Shift-Tab on CW / CCW detent
+ *   - keymap_tick()            Alt-release timeout, call once per 1 kHz tick
  *
- * Physical layout is 20 columns × 5 rows (100 positions, 10 unused).
- * Electrical layout is 9 columns × 10 rows (90 keys).
- * The KEYMAP() macro below maps physical positions to electrical (row, col).
- * TODO: replace the placeholder mapping with actual wiring once pin
- *       assignments are finalised.  Until then the raw [row][col] tables are
- *       the authoritative keymap.
+ * Report access
+ * -------------
+ * encoder_step() manipulates the shared keyboard report exclusively through
+ * the kbd_*() API declared in keyboard.h.  It does not access any report
+ * struct directly.  This resolves bug #13 (encoder bypassing the seqlock).
  */
 
 #include <avr/pgmspace.h>
 
 #include "keymap.h"
-#include "keycode.h"   /* KC_*, CC_*, LY_*, MC_*, LD_*, SYS_*, ______, XXXXXXX */
-#include "encoder.h"   /* ENCODER_CW, ENCODER_CCW                               */
-#include "usb_hid.h"   /* keyboard_report, add_key_to_report(),
-                        * remove_key_from_report(), send_keyboard_report()       */
-#include "matrix.h"    /* MATRIX_ROWS, MATRIX_COLS                  */
+#include "keycode.h"
+#include "encoder.h"
+#include "keyboard.h"   /* kbd_set_mod(), kbd_clear_mod(), kbd_add_key(),
+                           kbd_remove_key(), kbd_stage()                  */
+#include "matrix.h"     /* MATRIX_ROWS, MATRIX_COLS                       */
 
 /* ============================================================================
  * KEYMAP() physical→electrical remap macro
@@ -32,8 +31,6 @@
  * Electrical:     9 col × 10 row
  *
  * TODO: replace the body with actual wiring once PCB is confirmed.
- *       Each { ... } line is one electrical row; each element is the physical
- *       position token that lands on that electrical (row, col).
  * ========================================================================= */
 #define KEYMAP( \
     k00, k01, k02, k03, k04, k05, k06, k07, k08, k09, k0A, k0B, k0C, k0D, k0E, k0F, k0G, k0H, k0I, k0J, \
@@ -42,7 +39,6 @@
     k30, k31, k32, k33, k34, k35, k36, k37, k38, k39, k3A, k3B, k3C, k3D, k3E, k3F, k3G, k3H, k3I, k3J, \
     k40, k41, k42, k43, k44, k45, k46, k47, k48, k49, k4A, k4B, k4C, k4D, k4E, k4F, k4G, k4H, k4I, k4J  \
 ) { \
-    /* TODO: map physical positions to electrical (row, col) — placeholder below */ \
     { k00, k01, k02, k03, k04, k05, k06, k07, k08 }, /* elec row 0 */ \
     { k09, k0A, k0B, k0C, k0D, k0E, k0F, k0G, k0H }, /* elec row 1 */ \
     { k0I, k0J, k10, k11, k12, k13, k14, k15, k16 }, /* elec row 2 */ \
@@ -55,22 +51,10 @@
     { k41, k42, k43, k44, k45, k46, k47, k48, k49 }  /* elec row 9 */ \
 }
 
-#define NUM_LAYERS          3
+#define NUM_LAYERS  3
 
 /* ============================================================================
  * Keymap — 3 layers, stored in flash
- *
- * Layer access:
- *   Layer 0 — base layer    (always active unless a layer key is held)
- *   Layer 1 — function      (LY_MO1 on Layer 0, Row 4 Col 7)
- *   Layer 2 — system/config (LY_MO2 on Layer 1, Row 4 Col 8)
- *
- * Notation:
- *   ______   transparent — fall through to the layer below  (KC_TRNS = 0x0001)
- *   XXXXXXX  explicitly disabled — sends nothing            (KC_NO   = 0x0000)
- * 
- * TODO: Make use of the KEYMAP macro here instead of defining the electrical keymap directly.
- * 
  * ========================================================================= */
 const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] = {
 
@@ -92,6 +76,9 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] = {
 
     /* ------------------------------------------------------------------
      * Layer 1 — Function
+     *
+     * Invariant: all modifier positions must be KC_TRNS (______) so that
+     * modifier+Fn combos work regardless of press order.  Never KC_NO.
      * ------------------------------------------------------------------ */
     [1] = {
         /* Row 0 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
@@ -108,11 +95,6 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] = {
 
     /* ------------------------------------------------------------------
      * Layer 2 — System / config
-     *
-     * SYS_BOOT  — reboot into bootloader (KeyDU.BL)
-     * SYS_RST   — plain firmware reset
-     * LD_BRIU / LD_BRID — LED brightness up / down
-     * KC_F10–F12 — complete the F-key row started on Layer 0 Row 9
      * ------------------------------------------------------------------ */
     [2] = {
         /* Row 0 */  { SYS_BOOT, SYS_RST, ______,  ______,  ______,  ______,  ______,  ______,  ______ },
@@ -130,9 +112,6 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] = {
 
 /* ============================================================================
  * keymap_key_to_keycode — layer-aware lookup with transparent fallthrough
- *
- * Walks from the requested layer down to layer 0.  Returns KC_NO when the
- * key is KC_TRNS on every layer, or when any index is out of range.
  * ========================================================================= */
 uint16_t keymap_key_to_keycode(uint8_t layer, uint8_t row, uint8_t col)
 {
@@ -142,83 +121,72 @@ uint16_t keymap_key_to_keycode(uint8_t layer, uint8_t row, uint8_t col)
 
     uint16_t kc = pgm_read_word(&keymaps[layer][row][col]);
 
-    /* Walk down through transparent layers iteratively — no stack cost. */
     while (kc == KC_TRNS && layer > 0) {
         layer--;
         kc = pgm_read_word(&keymaps[layer][row][col]);
     }
 
-    /* Layer 0 transparent → no key */
     return (kc == KC_TRNS) ? KC_NO : kc;
 }
 
 /* ============================================================================
  * Alt-Tab encoder behaviour
  *
- * encoder_step() is the callback from encoder.c on each confirmed detent.
- * keymap_tick()  is called once per 1 kHz tick from keyboard_task(), after
- *                encoder_scan().
+ * encoder_step() is called by encoder.c on each confirmed detent.
+ * keymap_tick()  is called once per 1 kHz tick by keyboard_task().
  *
- * State is private to this translation unit.
- * s_alt_idle_ticks is uint16_t — the 600 ms timeout fits comfortably
- * (max value needed: 600 < 65535).
+ * The shared keyboard report is accessed exclusively through kbd_*() so
+ * that all writes go through the seqlock in hid_kbd_stage().  This is the
+ * fix for bug #13.
  * ========================================================================= */
 
-/* Milliseconds of encoder inactivity before Alt is released. */
 #define ALT_RELEASE_TIMEOUT_MS  600u
 
-static uint8_t  s_alt_held;        /* non-zero while Alt is latched  */
-static uint16_t s_alt_idle_ticks;  /* ticks elapsed since last step  */
+static uint8_t  s_alt_held;
+static uint16_t s_alt_idle_ticks;
 
 /* --------------------------------------------------------------------------
- * encoder_step — called by encoder.c on every confirmed detent.
+ * encoder_step — CW: Alt+Tab forward.  CCW: Alt+Shift+Tab backward.
  *
- * CW  → Alt+Tab            (forward through window switcher)
- * CCW → Alt+Shift+Tab      (backward through window switcher)
- *
- * Alt is pressed on the first step and held until the encoder goes idle for
- * ALT_RELEASE_TIMEOUT_MS.  Subsequent steps while Alt is already held send
- * Tab (± Shift) without re-asserting Alt.
+ * Alt is held across steps and released by keymap_tick() after
+ * ALT_RELEASE_TIMEOUT_MS of encoder inactivity.
  * ------------------------------------------------------------------------ */
 void encoder_step(int8_t dir)
 {
     /* Latch Alt on the first step of a new gesture. */
     if (!s_alt_held) {
-        keyboard_report.mods |= MOD_LALT;
-        send_keyboard_report();
+        kbd_set_mod(MOD_LALT);
+        kbd_stage();
         s_alt_held = 1;
     }
 
-    /* Reset idle countdown on every step. */
     s_alt_idle_ticks = 0;
 
     if (dir == ENCODER_CW) {
-        /* Forward: Tab while Alt is held. */
-        add_key_to_report(KC_TAB);
-        send_keyboard_report();
-        remove_key_from_report(KC_TAB);
-        send_keyboard_report();
+        /* Forward: tap Tab while Alt is held. */
+        kbd_add_key(KC_TAB);
+        kbd_stage();
+        kbd_remove_key(KC_TAB);
+        kbd_stage();
 
     } else {
-        /* Backward: Shift+Tab while Alt is held.
-         * Assert Shift, tap Tab, clear Shift — Alt stays held throughout. */
-        keyboard_report.mods |= MOD_LSFT;
-        send_keyboard_report();
+        /* Backward: tap Shift+Tab while Alt is held.
+         * Assert Shift, tap Tab, clear Shift — Alt stays latched. */
+        kbd_set_mod(MOD_LSFT);
+        kbd_stage();
 
-        add_key_to_report(KC_TAB);
-        send_keyboard_report();
-        remove_key_from_report(KC_TAB);
+        kbd_add_key(KC_TAB);
+        kbd_stage();
+        kbd_remove_key(KC_TAB);
 
-        keyboard_report.mods &= ~MOD_LSFT;
-        send_keyboard_report();
+        kbd_clear_mod(MOD_LSFT);
+        kbd_stage();
     }
 }
 
 /* --------------------------------------------------------------------------
- * keymap_tick — call once per 1 kHz tick from keyboard_task(), after
- *               encoder_scan().
- *
- * Counts idle ticks and releases Alt when the timeout expires.
+ * keymap_tick — call once per 1 kHz tick, after encoder_scan().
+ * Releases Alt when encoder goes idle for ALT_RELEASE_TIMEOUT_MS.
  * ------------------------------------------------------------------------ */
 void keymap_tick(void)
 {
@@ -229,8 +197,8 @@ void keymap_tick(void)
     s_alt_idle_ticks++;
 
     if (s_alt_idle_ticks >= ALT_RELEASE_TIMEOUT_MS) {
-        keyboard_report.mods &= ~MOD_LALT;
-        send_keyboard_report();
+        kbd_clear_mod(MOD_LALT);
+        kbd_stage();
         s_alt_held       = 0;
         s_alt_idle_ticks = 0;
     }

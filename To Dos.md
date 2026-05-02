@@ -15,17 +15,11 @@
 
 ---
 
-### Runtime Logic Bugs
-
-**#13 — Encoder bypasses seqlock in `keymap.c`**
-`encoder_step()` writes directly to `keyboard_report.mods` rather than staging through `hid_kbd_stage()`. This creates a potential partial-update race if `hid_flush()` fires mid-step. Rework the encoder path to build a full `hid_kbd_report_t` and route it through the same staging mechanism as key events. Decide at the same time whether to give `keymap.c` a read-back of the current staged report or maintain a local shadow for the modifier state.
-
-**#7 — `send_mod_key()` writes `keys[0]` directly in `macro.c`**
-Bypasses `add_key_to_report()` and clobbers slot 0 if any other key is held. Replace the direct struct write with `add_key_to_report()` / `remove_key_from_report()` calls, consistent with all other key event handling.
-
----
-
 ### Housekeeping (last, low risk)
 
 **#19 — `ep_configure_prv()` always returns `true` in `usb_ep.c`**
 The return value is meaningless — every code path returns `true`. Either add real validation and propagate errors to the caller, or change the return type to `void` and update the call site.
+
+
+- consider enabling autotuning to USB SOF
+- consider timing the TCB0_INT_vect (that wakes up the MCU and sets the tick flag to the moment the SOF arrives (do this after enumeration) minus 200 microseconds)
