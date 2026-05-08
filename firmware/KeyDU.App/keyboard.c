@@ -261,17 +261,19 @@ static void process_key_press(uint8_t row, uint8_t col)
     if (IS_SYSTEM_KEY(keycode)) {
         switch (keycode) {
             case SYS_RST:
-                wdt_enable(WDTO_8MS); 
-                while (1);
-                break;
+              GPR.GPR2 = 0x00u;
+              GPR.GPR3 = 0x00u;
+              wdt_enable(WDTO_8MS); 
+              while (1);
+              break;
             case SYS_BOOT:
-                GPR.GPR2 = BOOTLOADER_MAGIC;
-                GPR.GPR3 = BOOTLOADER_MAGIC_COMPL;
-                ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
-                while (1);
-                break;
+              GPR.GPR2 = BOOTLOADER_MAGIC;
+              GPR.GPR3 = BOOTLOADER_MAGIC_COMPL;
+              ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
+              while (1);
+              break;
             default:
-                break;
+              break;
         }
         return;
     }

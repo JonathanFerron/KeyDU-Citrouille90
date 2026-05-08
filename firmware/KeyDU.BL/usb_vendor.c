@@ -230,10 +230,10 @@ void usb_vendor_init(void)
 
     clock_init();   /* 24 MHz OSCHF, TIMEBASE=24 — required before USB */
 
-    sei();
-
     /* USB_OPT_VREG_ENABLE: internal 3.3V VUSB regulator is used on this board. */
     usb_init(USB_OPT_VREG_ENABLE);
+    
+    sei();
 }
 
 /* ============================================================================
@@ -245,7 +245,7 @@ void usb_vendor_init(void)
 void usb_vendor_task(void)
 {
     while (1) {
-        usb_task();
+        usb_ctrl_poll();
 
         if (s_reset_pending) {
             /* Short spin so the ACK handshake completes before detach */

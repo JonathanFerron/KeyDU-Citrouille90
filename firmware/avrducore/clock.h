@@ -11,4 +11,7 @@
 /* Initialise CLKCTRL and CPUINT. Blocks until OSCHF is stable. */
 void clock_init(void);
 
+void clock_autotune_enable(void);
+void clock_autotune_disable(void);
+
 #endif /* CLOCK_H */

@@ -30,7 +30,7 @@ void clock_init(void)
 } // clock_init
 
 /* Enable SOF autotune, incremental algorithm — call after enumeration */
-static inline void clock_autotune_enable(void)
+void clock_autotune_enable(void)
 {
     ccp_write_ioreg((void *)&CLKCTRL.OSCHFCTRLA,
         CLKCTRL_FRQSEL_24M_gc      |
@@ -39,7 +39,7 @@ static inline void clock_autotune_enable(void)
 }
 
 /* Disable autotune — call on suspend, bus reset, disconnect */
-static inline void clock_autotune_disable(void)
+void clock_autotune_disable(void)
 {
     ccp_write_ioreg((void *)&CLKCTRL.OSCHFCTRLA,
         CLKCTRL_FRQSEL_24M_gc      |

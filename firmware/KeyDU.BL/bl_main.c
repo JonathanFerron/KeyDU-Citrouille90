@@ -31,9 +31,6 @@
 #define BOOT_MAGIC        0x42u
 #define BOOT_MAGIC_COMPL  ((uint8_t)(~BOOT_MAGIC))   /* 0xBD */
 
-/* ── Application entry point ────────────────────────────────────────────── */
-#define APP_ENTRY_WORD_ADDR  ((uintptr_t)(APP_START) >> 1)   /* 0x1000 */
-
 /* ============================================================================
  * jump_to_application — clear GPR and transfer control to 0x2000
  * ========================================================================= */
@@ -48,11 +45,10 @@ static void jump_to_application(void)
     cli();
     USB0.CTRLB  &= ~USB_ATTACH_bm;
     USB0.CTRLA  &= ~USB_ENABLE_bm;
-    clock_autotune_disable();   /* leave clock in a clean known state for app */
     ccp_write_ioreg((void *)&CPUINT.CTRLA, 0x00);
 
     /* Jump to application reset vector (word address). */
-    void (*app)(void) = (void (*)(void))(APP_ENTRY_WORD_ADDR);
+    void (*app)(void) = (void (*)(void))(uintptr_t)((uint32_t)(APP_START) >> 1);
     app();
 
     /* Unreachable — silence noreturn warning. */
@@ -78,13 +74,13 @@ int main(void)
     GPR.GPR1 = 0x00u;
 
     /* Step 3: Enter bootloader only if:
-     *   - Reset was software- or watchdog-triggered (intentional programmatic reset)
+     *   - Reset was software-triggered (intentional programmatic reset)
      *   - GPR magic is intact (written by SYS_BOOT handler in keyboard.c)
-     * Power-on reset (PORF) and RESET pin (EXTRF) always go straight to the app. */
-    bool soft_or_wdt = (rstfr & (RSTCTRL_SWRF_bm | RSTCTRL_WDRF_bm)) != 0u;
+     * Power-on reset (PORF) and RESET pin (EXTRF) always go straight to the app. */    
+    bool soft = (rstfr & RSTCTRL_SWRF_bm ) != 0u;
     bool magic_valid = (gpr0 == BOOT_MAGIC) && (gpr1 == BOOT_MAGIC_COMPL);
 
-    if (soft_or_wdt && magic_valid) {
+    if (soft && magic_valid) {
       ccp_write_ioreg((void *)&CPUINT.CTRLA, CPUINT_IVSEL_bm);
       usb_vendor_init();   /* clock, USB hardware, state init, sei() */
       usb_vendor_task();   /* bare loop — never returns */

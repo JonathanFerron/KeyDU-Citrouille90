@@ -70,7 +70,7 @@ APP_OUT  = $(BUILD)/app
 APP_NAME = KeyDU.App
 APP_ELF  = $(APP_OUT)/$(APP_NAME).elf
 APP_HEX  = $(APP_OUT)/$(APP_NAME).hex
-APP_LD   = $(APP_DIR)/KeyDU_App.ld
+APP_LD   = $(APP_DIR)/KeyDU.App.ld
 
 APP_INC  = -I$(APP_DIR) -Iusbcore -I$(APP_DIR)/usbhid -Iavrducore
 
@@ -111,7 +111,7 @@ BL_OUT  = $(BUILD)/bl
 BL_NAME = KeyDU.BL
 BL_ELF  = $(BL_OUT)/$(BL_NAME).elf
 BL_HEX  = $(BL_OUT)/$(BL_NAME).hex
-BL_LD   = $(BL_DIR)/KeyDU_BL.ld
+BL_LD   = $(BL_DIR)/KeyDU.BL.ld
 
 BL_INC  = -I$(BL_DIR) -Iusbcore -I$(BL_DIR)/usbvendor -Iavrducore
 
