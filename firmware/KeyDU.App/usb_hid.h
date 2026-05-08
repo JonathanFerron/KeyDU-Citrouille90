@@ -5,10 +5,6 @@
 #include <stdbool.h>
 #include "usb_desc.h"
 
-// HID Report IDs
-#define REPORT_ID_KEYBOARD  1 // is this used?
-#define REPORT_ID_CONSUMER  2 // is this used?
-
 /* ════════════════════════════════════════════════════════════════════════
  *  HID report structs (§11.2, §11.4)
  *  Sizes must match HID_EP_SIZE_* in usb_desc.h.

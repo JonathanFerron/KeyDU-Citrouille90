@@ -43,6 +43,7 @@
 #include "encoder.h"
 #include "usb_hid.h"
 #include "usb_ctrl.h"
+#include "ccp.h"
 
 /* ============================================================================
  * Internal constants
@@ -260,13 +261,13 @@ static void process_key_press(uint8_t row, uint8_t col)
     if (IS_SYSTEM_KEY(keycode)) {
         switch (keycode) {
             case SYS_RST:
-                wdt_enable(WDTO_15MS);  // TODO: consider reducing this to a shorter wait time than 15 ms
+                wdt_enable(WDTO_8MS); 
                 while (1);
                 break;
             case SYS_BOOT:
                 GPR.GPR2 = BOOTLOADER_MAGIC;
                 GPR.GPR3 = BOOTLOADER_MAGIC_COMPL;
-                wdt_enable(WDTO_15MS);  // TODO: consider using a software reset here rather than a watchdog reset
+                ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
                 while (1);
                 break;
             default:

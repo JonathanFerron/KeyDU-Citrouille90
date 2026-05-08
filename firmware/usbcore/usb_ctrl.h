@@ -8,7 +8,7 @@
 /*
  * usb_ctrl — standard USB control request handling and device init/task.
  *
- * usb_init() brings up the USB hardware. usb_task() must be called every
+ * usb_init() brings up the USB hardware. usb_ctrl_poll() must be called every
  * iteration of the main loop (ungated) to poll EP0 for pending SETUP packets.
  *
  * Three callbacks MUST be implemented by the caller (usb_desc.c for the App,
@@ -20,7 +20,7 @@
  *     flash (PROGMEM). Return NO_DESCRIPTOR if not found.
  *
  * Four event callbacks have weak stub definitions here and may be overridden
- * by usb_app.c (or usb_vendor.c for the bootloader):
+ * by usb_hid.c (or usb_vendor.c for the bootloader):
  *
  *   void usb_event_reset(void)
  *   void usb_event_config_changed(void)
@@ -55,14 +55,14 @@ void usb_reset_interface(void);
 
 /* Poll EP0 for a pending SETUP packet and dispatch it.
    Must be called every main-loop iteration, ungated. */
-void usb_ctrl_poll()(void);
+void usb_ctrl_poll(void);
 
-/* --- Descriptor callback — implemented in usb_desc.c (App) or usb_vendor.c (BL) --- */
+/* --- Descriptor callback — implemented in usb_desc.c (App) or usb_vendor_desc.c (BL) --- */
 
 /* Return descriptor size; set *addr to PROGMEM address. Return NO_DESCRIPTOR if absent. */
 uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index, const void **addr);
 
-/* --- Event callbacks — weak stubs, override in usb_app.c / usb_vendor.c --- */
+/* --- Event callbacks — weak stubs, override in usb_hid.c / usb_vendor.c --- */
 
 /* Called after bus reset: EP0 already reconfigured, state set to DEFAULT */
 void usb_event_reset(void)          USB_WEAK;
@@ -81,7 +81,7 @@ void usb_event_wakeup(void)         USB_WEAK;
    and complete the transfer). Unhandled requests fall through to standard dispatch. */
 void usb_event_ctrl_request(void)   USB_WEAK;
 
-/* Called each SOF (1 ms when connected). Enable with usb_sof_enable(). */
+/* Called each SOF (1 ms when connected). */
 void usb_event_sof(void)            USB_WEAK;
 
 /* --- SOF interrupt control --- */

@@ -48,30 +48,8 @@
 #include "matrix.h"
 
 // ============================================================================
-// Matrix Pin Definitions (AVR64DU32 specific): are these detailed defines still required?
+// Matrix Pin Definitions (AVR64DU32 specific)
 // ============================================================================
-// Row pins (outputs)
-#define ROW0_PIN            PORTA_PIN0
-#define ROW1_PIN            PORTA_PIN1
-#define ROW2_PIN            PORTA_PIN2
-#define ROW3_PIN            PORTA_PIN3
-#define ROW4_PIN            PORTA_PIN4
-#define ROW5_PIN            PORTA_PIN5
-#define ROW6_PIN            PORTA_PIN6
-#define ROW7_PIN            PORTA_PIN7
-#define ROW8_PIN            PORTB_PIN0
-#define ROW9_PIN            PORTB_PIN1
-
-// Column pins (inputs with pullups)
-#define COL0_PIN            PORTB_PIN2
-#define COL1_PIN            PORTB_PIN3
-#define COL2_PIN            PORTB_PIN4
-#define COL3_PIN            PORTB_PIN5
-#define COL4_PIN            PORTF_PIN0
-#define COL5_PIN            PORTF_PIN1
-#define COL6_PIN            PORTF_PIN2
-#define COL7_PIN            PORTF_PIN3
-#define COL8_PIN            PORTF_PIN4
 
 /* ============================================================================
  * Port-wide masks

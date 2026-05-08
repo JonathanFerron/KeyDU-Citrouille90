@@ -25,10 +25,10 @@
 #include "usb_vendor.h"
 #include "usb_vendor_desc.h"
 #include "flash.h"
-#include "../../usbcore/usb_ctrl.h"
-#include "../../usbcore/usb_ep.h"
-#include "../../usbcore/usb_ep_stream.h"
-#include "../../avrducore/clock.h"
+#include "usb_ctrl.h"
+#include "usb_ep.h"
+#include "usb_ep_stream.h"
+#include "clock.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
@@ -202,6 +202,21 @@ void usb_event_ctrl_request(void)
     }
 }
 
+void usb_event_config_changed(void)
+{
+    clock_autotune_enable();
+}
+
+void usb_event_suspend(void)
+{
+    clock_autotune_disable();
+}
+
+void usb_event_reset(void)
+{
+    clock_autotune_disable();
+}
+
 /* ============================================================================
  * usb_vendor_init — call once at BL startup, before sei()
  * ========================================================================= */
@@ -237,17 +252,23 @@ void usb_vendor_task(void)
             for (volatile uint16_t d = 0; d < 4000u; d++) {}
 
             usb_disable();
+            clock_autotune_disable();   /* leave clock in a clean known state for app */
 
             /* Clear GPR magic so a plain power-on reset stays in the app */
             GPR.GPR2 = 0x00u;
             GPR.GPR3 = 0x00u;
+            
+            ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
+            while (1) {} /* Should not be reached */
+            
+            //ccp_write_ioreg((void *)&CPUINT.CTRLA, 0x00);
 
             /* Jump to application reset vector (byte addr → word addr). */
-            void (*app_entry)(void) = (void (*)(void))((uintptr_t)APP_START >> 1);
-            app_entry();
+            //void (*app_entry)(void) = (void (*)(void))((uintptr_t)APP_START >> 1);
+            //app_entry();
 
             /* Should not be reached */
-            while (1) {}
+            //while (1) {}
         }
     }
 }

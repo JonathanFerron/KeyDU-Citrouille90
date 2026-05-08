@@ -25,6 +25,7 @@
 #include <avr/interrupt.h>
 #include <stdbool.h>
 #include "usbvendor/usb_vendor.h"   /* usb_vendor_init(), usb_vendor_task() */
+#include "../../avrducore/ccp.h"     // ccp_write_ioreg()
 
 /* ── Boot magic ─────────────────────────────────────────────────────────── */
 #define BOOT_MAGIC        0x42u
@@ -47,6 +48,8 @@ static void jump_to_application(void)
     cli();
     USB0.CTRLB  &= ~USB_ATTACH_bm;
     USB0.CTRLA  &= ~USB_ENABLE_bm;
+    clock_autotune_disable();   /* leave clock in a clean known state for app */
+    ccp_write_ioreg((void *)&CPUINT.CTRLA, 0x00);
 
     /* Jump to application reset vector (word address). */
     void (*app)(void) = (void (*)(void))(APP_ENTRY_WORD_ADDR);
@@ -82,9 +85,9 @@ int main(void)
     bool magic_valid = (gpr0 == BOOT_MAGIC) && (gpr1 == BOOT_MAGIC_COMPL);
 
     if (soft_or_wdt && magic_valid) {
-      // TODO: figure out if we need to do a CCP write → CPUINT.CTRLA = IVSEL_BOOT_SECTION_gc here or not
-        usb_vendor_init();   /* clock, USB hardware, state init, sei() */
-        usb_vendor_task();   /* bare loop — never returns */
+      ccp_write_ioreg((void *)&CPUINT.CTRLA, CPUINT_IVSEL_bm);
+      usb_vendor_init();   /* clock, USB hardware, state init, sei() */
+      usb_vendor_task();   /* bare loop — never returns */
     }
 
     /* No valid boot request — jump straight to application. */

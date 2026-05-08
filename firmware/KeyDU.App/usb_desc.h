@@ -5,6 +5,9 @@
 #include <avr/pgmspace.h>
 
 /* ── Identity — edit here only ─────────────────────────────────────────── */
+// ============================================================================
+// Keyboard Information
+// ============================================================================
 #define USB_VID                 0x1209u          /* pid.codes open-source VID  */
 #define USB_PID                 0xB4B0u          /* KeyDU.App: not yet assigned by pid.codes */
 #define USB_DEVICE_VERSION      VERSION_BCD(1,0,0)
@@ -12,16 +15,6 @@
 #define USB_STR_MANUFACTURER    L"KeyDU project"
 #define USB_STR_PRODUCT         L"Citrouille90"
 /* Serial number: auto-generated from AVR SIGROW by usb_ctrl.c              */
-
-// ============================================================================
-// Keyboard Information
-// ============================================================================
-#define KEYBOARD_NAME       "Citrouille90" // is this still needed?
-#define VENDOR_ID           0xFEED  // Change to your vendor ID: is this still needed? FEED is what is used by QMK, TMK
-#define PRODUCT_ID          0x0090  // Change to your product ID: is this still needed?
-#define DEVICE_VERSION      0x0001  // is this still needed?
-#define MANUFACTURER        "YourName"  // is this still needed?
-#define PRODUCT             "Citrouille90" // is this still needed?
 
 /* ── String descriptor indices ─────────────────────────────────────────── */
 #define STRIDX_LANG             0u

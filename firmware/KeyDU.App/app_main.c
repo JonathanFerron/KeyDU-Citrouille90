@@ -28,6 +28,12 @@ ISR(TCB0_INT_vect)
     TCB0.INTFLAGS = TCB_CAPT_bm;    /* clear interrupt flag */
 }
 
+ISR(BADISR_vect)
+{
+    /* Unexpected interrupt — return silently.
+     * avr-libc default would reset via address 0 (lands in bootloader). */
+}
+
 /* ── system_init ──────────────────────────────────────────────────────── */
 static void system_init(void)
 {
@@ -40,7 +46,7 @@ static void system_init(void)
      * CCMP = (F_CPU / 1000) - 1 = 23999.                                 */
     TCB0.CCMP    = (F_CPU / 1000UL) - 1;
     TCB0.INTCTRL = TCB_CAPT_bm;
-    TCB0.CTRLA   = TCB_CLKSEL_CLKDIV1_gc | TCB_ENABLE_bm; // confirm the avr-libc header for your device exposes TCB_CLKSEL_CLKDIV1_gc under that exact name — some older pack versions use TCB_CLKSEL_DIV1_gc
+    TCB0.CTRLA   = TCB_CLKSEL_DIV1_gc | TCB_ENABLE_bm;
 }
 
 /* ── main ─────────────────────────────────────────────────────────────── */

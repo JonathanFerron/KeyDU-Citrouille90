@@ -1,0 +1,28 @@
+Programming only bootcode or only appcode
+
+To program only the bootcode or appcode on avr devices using avrdude and serialupdi, you must use specific memory address ranges (flash for app, boot for bootloader) or specialized memory segment commands, rather than relying on default full-chip erasure.
+
+Core Principles for Partial Programming
+AVRDUDE Command: Use -c serialupdi and -P <COM_PORT>.
+Avoid Erase: Do not use the -e flag, as this erases the entire flash, including the bootloader section.
+
+1. Programming Only the Appcode (Application) 
+To write only the application code without affecting the bootloader (if present), write to the flash section. The bootloader resides in the lower address space, but avrdude treats standard hex files as app code.
+
+Command:
+avrdude -c serialupdi -p <mcu_part> -P <port> -U flash:w:appcode.hex:i
+
+Example: avrdude -c serialupdi -p t1616 -P COM3 -U flash:w:main.hex:i
+
+2. Programming Only the Bootcode (Bootloader) 
+To write only the bootloader, you must ensure your hex file is generated for the boot section and use the appropriate flash target. If the chip has a defined boot memory region, use that; otherwise, it is often simply the specific address space within the flash memory.
+ 
+Command:
+avrdude -c serialupdi -p <mcu_part> -P <port> -U flash:w:bootloader.hex:i
+
+Crucial Note: You must have configured the fuses (BOOTSIZE) correctly for the bootloader to function. 
+
+Summary of Flags
+Task 	Avrdude Target	Notes
+Appcode	-U flash:w:file.hex:i	 Writes app data
+Bootcode	-U flash:w:boot.hex:i 	Requires boot fuse settings

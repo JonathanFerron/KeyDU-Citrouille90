@@ -1,0 +1,20 @@
+
+How to move from mplab x ide to pure avrgcc and make for avr 8 bit mcu:
+
+
+Moving from MPLAB X to a "pure" environment means replacing the IDE with a manual AVR-GCC toolchain and a Makefile to manage builds.
+
+1. Install the Core Toolchain
+You need three primary components:
+AVR-GCC: The compiler for C/C++.
+GNU Make: The build automation tool.
+AVR-Libc: Standard libraries (e.g., <avr/io.h>).
+AVRDUDE: The utility for uploading code to the MCU. 
+
+Platform Setup:
+Linux/Ubuntu: sudo apt-get install gcc-avr binutils-avr avr-libc avrdude make.
+
+2. Build Process (examples)
+Compile: avr-gcc -mmcu=atmega328p -Wall -Os -o main.elf main.c.
+Convert to Hex: avr-objcopy -j .text -j .data -O ihex main.elf main.hex.
+Upload: avrdude -c usbasp -p m328p -U flash:w:main.hex

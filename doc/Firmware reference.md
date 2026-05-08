@@ -20,7 +20,7 @@ Bare-metal, intentional, minimal. Every line of code is understood before it is 
 - `#define` constants: `UPPER_CASE`
 - Types: `snake_case_t` (e.g. `keycode_t`, `matrix_state_t`)
 - Enums: `typedef enum { UPPER_CASE_MEMBERS } name_t;`
-- No PascalCase anywhere (rules out MCC-style names as-is)
+- No PascalCase anywhere
 
 ### 2.2 Header / Source Split
 
@@ -74,7 +74,7 @@ Defined in `keycode.h` (header-only, no `.c` counterpart).
   #define XXXXXXX  KC_NO     /* explicitly disabled         */
   ```
 
-- Each `_BASE` sentinel equals the first value of its range (e.g. `CC_BASE = 0x0100`). Individual codes start at `_BASE | 0x01`, never `_BASE | 0x00`, so no code ever equals its range sentinel.
+- Each `_BASE` sentinel equals the first value of its range (e.g. `CC_BASE = 0x0100`). Individual codes start at `_BASE | 0x01`, so no code ever equals its range sentinel.
 
 ### 3.3 Dispatch Predicates
 
@@ -96,31 +96,29 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 
 ### 4.1 Compiled Source Files (`firmware/KeyDU.App/` on KeyDU-Citrouille90 git repo)
 
-| File            | Status         | Owns                                                                       |
-| --------------- | -------------- | -------------------------------------------------------------------------- |
-| `gpio.h`        | ✅ Final        | GPIO HAL — header-only, all macros                                         |
-| `matrix.c/.h`   | ✅ Final        | Matrix init and scan; `register_key()` callback to keyboard layer          |
-| `encoder.c/.h`  | ✅ Final (HW)   | Encoder init and hardware scan only; `encoder_step()` stub                 |
-| `keycode.h`     | ✅ Final*       | All keycode `#define`s, `IS_*` predicates, aliases                         |
-| `led.c/.h`      | ✅ Good         | TCA0 PWM init and brightness control                                       |
-| `keymap.c/.h`   | 🔧 In progress | PROGMEM keymap array, layer lookup, `encoder_step()` impl, `keymap_tick()` |
-| `macros.c/.h`   | 🔧 Stub        | Macro dispatch and PROGMEM sequences                                       |
-| `keyboard.c/.h` | good        | Main keyboard logic, `keyboard_task()`, key processing loop                |
-| `main.c`        | good        | Entry point, system init, TCB0 gate loop                                   |
-| `usb_hid.c/.h`  | good | Non-blocking report buffering, HID report structs, EP management           |
-| `usb_core.c/.h` | good | USB device state machine, enumeration                                      |
-| `usb_desc.c/.h` | good  | All USB descriptor tables                                                  |
-
-*`keycode.h` needs the `_BASE | 0x01` fix applied to `CC_`, `LD_`, `SYS_` ranges before first compile against actual keymap.
+| File                   | Owns                                                                       |
+| ------------ | ---------------------- |
+| `gpio.h`            | GPIO HAL — header-only, all macros                                         |
+| `matrix.c/.h`      | Matrix init and scan; `register_key()` callback to keyboard layer          |
+| `encoder.c/.h`  | Encoder init and hardware scan only; `encoder_step()` stub                 |
+| `keycode.h`     | All keycode `#define`s, `IS_*` predicates, aliases                         |
+| `led.c/.h`      | TCA0 PWM init and brightness control                                       |
+| `keymap.c/.h`   | PROGMEM keymap array, layer lookup, `encoder_step()` impl, `keymap_tick()` |
+| `macros.c/.h`    | Macro dispatch and PROGMEM sequences                                       |
+| `keyboard.c/.h`  | Main keyboard logic, `keyboard_task()`, key processing loop                |
+| `main.c`         | Entry point, system init, TCB0 gate loop                                   |
+| `usb_hid.c/.h` | Non-blocking report buffering, HID report structs, EP management           |
+| `usb_core.c/.h` | USB device state machine, enumeration                                      |
+| `usb_desc.c/.h` | All USB descriptor tables                                                  |
 
 ### 4.2 Bootloader (`firmware/KeyDU.BL/`)
 
-| File              | Status        | Owns                                          |
-| ----------------- | ------------- | --------------------------------------------- |
-| `main.c`          | good | Early GPR check, jump logic, BL state machine |
-| `usb_vendor.c/.h` | good | Vendor class USB, flash write protocol        |
-| `flash.c/.h`      | good | SPM flash write routines                      |
-| `linker.ld`       | good | Bootloader-specific linker script             |
+| File                 | Owns                                          |
+| ------------------------ | --------------------------------------------- |
+| `main.c`        | Early GPR check, jump logic, BL state machine |
+| `usb_vendor.c/.h` | Vendor class USB, flash write protocol        |
+| `flash.c/.h`      | SPM flash write routines                      |
+| `linker.ld`       | Bootloader-specific linker script             |
 
 ### 4.3 Not Compiled (`KeyDU-Examples` separate git repo)
 
@@ -233,7 +231,7 @@ uint8_t curr_ab = (GPIO_VPORT_READ(ENC_A_VPORT, ENC_A_PIN) << 1)
 - **Layout:** 10 rows × 9 columns = 90 keys
 - **Electrical scan direction:** Drive column low, read rows (pull-up on rows)
 - **Scan rate:** 1000 Hz (1 ms interval), gated by TCB0 in main loop
-- **Diode orientation:** COL2ROW (one diode per switch, cathode toward column)
+- **Diode orientation:** one diode per switch, cathode toward column
 
 ### 6.2 Rationale for 1 kHz
 
@@ -359,7 +357,7 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS];
 - `NUM_LAYERS = 3` (layers 0, 1, 2)
 - Transparent fallthrough in `keymap_key_to_keycode()` walks down layers; returns `KC_NO` when layer 0 is also transparent
 - Bounds check on entry: return `KC_NO` for out-of-range indices
-- Physical→electrical remap via `KEYMAP()` macro — implement with `uint16_t` once wiring finalized
+- Physical→electrical remap via `KEYMAP()` macro — implemented with `uint16_t`
 
 ### 9.2 Layer Summary
 
@@ -625,19 +623,14 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 ### 11.8 Bootloader Mode — Vendor Class
 
 - Vendor-defined class, single interface
-- Bulk transfers for firmware upload
-- Host tool: Python, C or avrdude (vendor class driver) + LibUSB
-- Reference: `avr64du32-cnano-usb-vendor-mplab-mcc` (Microchip GitHub) — study approach, adapt to bulk transfer style
-- USB multipacket transfers: design bootloader OUT endpoint to use these from the start — reduces CPU interrupts per 64KB upload and simplifies flashing tool timing
+- Host tool: C or avrdude (vendor class driver) + LibUSB
+- USB multipacket transfers: design bootloader OUT endpoint to use these: reduces CPU interrupts per 64KB upload and simplifies flashing tool timing
 - Keep in mind max packet size of 64B and page size of 512B
-
+- consider bulk transfer instead of control transfer
+- 
 ---
 
 ## 12. USB Stack Implementation Plan
-
-### 12.2 LUFA RAMPZ Bug
-
-`LUFA/Platform/UC3/ClockManagement.h` (and possibly others) reference `RAMPZ`. The AVR64DU32 does not have `RAMPZ` — the register does not exist on this device. This is a LUFA bug. Fix: `#ifdef`-guard the `RAMPZ` references like the way it's done in the MCC generated code.
 
 ### 12.4 What to Take from QMK
 
@@ -805,7 +798,7 @@ int main(void) {
 Your three ISR responsibilities become:
 
 - `TCB0_INT_vect`: set `tick_flag`
-- `USB_SOF_vect`: flush queued report to endpoint buffer (already planned)
+- `USB_SOF_vect`: flush queued report to endpoint buffer
 - `USB_BUSEVNT_vect`: handle reset → re-enumerate, suspend → optionally drop to a deeper sleep mode later, resume → restore
 - `USB_TRNCOMPL_vect`: handle control EP0 transfers (GET_DESCRIPTOR, SET_REPORT for LED output, SET_IDLE, etc.)
 
@@ -816,7 +809,7 @@ Your three ISR responsibilities become:
 - Compiler: `avr-gcc`
 - Linker: `avr-gcc` with custom linker script
 - Flash tool (UPDI): `avrdude` with `serialupdi` programmer
-- Flash tool (USB): custom Python, C or avrdude (with vendor programmer) + LibUSB (KeyDU host tool)
+- Flash tool (USB): custom C or avrdude (with vendor programmer) + LibUSB (KeyDU host tool)
 
 ### 17.2 Fuse Configuration (key items)
 
@@ -832,13 +825,10 @@ Your three ISR responsibilities become:
 
 These must happen in order; everything downstream depends on USB working:
 
-1. **Fix `keymap.c`:** fix `s_alt_idle_ticks` to `uint16_t`.
-2. Fix `RAMPZ` references.
-3. Establish non-blocking `send_keyboard_report()`. Document the non-blocking constraint in `usb_hid.h`.
-4. **Verify enumeration** on Curiosity Nano — confirm device appears as HID composite, check descriptor with USB descriptor viewer tool (e.g. USB Device Tree Viewer on Windows).
-5. **Verify keyboard reports** — confirm keystrokes reach host, modifiers work, 6KRO rollover correct.
-6. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
-7. **Verify consumer report** — confirm media keys reach host on Interface 1.
+1. **Verify enumeration** on Curiosity Nano — confirm device appears as HID composite, check descriptor with USB descriptor viewer tool (e.g. USB Device Tree Viewer on Windows).
+2. **Verify keyboard reports** — confirm keystrokes reach host, modifiers work, 6KRO rollover correct.
+3. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
+4. **Verify consumer report** — confirm media keys reach host on Interface 1.
 
 ### 18.2 Parallel — GPR Test
 
@@ -853,10 +843,9 @@ Results determine whether the dual-register check is needed and whether the hard
 
 ### 18.3 After USB App Firmware is Stable
 
-11. **Measure scan duration** with GPIO toggle + logic analyzer. Confirm < 0.2 ms. Record actual value.
-12. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
-13. **Complete `keyboard.c`** — full key processing loop, report building, layer dispatch, `add/remove_key_to_report()`.
-14. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
+1. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
+2. Complete `keyboard.c`** — full key processing loop, report building, layer dispatch, `add/remove_key_to_report()`.
+3. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
 
 ### 18.4 Deferred (Post-v1)
 

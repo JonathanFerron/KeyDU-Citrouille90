@@ -3,6 +3,7 @@
 #include "../usbcore/usb_ep.h"
 #include "../usbcore/usb_ep_stream.h"
 #include "../usbcore/usb_ctrl.h"
+#include "../../avrducore/clock.h"
 #include <string.h>
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -143,6 +144,7 @@ hid_led_report_t hid_get_led_report(void)
 void usb_event_config_changed(void)
 {
     hid_configure();
+    clock_autotune_enable();
 }
 
 /* ════════════════════════════════════════════════════════════════════════

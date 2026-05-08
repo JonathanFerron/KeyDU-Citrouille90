@@ -55,8 +55,7 @@ void ep_select(uint8_t address)
 }
 
 /* --- ep_configure_prv: internal helper used by ep_configure --- */
-
-static bool ep_configure_prv(uint8_t address, uint8_t config, uint8_t size)
+static void ep_configure_prv(uint8_t address, uint8_t config, uint8_t size)
 {
     ep_select(address);
 
@@ -72,9 +71,7 @@ static bool ep_configure_prv(uint8_t address, uint8_t config, uint8_t size)
 
     /* IN: length = bank size. OUT: length starts 0 (filled by hardware on receive) */
     usb_ep_fifo->length   = (address & EP_DIR_IN) ? size : 0;
-    usb_ep_fifo->position = 0;
-
-    return true;
+    usb_ep_fifo->position = 0; 
 }
 
 /* Convert byte count to AVR DU BUFSIZE field value */
@@ -94,24 +91,26 @@ static uint8_t ep_size_to_mask(uint16_t size)
 
 bool ep_configure(uint8_t address, uint8_t type, uint16_t size, uint8_t banks)
 {
-    (void)banks;    /* AVR DU does not use the banks parameter */
+  (void)banks;    /* AVR DU does not use the banks parameter */
 
-    if ((address & EP_NUM_MASK) >= EP_TABLE_COUNT) return false;
-    if (size > EP_MAX_SIZE)                         return false;
+  if ((address & EP_NUM_MASK) >= EP_TABLE_COUNT) return false;
+  if (size > EP_MAX_SIZE)                        return false;
 
-    uint8_t cfg = (uint8_t)(USB_TCDSBL_bm | ep_size_to_mask(size));
+  uint8_t cfg = (uint8_t)(USB_TCDSBL_bm | ep_size_to_mask(size));
 
-    switch (type) {
-        case EP_TYPE_CONTROL:     cfg |= USB_TYPE_CONTROL_gc;  break;
-        case EP_TYPE_ISOCHRONOUS: cfg |= USB_TYPE_ISO_gc;      break;
-        default:                  cfg |= USB_TYPE_BULKINT_gc;  break;
-    }
+  switch (type) 
+  {
+    case EP_TYPE_CONTROL:     cfg |= USB_TYPE_CONTROL_gc;  break;
+    case EP_TYPE_ISOCHRONOUS: cfg |= USB_TYPE_ISO_gc;      break;
+    default:                  cfg |= USB_TYPE_BULKINT_gc;  break;
+  }
 
-    /* Control endpoints need both IN and OUT configured */
-    if (type == EP_TYPE_CONTROL)
-        ep_configure_prv((uint8_t)(address ^ EP_DIR_IN), cfg, (uint8_t)size);
-
-    return ep_configure_prv(address, cfg, (uint8_t)size);
+  /* Control endpoints need both IN and OUT configured */
+  if (type == EP_TYPE_CONTROL)
+    ep_configure_prv((uint8_t)(address ^ EP_DIR_IN), cfg, (uint8_t)size);
+  
+  ep_configure_prv(address, cfg, (uint8_t)size);
+  return true;
 }
 
 bool ep_configure_table(const ep_table_entry_t *table, uint8_t count)

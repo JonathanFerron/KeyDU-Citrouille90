@@ -91,13 +91,15 @@ static void ctrl_set_address(void)
     uint8_t addr = (uint8_t)(usb_ctrl_req.w_value & 0x7Fu);
 
     /* AVR DU: set address register but do not enable it yet —
-       address takes effect after the status IN packet completes */
-    (void)addr;  /* USB0.ADDR written after status IN below */
+       address takes effect after the status IN packet completes */    
     ep_clear_setup();
     ep_complete_ctrl_status();
 
-    /* Now the status IN has been sent; activate the new address */
-    while (!ep_in_ready());
+    /* Activate the new address once the status IN packet has been sent.
+     * Guard against disconnect — consistent with ep_complete_ctrl_status(). */
+    while (!ep_in_ready()) {
+        if (usb_device_state == USB_STATE_UNATTACHED) return;
+    }
     USB0.ADDR = addr;
     usb_device_state = addr ? USB_STATE_ADDRESSED : USB_STATE_DEFAULT;
 }
@@ -365,4 +367,4 @@ ISR(USB0_BUSEVENT_vect)
 
         usb_event_reset();
     }
-}
+} // ISB USB BUSEVENT
