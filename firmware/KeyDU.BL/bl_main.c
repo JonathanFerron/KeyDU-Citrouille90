@@ -26,10 +26,7 @@
 #include <stdbool.h>
 #include "usbvendor/usb_vendor.h"   /* usb_vendor_init(), usb_vendor_task() */
 #include "../../avrducore/ccp.h"     // ccp_write_ioreg()
-
-/* ── Boot magic ─────────────────────────────────────────────────────────── */
-#define BOOT_MAGIC        0x42u
-#define BOOT_MAGIC_COMPL  ((uint8_t)(~BOOT_MAGIC))   /* 0xBD */
+#include "bootmagic.h"
 
 /* ============================================================================
  * jump_to_application — clear GPR and transfer control to 0x2000
@@ -38,8 +35,8 @@ static void jump_to_application(void) __attribute__((noreturn));
 static void jump_to_application(void)
 {
     /* Clear magic so a subsequent plain reset stays in the app. */
-    GPR.GPR0 = 0x00u;
-    GPR.GPR1 = 0x00u;
+    GPR.GPR2 = 0x00u;
+    GPR.GPR3 = 0x00u;
 
     /* Disable USB and interrupts before handing off. */
     cli();
@@ -68,10 +65,10 @@ int main(void)
     RSTCTRL.RSTFR = rstfr;
 
     /* Step 2: Read and clear GPR magic. */
-    uint8_t gpr0 = GPR.GPR0;
-    uint8_t gpr1 = GPR.GPR1;
-    GPR.GPR0 = 0x00u;
-    GPR.GPR1 = 0x00u;
+    uint8_t gpr2 = GPR.GPR2;
+    uint8_t gpr3 = GPR.GPR3;
+    GPR.GPR2 = 0x00u;
+    GPR.GPR3 = 0x00u;
 
     /* Step 3: Enter bootloader only if:
      *   - Reset was software-triggered (intentional programmatic reset)

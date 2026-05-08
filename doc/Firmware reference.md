@@ -96,26 +96,26 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 
 ### 4.1 Compiled Source Files (`firmware/KeyDU.App/` on KeyDU-Citrouille90 git repo)
 
-| File                   | Owns                                                                       |
-| ------------ | ---------------------- |
-| `gpio.h`            | GPIO HAL — header-only, all macros                                         |
-| `matrix.c/.h`      | Matrix init and scan; `register_key()` callback to keyboard layer          |
+| File            | Owns                                                                       |
+| --------------- | -------------------------------------------------------------------------- |
+| `gpio.h`        | GPIO HAL — header-only, all macros                                         |
+| `matrix.c/.h`   | Matrix init and scan; `register_key()` callback to keyboard layer          |
 | `encoder.c/.h`  | Encoder init and hardware scan only; `encoder_step()` stub                 |
 | `keycode.h`     | All keycode `#define`s, `IS_*` predicates, aliases                         |
 | `led.c/.h`      | TCA0 PWM init and brightness control                                       |
 | `keymap.c/.h`   | PROGMEM keymap array, layer lookup, `encoder_step()` impl, `keymap_tick()` |
-| `macros.c/.h`    | Macro dispatch and PROGMEM sequences                                       |
-| `keyboard.c/.h`  | Main keyboard logic, `keyboard_task()`, key processing loop                |
-| `main.c`         | Entry point, system init, TCB0 gate loop                                   |
-| `usb_hid.c/.h` | Non-blocking report buffering, HID report structs, EP management           |
+| `macros.c/.h`   | Macro dispatch and PROGMEM sequences                                       |
+| `keyboard.c/.h` | Main keyboard logic, `keyboard_task()`, key processing loop                |
+| `main.c`        | Entry point, system init, TCB0 gate loop                                   |
+| `usb_hid.c/.h`  | Non-blocking report buffering, HID report structs, EP management           |
 | `usb_core.c/.h` | USB device state machine, enumeration                                      |
 | `usb_desc.c/.h` | All USB descriptor tables                                                  |
 
 ### 4.2 Bootloader (`firmware/KeyDU.BL/`)
 
-| File                 | Owns                                          |
-| ------------------------ | --------------------------------------------- |
-| `main.c`        | Early GPR check, jump logic, BL state machine |
+| File              | Owns                                          |
+| ----------------- | --------------------------------------------- |
+| `main.c`          | Early GPR check, jump logic, BL state machine |
 | `usb_vendor.c/.h` | Vendor class USB, flash write protocol        |
 | `flash.c/.h`      | SPM flash write routines                      |
 | `linker.ld`       | Bootloader-specific linker script             |
@@ -369,67 +369,16 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS];
 
 Layer 2 contains: `SYS_BOOT` (enter bootloader), `SYS_RESET` (plain restart), `LD_BRIU`, `LD_BRID` (brightness adjust). Only one layer active at a time; highest active index wins at key press time.
 
-Press-time keycode locking:
-Each key slot stores a locked_kc field (type uint16_t) alongside its debounce state. On press, keymap_key_to_keycode(s_active_layer, r, c) is called once and the result stored. On release, locked_kc is used directly — no fresh lookup. Layer changes after press have no effect on in-flight keys.
-
 Keymap invariant — layer 1 and 2:
 All modifier key positions on layers 1 and 2 must be KC_TRNS. This enables both LY_01 → mod → key and mod → LY_01 → key orderings for modifier+function combos (e.g. Alt+F8). Leaving a modifier as KC_NO on an upper layer silently breaks that mod for all layer-1/2 combos. Enforce this as a design rule, not just convention.
 
-**key-press-time layer snapshot** or **per-key keycode locking**: when a key transitions from released → pressed, resolve its keycode immediately and store it alongside the key's "pressed" state. All subsequent logic for that key (including the release event) uses the stored keycode, not a fresh lookup.
 
-**Conceptually:**
 
-```c
-typedef struct {
-    bool     pressed;
-    uint16_t locked_kc;   /* resolved at press time, never changes */
-} key_state_t;
-
-static key_state_t key_state[MATRIX_ROWS][MATRIX_COLS];
-```
-
-On press:
-
-```c
-key_state[r][c].pressed   = true;
-key_state[r][c].locked_kc = keymap_key_to_keycode(s_active_layer, r, c);
-process_keydown(key_state[r][c].locked_kc);
-```
-
-On release:
-
-```c
-process_keyup(key_state[r][c].locked_kc);   // always uses the locked code
-key_state[r][c].pressed = false;
-```
-
----
-
-it's cleaner because the key state struct becomes the single source of truth.
-
-- `key_state_t` gains a `locked_kc` field. If you already have a debounce counter per key, this is just one more field in an existing struct. At 90 keys × 2 bytes = **180 bytes of SRAM**, well within your 8 KB budget.
-- `process_matrix_events()` in `keyboard.c` changes from "look up keycode fresh on each event" to "look up on press, use stored value on release." This is maybe 5–10 lines of logic change.
-- `keymap_key_to_keycode()` itself doesn't change at all.
-- The layer logic (`s_active_layer`) doesn't change at all.
-
----
-
-Here's what needs to happen concretely, mapped to your existing architecture:
-
-**1. Extend the per-key state struct** (likely in `keyboard.h` or `matrix.h` depending on where you put it)
-
-Add `locked_kc` alongside whatever debounce state already lives there. One struct, one allocation, no separate arrays.
-
-**2. Modify `process_matrix_events()` in `keyboard.c`**
-
-On press: call `keymap_key_to_keycode(s_active_layer, r, c)`, store result in `locked_kc`, then dispatch.
-On release: dispatch using `locked_kc` directly — no fresh lookup.
-
-**3. Keymap rule to document in `keymap.c`**
+**Keymap rule to document in `keymap.c`**
 
 All modifier positions on layers 1 and 2 must be `KC_TRNS`. Add a comment block above the layer 1 definition stating this explicitly as a design invariant, not just a convention.
 
-**Nothing else changes** — `keymap_key_to_keycode()`, the layer index logic, `s_active_layer`, debounce, all untouched.
+
 
 ---
 
@@ -558,38 +507,9 @@ Byte 3 b0:  System Sleep (HID Page 0x01, usage 0x82)
 Byte 3 b1–7: Padding
 ```
 
-Consumer codes to support: Volume Up/Down/Mute, Play/Pause, Stop, Next/Prev Track, Browser Home/Back/Forward/Refresh/Search.
+Consumer codes to support: Volume Up/Down/Mute, Play/Pause, Stop, Next/Prev Track, Browser Home/Back/Forward/Refresh/Search.### 
 
-### 11.5 Critical Design Constraint — Non-Blocking send_keyboard_report()
-
-`send_keyboard_report()` **must not block**. It writes to a buffer and returns immediately. The USB peripheral handles the actual transaction autonomously when the host polls.
-
-```c
-/* usb_hid.c — intended model */
-static hid_keyboard_report_t kb_report_buf;
-static volatile uint8_t      kb_report_dirty;
-
-void send_keyboard_report(void) {
-    memcpy(&kb_report_buf, &keyboard_report, sizeof(kb_report_buf));
-    kb_report_dirty = 1;
-    /* signal endpoint — implementation detail resolved when writing USB stack */
-}
-```
-
-**Why this is non-negotiable:** `encoder_step()` calls `send_keyboard_report()` multiple times inline for the Alt+Tab tap sequence. If blocking, this stalls for several ms mid-scan, breaking the entire 1 kHz timing architecture. Document this constraint explicitly in `usb_hid.h` before writing endpoint code.
-
-You need a true double-buffer or critical section. The weakness of the buffered approach is a **torn-read race condition.** Your scan loop writes an 8-byte report struct; your ISR reads it. On AVR, an 8-byte write is never atomic — it's 8 separate `ST` instructions. If the ISR fires mid-write, the host receives a half-updated report (e.g., modifier byte from the new state, keycodes from the old state).
-
-You have two clean solutions:
-
-- **Double-buffer with a dirty flag.** Scan loop writes to a back buffer and sets a flag. ISR checks the flag, copies the back buffer to the front buffer atomically (or just sends directly from back buffer if you design the flag protocol carefully).
-- **`ATOMIC_BLOCK` around the ISR read.** Simpler: the ISR wraps its read of the shared buffer in `ATOMIC_BLOCK(ATOMIC_RESTORESTATE)`, which on AVR-DU means briefly masking global interrupts during the copy. Since the report is only 8 bytes, this is on the order of 8–16 cycles — negligible.
-  - ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { memcpy(&front_buf, &back_buf, sizeof(report_keyboard_t)); }
-  - Global interrupts are disabled for those ~16 cycles. The ISR cannot fire mid-copy. This is safe because 16 cycles at 24MHz is under 1µs — your USB timing and encoder lockout windows are all in the millisecond range, so nothing cares.
-    
-    The subtlety: you'd call this from the **scan loop** side before setting the dirty flag, not from inside the ISR. The ISR then reads `front_buf` freely, because by the time it runs, the copy is guaranteed complete.
-
-### 11.6 SOF Interrupt and Scan Loop Relationship
+### 11.5 SOF Interrupt and Scan Loop Relationship
 
 `USB_SOF_vect` fires every 1 ms when host is connected and not suspended.
 
@@ -601,7 +521,7 @@ TCB0 runs unconditionally. During USB suspend or before enumeration, SOF stops b
 
 **Correct HID report sequence:** Scan → queue report → send on next host SOF poll. Report reflects the world just before the host asked, not up to 1 ms ago.
 
-### 11.7 Future Optimization — SOF Phase Lock
+### 11.6 Future Optimization — SOF Phase Lock
 
 After USB stack is stable and scan duration is measured on real hardware:
 
@@ -620,7 +540,7 @@ Phase measurement: snapshot `TCB0.CNT` in `USB_SOF_vect`, average 8–16 samples
 
 As a first guess, just assume a conservative scan budget of say 200 microseconds.
 
-### 11.8 Bootloader Mode — Vendor Class
+### 11.7 Bootloader Mode — Vendor Class
 
 - Vendor-defined class, single interface
 - Host tool: C or avrdude (vendor class driver) + LibUSB
@@ -628,6 +548,7 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 - Keep in mind max packet size of 64B and page size of 512B
 - consider bulk transfer instead of control transfer
 - 
+
 ---
 
 ## 12. USB Stack Implementation Plan
@@ -673,7 +594,7 @@ Split mode, driving both indicator LEDs independently. See `tca0_pin_info` for p
 
 | Method                    | Mechanism            | Enters BL? | GPR preserved? |
 | ------------------------- | -------------------- | ---------- | -------------- |
-| Hardware tact switch      | RESET pin assertion  | No         | No   |
+| Hardware tact switch      | RESET pin assertion  | No         | No             |
 | `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        | Test on Nano   |
 | `SYS_RESET` key (Layer 2) | soft reset, no magic | No         | Test on Nano   |
 | Power-on reset            | —                    | No         | No             |

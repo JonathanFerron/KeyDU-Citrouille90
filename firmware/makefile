@@ -75,7 +75,7 @@ APP_LD   = $(APP_DIR)/KeyDU.App.ld
 APP_INC  = -I$(APP_DIR) -Iusbcore -I$(APP_DIR)/usbhid -Iavrducore
 
 APP_C_SRC = \
-    $(APP_DIR)/main.c           \
+    $(APP_DIR)/app_main.c           \
     $(APP_DIR)/keyboard.c       \
     $(APP_DIR)/matrix.c         \
     $(APP_DIR)/keymap.c         \
@@ -83,12 +83,12 @@ APP_C_SRC = \
     $(APP_DIR)/macro.c          \
     $(APP_DIR)/led.c            \
     $(APP_DIR)/encoder.c        \
-    $(APP_DIR)/fuses.c          \
-    $(APP_DIR)/usbhid/usb_hid.c \
-    $(APP_DIR)/usbhid/usb_desc.c \
+    $(APP_DIR)/usb_hid.c \
+    $(APP_DIR)/usb_desc.c \
     usbcore/usb_ctrl.c          \
     usbcore/usb_ep.c            \
     usbcore/usb_ep_stream.c     \
+    avrducore/fuses.c          \
     avrducore/clock.c
 
 APP_S_SRC = \
@@ -116,8 +116,9 @@ BL_LD   = $(BL_DIR)/KeyDU.BL.ld
 BL_INC  = -I$(BL_DIR) -Iusbcore -I$(BL_DIR)/usbvendor -Iavrducore
 
 BL_C_SRC = \
-    $(BL_DIR)/usbvendor/usb_vendor.c      \
-    $(BL_DIR)/usbvendor/usb_vendor_desc.c \
+    $(BL_DIR)/bl_main.c                   \
+    $(BL_DIR)/usb_vendor.c      \
+    $(BL_DIR)/usb_vendor_desc.c \
     $(BL_DIR)/flash.c                     \
     usbcore/usb_ctrl.c                    \
     usbcore/usb_ep.c                      \

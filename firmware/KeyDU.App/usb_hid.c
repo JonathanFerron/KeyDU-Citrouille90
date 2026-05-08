@@ -227,4 +227,17 @@ void usb_event_ctrl_request(void)
     default:
         break;  /* unrecognised — fall through, usb_ctrl.c will stall       */
     }
+} // usb_event_ctrl_request
+
+/* Called from USB0_BUSEVENT_vect once per 1 ms SOF when the bus is active.
+ * Flushes staged keyboard and consumer reports to their IN endpoints.
+ * hid_flush() is a no-op if the device is not in USB_STATE_CONFIGURED,
+ * so no guard is needed here.
+ *
+ * Note: do not gate this on tick_flag or any scan-loop state.
+ * The SOF ISR and the scan loop are independent — hid_flush() reads
+ * the seqlock double-buffer, so concurrent access is safe. */
+void usb_event_sof(void)
+{
+    hid_flush();
 }

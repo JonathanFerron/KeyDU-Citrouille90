@@ -84,7 +84,7 @@ static void handle_erase(uint8_t page_count_code, uint32_t addr)
     }
 
     ep_complete_ctrl_status();
-}
+} // handle_erase
 
 static void handle_write(uint32_t addr)
 {
@@ -171,7 +171,11 @@ void usb_event_ctrl_request(void)
     const uint16_t wval = usb_ctrl_req.w_value;
     const uint16_t widx = usb_ctrl_req.w_index;
 
-    /* WRITE / READ address: wValue = addr_hi16, wIndex = addr_lo16 */
+    /* WRITE / READ address: wValue = addr_hi16, wIndex = addr_lo16
+     * ERASE is different: wValue = page_count_code, wIndex = addr_lo16 only.
+     * The combined `addr` below is therefore wrong for VCMD_ERASE — the erase
+     * handler uses (uint32_t)widx directly and ignores this variable.
+     * All erasable addresses fit in 16 bits (APP_START=0x2000, FLASH_END=0xFFFF). */
     const uint32_t addr = ((uint32_t)wval << 16) | widx;
 
     switch (cmd) {
@@ -248,7 +252,10 @@ void usb_vendor_task(void)
         usb_ctrl_poll();
 
         if (s_reset_pending) {
-            /* Short spin so the ACK handshake completes before detach */
+            /* Short spin so the ACK handshake completes before detach 
+             * The spin-delay of 4000 iterations before the reset is an unquantified delay — 
+             * at 24MHz and assuming ~3 cycles/iteration, that's roughly 500µs, which should 
+             * be enough for the USB ACK to complete.*/
             for (volatile uint16_t d = 0; d < 4000u; d++) {}
 
             usb_disable();

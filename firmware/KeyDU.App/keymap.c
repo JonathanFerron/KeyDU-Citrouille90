@@ -30,7 +30,7 @@
  * Physical grid: 20 col × 5 row  →  kNM where N=row (0–4), M=col (0–J hex)
  * Electrical:     9 col × 10 row
  *
- * TODO: replace the body with actual wiring once PCB is confirmed.
+ * TODO: replace the body with actual wiring based on KICAD design.
  * ========================================================================= */
 #define KEYMAP( \
     k00, k01, k02, k03, k04, k05, k06, k07, k08, k09, k0A, k0B, k0C, k0D, k0E, k0F, k0G, k0H, k0I, k0J, \
@@ -60,54 +60,39 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] = {
 
     /* ------------------------------------------------------------------
      * Layer 0 — Base
+     * Physical layout: 20 cols × 5 rows (k<row><col>, col in hex 0–J)
      * ------------------------------------------------------------------ */
-    [0] = {
-        /* Row 0 */  { KC_ESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8    },
-        /* Row 1 */  { KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I    },
-        /* Row 2 */  { KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K    },
-        /* Row 3 */  { KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM },
-        /* Row 4 */  { KC_LCTL, KC_LGUI, KC_LALT, KC_SPC,  XXXXXXX, XXXXXXX, KC_RALT, LY_MO1,  KC_RCTL },
-        /* Row 5 */  { KC_GRV,  KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_LBRC, KC_RBRC, KC_BSLS },
-        /* Row 6 */  { KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_DEL,  KC_PGUP, KC_PGDN, KC_HOME },
-        /* Row 7 */  { KC_L,    KC_SCLN, KC_QUOT, KC_ENT,  KC_END,  KC_UP,   KC_DOWN, KC_LEFT, KC_RGHT },
-        /* Row 8 */  { KC_DOT,  KC_SLSH, KC_RSFT, KC_INS,  KC_PSCR, KC_SLCK, KC_PAUS, XXXXXXX, XXXXXXX },
-        /* Row 9 */  { KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9   },
-    },
+    [0] = KEYMAP(
+        /* Row 0 */ KC_ESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_INS,  KC_HOME, KC_PGUP, KC_NLCK, KC_PSLS, KC_PAST,
+        /* Row 1 */ KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_DEL,  KC_END,  KC_PGDN, KC_P7,   KC_P8,   KC_P9,
+        /* Row 2 */ KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_ENT,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_P4,   KC_P5,   KC_P6,
+        /* Row 3 */ KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT, XXXXXXX, XXXXXXX, KC_UP,   XXXXXXX, XXXXXXX, KC_P1,   KC_P2,   KC_P3,
+        /* Row 4 */ KC_LCTL, KC_LGUI, KC_LALT, KC_SPC,  XXXXXXX, XXXXXXX, XXXXXXX, KC_RALT, LY_MO1,  KC_RCTL, XXXXXXX, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, KC_RGHT, XXXXXXX, KC_P0,   KC_PDOT, KC_PENT
+    ),
 
     /* ------------------------------------------------------------------
      * Layer 1 — Function
-     *
-     * Invariant: all modifier positions must be KC_TRNS (______) so that
-     * modifier+Fn combos work regardless of press order.  Never KC_NO.
+     * Invariant: all modifier positions must be KC_TRNS so that
+     * modifier+Fn combos work regardless of press order.
      * ------------------------------------------------------------------ */
-    [1] = {
-        /* Row 0 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 1 */  { ______,  MC_COPY, MC_PSTE, ______,  CC_VOLU, CC_VOLD, CC_MUTE, ______,  ______ },
-        /* Row 2 */  { ______,  MC_SALL, MC_SAVE, ______,  MC_FIND, ______,  ______,  ______,  ______ },
-        /* Row 3 */  { ______,  MC_UNDO, MC_CUT,  MC_COPY, MC_PSTE, ______,  ______,  ______,  ______ },
-        /* Row 4 */  { ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  ______,  LY_MO2 },
-        /* Row 5 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 6 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 7 */  { ______,  ______,  ______,  ______,  ______,  CC_MPLY, CC_MNXT, CC_MPRV, CC_MSTP },
-        /* Row 8 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX },
-        /* Row 9 */  { ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-    },
+    [1] = KEYMAP(
+        /* Row 0 */ ______,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL,  ______,  ______,  ______,  ______,  ______,  ______,
+        /* Row 1 */ ______,  MC_COPY, MC_PSTE, MC_CUT,  CC_VOLU, CC_VOLD, CC_MUTE, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,
+        /* Row 2 */ ______,  MC_SALL, MC_SAVE, MC_FIND, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,
+        /* Row 3 */ ______,  MC_UNDO, MC_REDO, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, CC_MPLY, XXXXXXX, XXXXXXX, ______,  ______,  ______,
+        /* Row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  LY_MO2,  XXXXXXX, XXXXXXX, XXXXXXX, CC_MPRV, CC_MSTP, CC_MNXT, XXXXXXX, ______,  ______,  ______
+    ),
 
     /* ------------------------------------------------------------------
      * Layer 2 — System / config
      * ------------------------------------------------------------------ */
-    [2] = {
-        /* Row 0 */  { SYS_BOOT, SYS_RST, ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 1 */  { ______,   ______,  ______,  ______,  LD_BRIU, LD_BRID, ______,  ______,  ______ },
-        /* Row 2 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 3 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 4 */  { ______,   ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  ______,  ______ },
-        /* Row 5 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 6 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 7 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______ },
-        /* Row 8 */  { ______,   ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX },
-        /* Row 9 */  { KC_F10,   KC_F11,  KC_F12,  ______,  ______,  ______,  ______,  ______,  ______ },
-    },
+    [2] = KEYMAP(
+        /* Row 0 */ SYS_BOOT,SYS_RST, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,
+        /* Row 1 */ ______,  ______,  ______,  ______,  LD_BRIU, LD_BRID, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,
+        /* Row 2 */ ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,
+        /* Row 3 */ ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  XXXXXXX, XXXXXXX, ______,  ______,  ______,
+        /* Row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,  XXXXXXX, KC_F10,  KC_F11,  KC_F12
+    ),
 };
 
 /* ============================================================================

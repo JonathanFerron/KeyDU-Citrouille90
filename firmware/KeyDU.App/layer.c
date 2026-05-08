@@ -54,20 +54,14 @@ void layer_key_pressed(uint8_t row, uint8_t col, uint8_t target_layer) {
 // Called when a layer key is released
 void layer_key_released(uint8_t row, uint8_t col) {
     // Find and remove this key from the array
-    for (uint8_t i = 0; i < active_layer_key_count; i++) {
-        if (active_layer_keys[i].row == row && 
-            active_layer_keys[i].col == col) {
-            // Shift remaining keys down
-            for (uint8_t j = i; j < active_layer_key_count - 1; j++) {
-                active_layer_keys[j] = active_layer_keys[j + 1];
-            }
-            
-            // Clear the last slot
+    for (uint8_t i = 0; i < active_layer_key_count; i++) {        
+        if (active_layer_keys[i].row == row && active_layer_keys[i].col == col) 
+        {
             active_layer_key_count--;
-            active_layer_keys[active_layer_key_count].row = 0xFF;
-            active_layer_keys[active_layer_key_count].col = 0xFF;
+            active_layer_keys[i] = active_layer_keys[active_layer_key_count];
+            active_layer_keys[active_layer_key_count].row          = 0xFF;
+            active_layer_keys[active_layer_key_count].col          = 0xFF;
             active_layer_keys[active_layer_key_count].target_layer = 0;
-            
             layer_update();
             return;
         }

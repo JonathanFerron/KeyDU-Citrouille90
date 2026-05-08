@@ -24,9 +24,9 @@
  *
  * Bootloader entry (SYS_BOOT)
  * ---------------------------
- * Writes BOOTLOADER_MAGIC to GPR.GPR2 / GPR.GPR3 (complement), then
- * triggers a 15 ms watchdog reset.  The bootloader checks these registers
- * before C-runtime init.  False-positive probability on POR: ~1/65536.
+ * Writes BOOT_MAGIC to GPR.GPR2 / GPR.GPR3 (complement), then
+ * triggers a reset.  The bootloader checks these registers.  
+ * False-positive probability on POR: ~1/65536.
  */
 
 #include <avr/io.h>
@@ -44,13 +44,12 @@
 #include "usb_hid.h"
 #include "usb_ctrl.h"
 #include "ccp.h"
+#include "bootmagic.h"
 
 /* ============================================================================
  * Internal constants
  * ========================================================================= */
 
-#define BOOTLOADER_MAGIC        0x42u
-#define BOOTLOADER_MAGIC_COMPL  ((uint8_t)(~BOOTLOADER_MAGIC))
 
 /* ============================================================================
  * HID report state — private to this module
@@ -267,8 +266,8 @@ static void process_key_press(uint8_t row, uint8_t col)
               while (1);
               break;
             case SYS_BOOT:
-              GPR.GPR2 = BOOTLOADER_MAGIC;
-              GPR.GPR3 = BOOTLOADER_MAGIC_COMPL;
+              GPR.GPR2 = BOOT_MAGIC;
+              GPR.GPR3 = BOOT_MAGIC_COMPL;
               ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
               while (1);
               break;
