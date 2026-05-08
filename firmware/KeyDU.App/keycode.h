@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 
+// TODO: Add some explanation here of the range system and how to add a keycode
+
 // ============================================================================
 // Basic HID Keyboard codes (Page 0x07) - values 0x00 to 0xFF
 // Prefix: KC_ (KeyCode)
