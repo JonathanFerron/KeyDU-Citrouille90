@@ -323,8 +323,8 @@ static const int8_t enc_lut[16] = {
      0,  /* 10→10 no change  */
     +1,  /* 10→11 valid CW   */
      0,  /* 11→00 illegal    */
-    +1,  /* 11→01 valid CCW  */  /* note: these last two match
-    -1,  /* 11→10 valid CW   */     the full-cycle symmetry     */
+    +1,  /* 11→01 valid CW   */  
+    -1,  /* 11→10 valid CCW  */ 
      0,  /* 11→11 no change  */
 };
 ```
@@ -547,27 +547,16 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 - USB multipacket transfers: design bootloader OUT endpoint to use these: reduces CPU interrupts per 64KB upload and simplifies flashing tool timing
 - Keep in mind max packet size of 64B and page size of 512B
 - consider bulk transfer instead of control transfer
-- 
 
 ---
 
-## 12. USB Stack Implementation Plan
+## 12. USB Stack remarks
 
-### 12.4 What to Take from QMK
+USBCore:
 
-- Layer system and keycode architecture patterns (study `quantum/keymap_common.c`)
-- HID report building: modifier byte packing, 6KRO key slot management
-- `process_keycode/` subdirectory: consumer control dispatch, media key routing
-- USB suspend/resume handling approach
+USB HID:
 
-### 12.5 What to Take from TinyUSB
-
-- `hid_keyboard_report_t` struct definition (already in TinyUSB reference doc)
-- HID modifier bitmask defines
-- Vendor class descriptor structure pattern
-- Boot protocol handling approach
-
-TinyUSB itself is not used — too much abstraction overhead for a single-target bare-metal build.
+USB Vendor:
 
 ---
 
@@ -596,40 +585,13 @@ Split mode, driving both indicator LEDs independently. See `tca0_pin_info` for p
 | ------------------------- | -------------------- | ---------- | -------------- |
 | Hardware tact switch      | RESET pin assertion  | No         | No             |
 | `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        | Test on Nano   |
-| `SYS_RESET` key (Layer 2) | soft reset, no magic | No         | Test on Nano   |
+| `SYS_RESET` key (Layer 2) | wdt reset, no magic  | No         | Test on Nano   |
 | Power-on reset            | —                    | No         | No             |
 | Brown-out reset           | —                    | No         | No             |
 
 ### 14.2 GPR Magic Mechanism
 
-```c
-#define BOOT_MAGIC  0x42u   /* arbitrary distinctive value */
-
-void request_bootloader(void) {
-    /* Write magic to GPR0 before reset fires */
-    asm volatile ("ldi r2, %0\n" : : "M" (BOOT_MAGIC));
-    /* Optionally also write complement to GPR1 for ~1/65536 false positive rate */
-    // Call software reset
-}
-
-void software_reset(void) {
-    /* No magic — GPR left at whatever it was */
-    // Call software reset
-}
-```
-
-Bootloader startup (at the very beginning of main()):
-
-```c
-if (GPR.GPR0 == BOOT_MAGIC) { // may also check reset flag
-    GPR.GPR0 = 0;           /* clear immediately */
-    // may possibly store reset flag
-    // clear reset flag
-    stay_in_bootloader();
-} else {
-    jump_to_application();
-}
-```
+Refer to bl_main.c, app_main.c and bootmagic.h
 
 ### 14.3 GPR Retention Test — Pending
 
@@ -685,38 +647,7 @@ On AVR Dx/DU, flash is memory-mapped — `const` data can be read like normal da
 
 The main loop is gated on a TCB0 1 ms tick flag — not a busy-poll, not a `delay_ms()`.
 
-```c
-/* main.c skeleton */
-int main(void) {
-    system_init();      /* clock, etc. */
-    gpio_init();
-    matrix_init();
-    encoder_init();
-    led_init();
-    usb_init();
-    tcb0_init();        /* 1 ms tick, sets flag in ISR */
-    sei();
-    sleep_enable();   /* sets SE bit in SLPCTRL — required before sleep_cpu() works */
-    set_sleep_mode(SLEEP_MODE_IDLE); // from <avr/sleep.h>
-
-    while (1) {
-        if (tick_flag) {
-            tick_flag = 0;
-            matrix_scan();
-            encoder_scan();         /* may call encoder_step() → keymap_tick indirectly */
-            keymap_tick();          /* Alt timeout, other tick-based state */
-            process_matrix_events();/* key press/release → keycode dispatch */
-            /* build and queue HID reports */
-        }
-        /* nothing else to do — USB is fully interrupt-driven */
-        sleep_cpu();   /* IDLE mode: wakes on any interrupt (TCB0, USB, etc.) */
-    }
-}
-```
-
-`tick_flag` is `volatile uint8_t`, set in `TCB0_INT_vect`, cleared in main loop before `keyboard_task()`.
-
-Your three ISR responsibilities become:
+The three ISR responsibilities are:
 
 - `TCB0_INT_vect`: set `tick_flag`
 - `USB_SOF_vect`: flush queued report to endpoint buffer
@@ -730,7 +661,7 @@ Your three ISR responsibilities become:
 - Compiler: `avr-gcc`
 - Linker: `avr-gcc` with custom linker script
 - Flash tool (UPDI): `avrdude` with `serialupdi` programmer
-- Flash tool (USB): custom C or avrdude (with vendor programmer) + LibUSB (KeyDU host tool)
+- Flash tool (USB): custom C + LibUSB (KeyDU.Flasher host tool)
 
 ### 17.2 Fuse Configuration (key items)
 
@@ -765,12 +696,11 @@ Results determine whether the dual-register check is needed and whether the hard
 ### 18.3 After USB App Firmware is Stable
 
 1. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
-2. Complete `keyboard.c`** — full key processing loop, report building, layer dispatch, `add/remove_key_to_report()`.
-3. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
+2. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
 
 ### 18.4 Deferred (Post-v1)
 
 - USB multipacket for bootloader upload speed
-- SOF phase lock optimization
-- Boot mouse interface (eg on Interface 2, EP3 IN)
+- SOF phase lock optimization (SOF minus 200 us)
+- Boot mouse interface (eg on Interface 2, EP3 IN, if ever)
 - NKRO (not planned — 6KRO is sufficient)

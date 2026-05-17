@@ -75,7 +75,7 @@ int main(void)
      *   - GPR magic is intact (written by SYS_BOOT handler in keyboard.c)
      * Power-on reset (PORF) and RESET pin (EXTRF) always go straight to the app. */    
     bool soft = (rstfr & RSTCTRL_SWRF_bm ) != 0u;
-    bool magic_valid = (gpr0 == BOOT_MAGIC) && (gpr1 == BOOT_MAGIC_COMPL);
+    bool magic_valid = (gpr2 == BOOT_MAGIC) && (gpr3 == BOOT_MAGIC_COMPL);
 
     if (soft && magic_valid) {
       ccp_write_ioreg((void *)&CPUINT.CTRLA, CPUINT_IVSEL_bm);
