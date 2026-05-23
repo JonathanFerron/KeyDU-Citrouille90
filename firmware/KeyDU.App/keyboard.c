@@ -17,21 +17,19 @@
  * and macro.c — manipulate it exclusively through the kbd_*() API defined
  * in keyboard.h.  kbd_stage() pushes it through hid_kbd_stage() into the
  * seqlock double-buffer; hid_flush() in the SOF ISR sends it to the host.
- * This eliminates both bug #7 (direct keys[0] write in macro.c) and
- * bug #13 (encoder writing keyboard_report.mods directly).
  *
  * Consumer reports follow the same pattern via kbd_consumer_set/clear().
  *
  * Bootloader entry (SYS_BOOT)
  * ---------------------------
- * Writes BOOT_MAGIC to GPR.GPR2 / GPR.GPR3 (complement), then
+ * Writes BOOT_MAGIC to EEPROM), then
  * triggers a reset.  The bootloader checks these registers.  
- * False-positive probability on POR: ~1/65536.
  */
 
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <string.h>
+#include <avr/eeprom.h>
 
 #include "keyboard.h"
 #include "keycode.h"
@@ -219,7 +217,7 @@ void keyboard_task(void)
     encoder_scan();
 
     /* 4. Alt-Tab timeout tick. */
-    keymap_tick();
+    encoder_alt_timeout_tick();
 
     /* 5. LED layer feedback. */
     static uint8_t last_layer = 0xFF;
@@ -260,17 +258,16 @@ static void process_key_press(uint8_t row, uint8_t col)
     if (IS_SYSTEM_KEY(keycode)) {
         switch (keycode) {
             case SYS_RST:
-              GPR.GPR2 = 0x00u;
-              GPR.GPR3 = 0x00u;
-              wdt_enable(WDTO_8MS); 
-              while (1);
-              break;
+               if (eeprom_read_byte(BOOT_MAGIC_EEPROM_ADDR) != 0xFFu)
+                 eeprom_write_byte(BOOT_MAGIC_EEPROM_ADDR, 0xFFu);
+               wdt_enable(WDTO_8MS);
+               while (1);
+               break;
             case SYS_BOOT:
-              GPR.GPR2 = BOOT_MAGIC;
-              GPR.GPR3 = BOOT_MAGIC_COMPL;
-              ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
-              while (1);
-              break;
+               eeprom_write_byte(BOOT_MAGIC_EEPROM_ADDR, BOOT_MAGIC);
+               ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
+               while (1);
+               break;
             default:
               break;
         }

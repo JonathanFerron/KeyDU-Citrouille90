@@ -115,7 +115,7 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 
 | File              | Owns                                          |
 | ----------------- | --------------------------------------------- |
-| `main.c`          | Early GPR check, jump logic, BL state machine |
+| `main.c`          | Early EEPROM check, jump logic, BL state machine |
 | `usb_vendor.c/.h` | Vendor class USB, flash write protocol        |
 | `flash.c/.h`      | SPM flash write routines                      |
 | `linker.ld`       | Bootloader-specific linker script             |
@@ -581,28 +581,19 @@ Split mode, driving both indicator LEDs independently. See `tca0_pin_info` for p
 
 ### 14.1 Reset Methods
 
-| Method                    | Mechanism            | Enters BL? | GPR preserved? |
-| ------------------------- | -------------------- | ---------- | -------------- |
-| Hardware tact switch      | RESET pin assertion  | No         | No             |
-| `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        | Test on Nano   |
-| `SYS_RESET` key (Layer 2) | wdt reset, no magic  | No         | Test on Nano   |
-| Power-on reset            | —                    | No         | No             |
-| Brown-out reset           | —                    | No         | No             |
+| Method                    | Mechanism            | Enters BL? | 
+| ------------------------- | -------------------- | ---------- | 
+| Hardware tact switch      | RESET pin assertion  | No         | 
+| `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        |
+| `SYS_RESET` key (Layer 2) | wdt reset, no magic  | No         |
+| Power-on reset            | —                    | No         |
+| Brown-out reset           | —                    | No         |
 
-### 14.2 GPR Magic Mechanism
+### 14.2 EEPROM Magic Mechanism
 
 Refer to bl_main.c, app_main.c and bootmagic.h
 
-### 14.3 GPR Retention Test — Pending
-
-**Must test on Curiosity Nano AVR64DU32 before relying on this mechanism:**
-
-- Does GPR survive RESET pin assertion? (ClaudeAI says yes for WDT and soft reset; RESET pin behavior needs confirmation)
-- Does GPR survive direct software reset via `_PROTECTED_WRITE(RSTCTRL.SWRR, ...)`?
-
-If GPR does survive hardware RESET pin: the tact switch could cause false bootloader entry if GPR happens to contain `0x42` — low probability (~1/256) but not zero. The dual-register check (GPR0 == 0x42 AND GPR1 == ~0x42) reduces this to ~1/65536. Checking the reset flag eliminates this risk.
-
-### 14.4 Flash Memory Layout
+### 14.3 Flash Memory Layout
 
 ```
 0x0000  ┌─────────────────────┐
@@ -622,20 +613,20 @@ Application firmware start address: `0x2000`. Bootloader jumps to `0x2000` when 
 
 ## 15. Memory Strategy
 
-### 15.1 Two-Tier Runtime Strategy (v1)
+### 15.1 Runtime Strategy
 
-| Tier  | Where           | Contents                                                                                                               |
-| ----- | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Flash | `const PROGMEM` | Keymaps (all 3 layers), macro sequences, USB descriptors, default LED brightness                                       |
-| SRAM  | Global/static   | Active layer index, matrix state, debounce counters, macro execution state, runtime LED brightness, HID report buffers |
+| Tier   | Where           | Contents                                                                                                               |
+| -----  | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Flash  | `const PROGMEM` | Keymaps (all 3 layers), macro sequences, USB descriptors, default LED brightness                                       |
+| SRAM   | Global/static   | Active layer index, matrix state, debounce counters, macro execution state, runtime LED brightness, HID report buffers |
+| EEPROM |                 | Magic byte for bootloader flag located at EEPROM byte 0x00. The remaining 255 bytes (offsets 0x01 to 0xFF are free for future use)  |
 
 On AVR Dx/DU, flash is memory-mapped — `const` data can be read like normal data with no special flash access API needed on reads. Check alternative approach to access progmem documented in DxCore.
 
-### 15.2 Deferred Tiers (post-v1)
+### 15.2 Deferred Tiers
 
 | Tier     | Size  | Intended use                                                                     |
 | -------- | ----- | -------------------------------------------------------------------------------- |
-| EEPROM   | 256 B | User runtime preferences: LED brightness persistence, future profile index       |
 | User Row | 64 B  | Unit identity, permanent calibration, bootloader flags. Survives chip erase.     |
 | Boot Row | 512 B | Bootloader-private config, firmware validation anchor. App code cannot touch it. |
 
@@ -682,23 +673,12 @@ These must happen in order; everything downstream depends on USB working:
 3. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
 4. **Verify consumer report** — confirm media keys reach host on Interface 1.
 
-### 18.2 Parallel — GPR Test
-
-Before writing any bootloader code, run the GPR retention test on the Curiosity Nano:
-
-- Write known value to `GPR.GPR0`
-- Assert RESET pin (tact switch)
-- On startup, read `GPR.GPR0` — retained or cleared?
-- Repeat for software reset via `_PROTECTED_WRITE(RSTCTRL.SWRR, ...)`
-
-Results determine whether the dual-register check is needed and whether the hardware tact switch requires the complement guard.
-
-### 18.3 After USB App Firmware is Stable
+### 18.2 After USB App Firmware is Stable
 
 1. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
 2. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
 
-### 18.4 Deferred (Post-v1)
+### 18.3 Deferred (Post-v1)
 
 - USB multipacket for bootloader upload speed
 - SOF phase lock optimization (SOF minus 200 us)

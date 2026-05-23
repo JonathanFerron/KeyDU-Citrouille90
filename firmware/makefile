@@ -140,7 +140,7 @@ BL_OBJ   = $(BL_C_OBJ) $(BL_S_OBJ)
 # Top-level targets
 # =============================================================================
 
-.PHONY: all app bl clean size flash_app flash_bl
+.PHONY: all app bl clean size flash_updi flash_app flash_bl flash_usb flasher
 
 all: app bl
 
@@ -155,6 +155,8 @@ bl: $(BL_HEX)
 	$(SIZE) --format=avr --mcu=$(MCU) $(BL_ELF)
 
 size: app bl
+
+flasher: $(FLASHER_BIN)
 
 # =============================================================================
 # Link
@@ -215,16 +217,59 @@ $(BL_OUT)/%.o: %.S
 	$(AS) $(BL_ASFLAGS) -c $< -o $@
 
 # =============================================================================
-# Flash
+# Merged hex (BL + App combined for full UPDI flash)
 # =============================================================================
 
-flash_app: $(APP_HEX)
-	@echo "Flashing KeyDU.App..."
+MERGED_HEX = $(BUILD)/KeyDU.merged.hex
+
+$(MERGED_HEX): $(BL_HEX) $(APP_HEX)
+	@mkdir -p $(BUILD)
+	@echo "[MERGE] $@"
+	srec_cat $(BL_HEX) -Intel $(APP_HEX) -Intel -o $@ -Intel
+
+# =============================================================================
+# Flasher tool (keydu_flasher — USB vendor protocol)
+# =============================================================================
+
+FLASHER_DIR = tools
+FLASHER_SRC = $(FLASHER_DIR)/keydu_flasher.c
+FLASHER_BIN = $(BUILD)/keydu_flasher
+
+$(FLASHER_BIN): $(FLASHER_SRC)
+	@mkdir -p $(BUILD)
+	@echo "[CC]  $@"
+	gcc -o $@ $< $(shell pkg-config --cflags --libs libusb-1.0)
+
+# =============================================================================
+# Flash targets
+# =============================================================================
+
+# Full UPDI flash — merged BL + App in one shot.
+# Use this for initial bring-up and any time the bootloader changes.
+flash_updi: $(MERGED_HEX)
+	@echo "Flashing merged image (BL + App) via UPDI..."
 	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -U flash:w:$<:i
 
+# UPDI app-only — for development when BL is already on the chip.
+# Uses -D to suppress the auto-erase so the bootloader partition
+# is not disturbed. Only safe if the app region was previously erased
+# (i.e. a full flash_updi was done at least once before).
+flash_app: $(APP_HEX)
+	@echo "Flashing KeyDU.App only via UPDI (no erase)..."
+	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -D -U flash:w:$<:i
+
+# UPDI BL-only — reflash bootloader without touching app.
+# Same -D caveat as flash_app above.
 flash_bl: $(BL_HEX)
-	@echo "Flashing KeyDU.BL..."
-	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -U flash:w:$<:i
+	@echo "Flashing KeyDU.BL only via UPDI (no erase)..."
+	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -D -U flash:w:$<:i
+
+# USB flash — send app image to running bootloader via vendor protocol.
+# Device must already be in bootloader mode (SYS_BOOT key or UPDI reset).
+flash_usb: $(APP_HEX) $(FLASHER_BIN)
+	@echo "Flashing KeyDU.App via USB vendor protocol..."
+	$(OBJCOPY) -I ihex -O binary $(APP_HEX) $(APP_OUT)/KeyDU.App.bin
+	$(FLASHER_BIN) $(APP_OUT)/KeyDU.App.bin
 
 # =============================================================================
 # Clean

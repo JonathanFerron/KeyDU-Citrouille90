@@ -46,7 +46,8 @@
 // USB control transfer parameters
 #define USB_TIMEOUT         5000  // 5 second timeout
 #define CHUNK_SIZE          64    // Full Speed max control data
-#define FLASH_BASE_ADDR     0x0000
+#define FLASH_BASE_ADDR     0x2000   /* APP_START — bootloader partition is
+                                        0x0000–0x1FFF, never touch it */
 #define PAGE_SIZE           512   // AVR-DU flash page size (check datasheet)
 
 // bmRequestType values
@@ -158,19 +159,29 @@ int main(int argc, char **argv) {
     printf("\nErase complete! (Much faster with multi-page erase)\n\n");
     
     // Write firmware in chunks
-    printf("Writing firmware...\n");
+    /* Pad firmware image to a multiple of PAGE_SIZE with 0xFF so the
+     * final page flush always receives a complete 512-byte page, and
+     * every VCMD_WRITE transfer always carries exactly CHUNK_SIZE bytes. */
+    size_t padded_size = (firmware_size + PAGE_SIZE - 1) & ~(size_t)(PAGE_SIZE - 1);
+    uint8_t *padded = realloc(firmware, padded_size);
+    if (!padded) {
+        fprintf(stderr, "Failed to pad firmware buffer\n");
+        free(firmware);
+        libusb_close(handle);
+        libusb_exit(NULL);
+        return 1;
+    }
+    firmware = padded;
+    memset(firmware + firmware_size, 0xFF, padded_size - firmware_size);
+
+    printf("Writing firmware (%zu bytes, padded to %zu)...\n",
+           firmware_size, padded_size);
+
     size_t bytes_written = 0;
-    
-    while (bytes_written < firmware_size) {
-        size_t chunk_len = firmware_size - bytes_written;
-        if (chunk_len > CHUNK_SIZE) {
-            chunk_len = CHUNK_SIZE;
-        }
-        
-        uint32_t addr = FLASH_BASE_ADDR + bytes_written;
-        
-        ret = write_chunk(handle, addr, 
-                         firmware + bytes_written, chunk_len);
+    while (bytes_written < padded_size) {
+        uint32_t addr = FLASH_BASE_ADDR + (uint32_t)bytes_written;
+
+        ret = write_chunk(handle, addr, firmware + bytes_written, CHUNK_SIZE);
         if (ret != 0) {
             fprintf(stderr, "\nWrite failed at address 0x%08X\n", addr);
             free(firmware);
@@ -178,13 +189,12 @@ int main(int argc, char **argv) {
             libusb_exit(NULL);
             return 1;
         }
-        
-        bytes_written += chunk_len;
-        
-        // Progress bar
-        int progress = (bytes_written * 100) / firmware_size;
-        printf("  Progress: %3d%% (%zu/%zu bytes)\r", 
-               progress, bytes_written, firmware_size);
+
+        bytes_written += CHUNK_SIZE;
+
+        int progress = (int)((bytes_written * 100) / padded_size);
+        printf("  Progress: %3d%% (%zu/%zu bytes)\r",
+               progress, bytes_written, padded_size);
         fflush(stdout);
     }
     printf("\nWrite complete!\n\n");

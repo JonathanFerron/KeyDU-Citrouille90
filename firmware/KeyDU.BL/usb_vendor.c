@@ -22,6 +22,11 @@
  *                       after jumping to the application
  */
 
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <string.h>
+#include <avr/eeprom.h>
+
 #include "usb_vendor.h"
 #include "usb_vendor_desc.h"
 #include "flash.h"
@@ -29,9 +34,8 @@
 #include "usb_ep.h"
 #include "usb_ep_stream.h"
 #include "clock.h"
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <string.h>
+#include "bootmagic.h"
+
 
 /* ============================================================================
  * Module state
@@ -261,9 +265,9 @@ void usb_vendor_task(void)
             usb_disable();
             clock_autotune_disable();   /* leave clock in a clean known state for app */
 
-            /* Clear GPR magic so a plain power-on reset stays in the app */
-            GPR.GPR2 = 0x00u;
-            GPR.GPR3 = 0x00u;
+            /* Clear EEPROM magic so a plain power-on reset stays in the app */
+             if (eeprom_read_byte(BOOT_MAGIC_EEPROM_ADDR) != 0xFFu)
+              eeprom_write_byte(BOOT_MAGIC_EEPROM_ADDR, 0xFFu);
             
             ccp_write_ioreg((void *)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
             while (1) {} /* Should not be reached */

@@ -18,6 +18,6 @@ uint16_t keymap_key_to_keycode(uint8_t layer, uint8_t row, uint8_t col);
 
 /* Call once per 1 kHz tick from keyboard_task(), after encoder_scan().
  * Manages the Alt-release timeout for the encoder Alt-Tab gesture. */
-void keymap_tick(void);
+void encoder_alt_timeout_tick(void);
 
 #endif /* KEYMAP_H */
