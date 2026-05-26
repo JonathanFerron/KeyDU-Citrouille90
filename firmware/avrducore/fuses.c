@@ -7,8 +7,14 @@
  * row separately from flash.
  *
  * BOOTSIZE / CODESIZE: 0x10 means 8KB boot partition —
+ * 8KB = 16 pages of 512B = 0x10
  * 56 KB of flash is available to the application.
  *
+ * If you change BOOTSIZE / CODESIZE, also update:
+ *   usb_vendor.h  : APP_START
+ *   KeyDU.BL.ld   : flash LENGTH
+ *   KeyDU.App.ld  : flash ORIGIN
+ * 
  * USBSINK_ENABLE: required — enables the internal DM pull-down that
  * the AVR64DU32 USB PHY needs to operate as a full-speed device.
  *

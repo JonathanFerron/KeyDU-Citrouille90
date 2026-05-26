@@ -75,20 +75,21 @@ APP_LD   = $(APP_DIR)/KeyDU.App.ld
 APP_INC  = -I$(APP_DIR) -Iusbcore -I$(APP_DIR)/usbhid -Iavrducore
 
 APP_C_SRC = \
-    $(APP_DIR)/app_main.c           \
+    $(APP_DIR)/app_main.c       \
     $(APP_DIR)/keyboard.c       \
     $(APP_DIR)/matrix.c         \
     $(APP_DIR)/keymap.c         \
     $(APP_DIR)/layer.c          \
     $(APP_DIR)/macro.c          \
+    $(APP_DIR)/compose.c        \
     $(APP_DIR)/led.c            \
     $(APP_DIR)/encoder.c        \
-    $(APP_DIR)/usb_hid.c \
-    $(APP_DIR)/usb_desc.c \
+    $(APP_DIR)/usb_hid.c        \
+    $(APP_DIR)/usb_desc.c       \
     usbcore/usb_ctrl.c          \
     usbcore/usb_ep.c            \
     usbcore/usb_ep_stream.c     \
-    avrducore/fuses.c          \
+    avrducore/fuses.c           \
     avrducore/clock.c
 
 APP_S_SRC = \

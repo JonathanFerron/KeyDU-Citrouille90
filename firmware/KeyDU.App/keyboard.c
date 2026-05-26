@@ -9,6 +9,7 @@
  *   - cc_to_hid_usage()                  CC_* keycode → HID Consumer usage
  *   - process_key_press/release()        key event dispatch
  *   - pressed_keys[]                     press-time keycode locking
+ *   - send_mod_key() / tap_key()         shared key-send helpers
  *
  * Report model
  * ------------
@@ -158,6 +159,44 @@ void kbd_stage(void)
 }
 
 /* ============================================================================
+ * Shared key-send helpers — used by macro.c and compose.c
+ *
+ * Phase 1: two consecutive kbd_stage() calls within one tick may both be
+ * consumed by the same SOF flush, causing the host to see only the last
+ * staged report.  This is a known limitation documented in the phase 2
+ * plan (report queue).
+ *
+ * Phase 2: kbd_stage() becomes a non-blocking enqueue into the kbd report
+ * queue.  hid_flush() drains one entry per SOF, so each press and release
+ * report reaches the host independently.  No changes to these functions
+ * are needed for that migration.
+ * ========================================================================= */
+
+/* send_mod_key — press mod+key, stage, release, stage.
+ * mod_bits == 0 is valid — degenerates to a plain key tap with no modifier,
+ * which is used by compose_accented() for the base letter after the dead key. */
+void send_mod_key(uint8_t mod_bits, uint8_t keycode)
+{
+    if (mod_bits) kbd_set_mod(mod_bits);
+    kbd_add_key(keycode);
+    kbd_stage();
+    if (mod_bits) kbd_clear_mod(mod_bits);
+    kbd_remove_key(keycode);
+    kbd_stage();
+}
+
+/* tap_key — press key, stage, release, stage.
+ * Named separately from send_mod_key(0, kc) for clarity at call sites
+ * in run_macro_sequence(). */
+void tap_key(uint8_t kc)
+{
+    kbd_add_key(kc);
+    kbd_stage();
+    kbd_remove_key(kc);
+    kbd_stage();
+}
+
+/* ============================================================================
  * Public report API — consumer
  * ========================================================================= */
 
@@ -277,6 +316,12 @@ static void process_key_press(uint8_t row, uint8_t col)
     /* Macros — execute atomically on press, no release handling. */
     if (IS_MACRO_KEY(keycode)) {
         execute_macro(keycode);
+        return;
+    }
+    
+    // Compose keys (accented characters)
+    if (IS_COMPOSE_KEY_KEY(keycode)) {
+        execute_compose(keycode);
         return;
     }
 

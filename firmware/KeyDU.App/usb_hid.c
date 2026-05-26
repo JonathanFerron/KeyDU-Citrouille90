@@ -21,18 +21,23 @@ static uint8_t s_idle_rate[HID_IFACE_COUNT];
 /* LED output report: last value received from host via SET_REPORT or EP OUT */
 static volatile hid_led_report_t s_led_report;
 
-/* ── Seqlock double-buffers ─────────────────────────────────────────────
- * seq even = stable snapshot; seq odd = write in progress.
- * hid_kbd_stage / hid_consumer_stage run in main context.
- * hid_flush runs in SOF ISR (or tight main loop just before usb_task).
- * On AVR there is no out-of-order execution, but the compiler can reorder
- * across volatile — USB_MEMORY_BARRIER() (defined in usb_types.h as a GCC
- * memory-clobber asm) prevents that without a real memory barrier instruction.
+/* ── Keyboard report queue (Phase 2) ────────────────────────────────────
+ *
+ * Replaces the seqlock double-buffer for keyboard reports.
+ * SPSC lockless ring buffer — head touched only by hid_flush() (SOF ISR),
+ * tail touched only by kbd_stage() (main context).
+ * uint8_t indices are written atomically on AVR — no lock needed.
+ *
+ * Consumer report retains its seqlock — it is staged infrequently and
+ * its 4-byte report does not need the multi-entry queue.
  * ──────────────────────────────────────────────────────────────────────── */
-static volatile uint8_t       s_kbd_seq;
+kbd_queue_entry_t  kbd_queue[KBD_QUEUE_DEPTH];
+volatile uint8_t   kbd_queue_head = 0;
+volatile uint8_t   kbd_queue_tail = 0;
+
+/* Consumer report retains seqlock from phase 1 */
 static volatile uint8_t       s_con_seq;
-static hid_kbd_report_t      s_kbd_buf;
-static hid_consumer_report_t s_con_buf;
+static hid_consumer_report_t  s_con_buf;
 
 /* ════════════════════════════════════════════════════════════════════════
  *  hid_configure — call from usb_event_config_changed()
@@ -42,28 +47,72 @@ void hid_configure(void)
     ep_configure(HID_EP_KBD_IN,      EP_TYPE_INTERRUPT, HID_EP_SIZE_KBD,      1);
     ep_configure(HID_EP_KBD_OUT,     EP_TYPE_INTERRUPT, HID_EP_SIZE_KBD,      1);
     ep_configure(HID_EP_CONSUMER_IN, EP_TYPE_INTERRUPT, HID_EP_SIZE_CONSUMER, 1);
-
-    /* Clear report buffers and seqlocks on (re)configuration               */
-    memset(&s_kbd_buf, 0, sizeof(s_kbd_buf));
+    
+    /* Reset queue — safe here since hid_flush() cannot preempt during init */
+    kbd_queue_head = 0;
+    kbd_queue_tail = 0;
+    memset(kbd_queue, 0, sizeof(kbd_queue));    
+    
     memset(&s_con_buf, 0, sizeof(s_con_buf));
-    s_con_buf.report_id = 0x01;
-    s_kbd_seq = 0;
+    s_con_buf.report_id = 0x01;    
     s_con_seq = 0;
     s_led_report = 0;
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- *  Stage helpers (main-loop / scan context)
+ *  kbd_stage — enqueue one keyboard report (main-loop context)
+ *
+ *  Replaces the seqlock write from phase 1.
+ *  Full queue: silently drop — see usb_hid.h for sizing guidance.
+ *  Entry is written before tail is advanced so hid_flush() never sees
+ *  a partially-written slot. 
  * ════════════════════════════════════════════════════════════════════════ */
-void hid_kbd_stage(const hid_kbd_report_t *r)
+/* Internal enqueue — shared by kbd_stage() (keyboard.c) and kbd_stage_wait() */
+static void kbd_enqueue(const kbd_queue_entry_t *entry)
 {
-    s_kbd_seq++;                        /* odd  — write in progress          */
+    uint8_t next_tail = (kbd_queue_tail + 1u) & KBD_QUEUE_MASK;
+    if (next_tail == kbd_queue_head) return;   /* full — drop */
+    kbd_queue[kbd_queue_tail] = *entry;        /* write data first */
     USB_MEMORY_BARRIER();
-    memcpy(&s_kbd_buf, r, sizeof(s_kbd_buf));
-    USB_MEMORY_BARRIER();
-    s_kbd_seq++;                        /* even — stable                     */
+    kbd_queue_tail = next_tail;                /* then advance tail */
 }
 
+/* hid_kbd_stage — called from keyboard.c / kbd_stage() */
+void hid_kbd_stage(const hid_kbd_report_t *r)
+{
+    kbd_queue_entry_t entry;
+    entry.type   = KBD_QUEUE_REPORT;
+    memcpy(&entry.report, r, sizeof(entry.report));
+    kbd_enqueue(&entry);
+}
+
+/* kbd_stage_wait — enqueue a wait sentinel (N SOF ticks of silence).
+ * Called from run_macro_sequence() in phase 2, replacing _delay_ms(). */
+void kbd_stage_wait(uint8_t n_sofs)
+{
+    kbd_queue_entry_t entry;
+    entry.type      = KBD_QUEUE_WAIT;
+    entry.wait_sofs = n_sofs;
+    kbd_enqueue(&entry);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * Phase 2 — macro.c MACRO_ACTION_WAIT update
+ *
+ * In macro.c, replace the MACRO_ACTION_WAIT case:
+ *
+ *   // Phase 1 (remove):
+ *   for (volatile uint8_t w = action.keycode; w; w--)
+ *       for (volatile uint16_t d = 0; d < 2400u; d++) {}
+ *
+ *   // Phase 2 (replace with):
+ *   kbd_stage_wait(action.keycode);
+ *
+ * Also add #include "usb_hid.h" to macro.c (or expose kbd_stage_wait
+ * via keyboard.h — either is acceptable).  
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* Consumer report retains seqlock — unchanged from phase 1 */
 void hid_consumer_stage(const hid_consumer_report_t *r)
 {
     s_con_seq++;
@@ -74,7 +123,14 @@ void hid_consumer_stage(const hid_consumer_report_t *r)
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- *  hid_flush — call once per USB frame (SOF ISR or just before usb_task)
+ *  hid_flush — call once per SOF from usb_event_sof()
+ *
+ *  Keyboard: dequeues one entry from kbd_queue.
+ *    KBD_QUEUE_REPORT: sends report to EP1 IN this SOF.
+ *    KBD_QUEUE_WAIT:   decrements wait_sofs; discards when zero,
+ *                      sending nothing to host this SOF.
+ *  Consumer: unchanged seqlock path from phase 1.
+ *  LED OUT: unchanged from phase 1.
  *
  *  For each IN endpoint:
  *    1. Read seqlock; skip if odd (write in progress)
@@ -87,18 +143,27 @@ void hid_consumer_stage(const hid_consumer_report_t *r)
 
 static void flush_kbd(void)
 {
-    uint8_t s0 = s_kbd_seq;
-    if (s0 & 1u) return;
-    USB_MEMORY_BARRIER();
-    hid_kbd_report_t snap;
-    memcpy(&snap, &s_kbd_buf, sizeof(snap));
-    USB_MEMORY_BARRIER();
-    if (s_kbd_seq != s0) return;        /* torn read — skip this frame       */
+  /* Empty queue — nothing to send */
+  if (kbd_queue_head == kbd_queue_tail) return;
 
-    ep_select(HID_EP_KBD_IN);
-    if (!ep_in_ready()) return;
-    ep_write_stream(&snap, sizeof(snap), NULL);
-    ep_clear_in();
+  kbd_queue_entry_t *entry = &kbd_queue[kbd_queue_head];
+  
+  if (entry->type == KBD_QUEUE_WAIT) {
+      /* Countdown sentinel — decrement and discard when expired */
+      if (--entry->wait_sofs == 0) {
+          USB_MEMORY_BARRIER();
+          kbd_queue_head = (kbd_queue_head + 1u) & KBD_QUEUE_MASK;
+      }
+      return;   /* send nothing to host this SOF */
+  }
+  
+  /* KBD_QUEUE_REPORT — send and pop */
+  ep_select(HID_EP_KBD_IN);
+  if (!ep_in_ready()) return;   /* endpoint busy — retry next SOF */
+  ep_write_stream(&entry->report, sizeof(entry->report), NULL);
+  ep_clear_in();
+  USB_MEMORY_BARRIER();
+  kbd_queue_head = (kbd_queue_head + 1u) & KBD_QUEUE_MASK;  
 }
 
 static void flush_consumer(void)

@@ -16,11 +16,13 @@
  *              are defined locally and #undef'd at the end of the file.
  */
 
+#include <avr/pgmspace.h>
+
 #include "macro.h"
 #include "keyboard.h"
+#include "compose.h"
 #include "keycode.h"
-#include <avr/pgmspace.h>
-#include <util/delay.h>
+
 
 /* ============================================================================
  * Private convenience aliases — undefined at the end of this file
@@ -54,32 +56,19 @@ static void release_key(uint8_t kc)
     }
 }
 
-/* Tap (press + stage + release + stage) a single key. */
-static void tap_key(uint8_t kc)
-{
-    press_key(kc);
-    kbd_stage();
-    release_key(kc);
-    kbd_stage();
-}
-
-/* Send a modifier + key combo and return the report to its prior state.
- * This is safe because macros execute atomically on press — no other key
- * event interleaves with a macro sequence within the same 1 ms tick. */
-static void send_mod_key(uint8_t mod_bits, uint8_t keycode)
-{
-    kbd_set_mod(mod_bits);
-    kbd_add_key(keycode);
-    kbd_stage();
-    kbd_clear_mod(mod_bits);
-    kbd_remove_key(keycode);
-    kbd_stage();
-}
-
 /* Execute a PROGMEM macro_action_t sequence.
  * Terminates on MACRO_ACTION_END or after MAX_MACRO_STEPS steps.
  * Sends a clean report at the end to release any keys left pressed by
- * a malformed or truncated sequence. */
+ * a malformed or truncated sequence. 
+ * 
+ * Phase 2 note — MACRO_ACTION_WAIT:
+ *   Currently uses _delay_ms() which busy-waits and may interfere with
+ *   USB SOF timing.  In phase 2, replace with a sentinel queue entry
+ *   (KBD_QUEUE_WAIT) that hid_flush() counts down — see usb_hid.h.
+ *   The macro_action_t struct and MACRO_WAIT() macro are unchanged;
+ *   only run_macro_sequence() needs updating.
+ */
+ 
 #define MAX_MACRO_STEPS  32u
 
 static void run_macro_sequence(const macro_action_t *sequence)
@@ -101,12 +90,18 @@ static void run_macro_sequence(const macro_action_t *sequence)
                 break;
 
             case MACRO_ACTION_TAP:
-                tap_key(action.keycode);
+                tap_key(action.keycode);   /* tap_key() now in keyboard.c */
                 break;
 
             case MACRO_ACTION_WAIT:
-                /* keycode field carries the delay in ms (1–255 ms). */
-                _delay_ms(action.keycode);
+                /* Phase 1: busy-wait — acceptable for infrequent macro use.
+                 * Phase 2: replace with kbd_stage_wait(action.keycode) which
+                 * enqueues a KBD_QUEUE_WAIT sentinel — see usb_hid.h. */
+                for (volatile uint8_t w = action.keycode; w; w--) {
+                    /* spin ~1 ms per count at 24 MHz — rough but sufficient
+                     * for phase 1.  No _delay_ms() dependency needed. */
+                    for (volatile uint16_t d = 0; d < 2400u; d++) {}
+                }               
                 break;
 
             case MACRO_ACTION_END:

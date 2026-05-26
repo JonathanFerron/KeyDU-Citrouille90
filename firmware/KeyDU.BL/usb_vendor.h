@@ -62,6 +62,21 @@
 
 /* ── Flash geometry ─────────────────────────────────────────────────────── */
 #define APP_START       0x2000u              /* 8KB bootloader partition      */
+/* PARTITION BOUNDARY — bootloader occupies 0x0000–0x1FFF (8KB)
+ *   8KB = 8192 bytes = 0x2000 bytes  (0x2000 = 2 × 16³ = 2 × 4096)
+ *   → application starts at byte address 0x2000
+ *   8KB = 16 pages of 512B → BOOTSIZE = 0x10
+ *
+ * To change the bootloader size, use a calculator or:
+ *   python3 -c "n=10240; print(f'APP_START=0x{n:04X}  BOOTSIZE=0x{n//512:02X}')"
+ *
+ * If you change this, also update:
+ *   usb_vendor.h  : APP_START       (byte address = bootloader size in bytes)
+ *   KeyDU.BL.ld   : flash LENGTH    (bootloader size in bytes)
+ *   KeyDU.App.ld  : flash ORIGIN    (= APP_START = bootloader size in bytes)
+ *   fuses.c       : BOOTSIZE        (page count = bootloader size / 512) */
+ 
+
 #define PAGE_SIZE       512u                 /* AVR64DU32 flash page size      */
 #define CHUNK_SIZE      64u                  /* EP0 transfer chunk             */
 #define CHUNKS_PER_PAGE (PAGE_SIZE / CHUNK_SIZE)   /* 8                       */

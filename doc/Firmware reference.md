@@ -113,12 +113,12 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 
 ### 4.2 Bootloader (`firmware/KeyDU.BL/`)
 
-| File              | Owns                                          |
-| ----------------- | --------------------------------------------- |
+| File              | Owns                                             |
+| ----------------- | ------------------------------------------------ |
 | `main.c`          | Early EEPROM check, jump logic, BL state machine |
-| `usb_vendor.c/.h` | Vendor class USB, flash write protocol        |
-| `flash.c/.h`      | SPM flash write routines                      |
-| `linker.ld`       | Bootloader-specific linker script             |
+| `usb_vendor.c/.h` | Vendor class USB, flash write protocol           |
+| `flash.c/.h`      | SPM flash write routines                         |
+| `linker.ld`       | Bootloader-specific linker script                |
 
 ### 4.3 Not Compiled (`KeyDU-Examples` separate git repo)
 
@@ -372,13 +372,9 @@ Layer 2 contains: `SYS_BOOT` (enter bootloader), `SYS_RESET` (plain restart), `L
 Keymap invariant — layer 1 and 2:
 All modifier key positions on layers 1 and 2 must be KC_TRNS. This enables both LY_01 → mod → key and mod → LY_01 → key orderings for modifier+function combos (e.g. Alt+F8). Leaving a modifier as KC_NO on an upper layer silently breaks that mod for all layer-1/2 combos. Enforce this as a design rule, not just convention.
 
-
-
 **Keymap rule to document in `keymap.c`**
 
 All modifier positions on layers 1 and 2 must be `KC_TRNS`. Add a comment block above the layer 1 definition stating this explicitly as a design invariant, not just a convention.
-
-
 
 ---
 
@@ -581,13 +577,13 @@ Split mode, driving both indicator LEDs independently. See `tca0_pin_info` for p
 
 ### 14.1 Reset Methods
 
-| Method                    | Mechanism            | Enters BL? | 
-| ------------------------- | -------------------- | ---------- | 
-| Hardware tact switch      | RESET pin assertion  | No         | 
-| `SYS_BOOT` key (Layer 2)  | soft reset + magic   | Yes        |
-| `SYS_RESET` key (Layer 2) | wdt reset, no magic  | No         |
-| Power-on reset            | —                    | No         |
-| Brown-out reset           | —                    | No         |
+| Method                    | Mechanism           | Enters BL? |
+| ------------------------- | ------------------- | ---------- |
+| Hardware tact switch      | RESET pin assertion | No         |
+| `SYS_BOOT` key (Layer 2)  | soft reset + magic  | Yes        |
+| `SYS_RESET` key (Layer 2) | wdt reset, no magic | No         |
+| Power-on reset            | —                   | No         |
+| Brown-out reset           | —                   | No         |
 
 ### 14.2 EEPROM Magic Mechanism
 
@@ -615,11 +611,11 @@ Application firmware start address: `0x2000`. Bootloader jumps to `0x2000` when 
 
 ### 15.1 Runtime Strategy
 
-| Tier   | Where           | Contents                                                                                                               |
-| -----  | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Flash  | `const PROGMEM` | Keymaps (all 3 layers), macro sequences, USB descriptors, default LED brightness                                       |
-| SRAM   | Global/static   | Active layer index, matrix state, debounce counters, macro execution state, runtime LED brightness, HID report buffers |
-| EEPROM |                 | Magic byte for bootloader flag located at EEPROM byte 0x00. The remaining 255 bytes (offsets 0x01 to 0xFF are free for future use)  |
+| Tier   | Where           | Contents                                                                                                                           |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Flash  | `const PROGMEM` | Keymaps (all 3 layers), macro sequences, USB descriptors, default LED brightness                                                   |
+| SRAM   | Global/static   | Active layer index, matrix state, debounce counters, macro execution state, runtime LED brightness, HID report buffers             |
+| EEPROM |                 | Magic byte for bootloader flag located at EEPROM byte 0x00. The remaining 255 bytes (offsets 0x01 to 0xFF are free for future use) |
 
 On AVR Dx/DU, flash is memory-mapped — `const` data can be read like normal data with no special flash access API needed on reads. Check alternative approach to access progmem documented in DxCore.
 
@@ -684,3 +680,70 @@ These must happen in order; everything downstream depends on USB working:
 - SOF phase lock optimization (SOF minus 200 us)
 - Boot mouse interface (eg on Interface 2, EP3 IN, if ever)
 - NKRO (not planned — 6KRO is sufficient)
+
+
+
+## 19 Adapting to future changes
+
+If adopting a different matrix layount (same MCU), adapt:
+
+- `matrix.c` — `COL_F_MASK`, `COL_D_MASK`, `ROW_D_MASK`, `ROW_A_MASK`, `col_pins[]`, `row_a_lut[]`, `scan_col_raw()`
+- `matrix.h` — `MATRIX_COLS`, `MATRIX_ROWS`, `DEBOUNCE_TICKS` (if desired)
+- `keymap.c` — `KEYMAP()` macro body (physical→electrical remap), keymap arrays
+- `keyboard.c` — no changes likely, but verify `PRESSED_KEY_MAX` is still sufficient
+
+
+
+If moving to an AVR-DU with more than 32 pins, adapt:
+
+- `matrix.c` — port/pin assignments, masks, `row_a_lut[]`, `scan_col_raw()` (new ports available)
+- `encoder.c` — `ENC_A_PORT/VPORT/PIN`, `ENC_B_PORT/VPORT/PIN`
+- `led.c` / `led.h` — `LED_PORT`, `LED_A_PIN`, `LED_B_PIN`, PORTMUX routing if TCA0 moves
+- `gpio.h` — `GPIO_VPORT_READ` note: verify VPORT availability on new pincount variant
+- `fuses.c` — verify fuse constants still match new device header
+
+
+
+If moving to an AVR-DU with more flase or more SRAM, adapt:
+
+- `KeyDU.App.ld` — `ORIGIN`/`LENGTH` for `flash` and `sram`
+- `KeyDU.BL.ld` — same
+- `fuses.c` — `BOOTSIZE`, `CODESIZE` (flash partition sizes)
+- `flash.h` / `flash.c` — `APP_START`, `FLMAP_SECTION1_ADDR`, `flmap_set()` (FLMAP logic changes if flash exceeds 64KB or sections shift; more sections may be needed)
+- `usb_vendor.h` — `APP_START`, `PAGE_SIZE` if the new device differs
+- `bl_main.c` — `APP_START` in the jump address calculation
+- `usb_vendor.c` — `addr_valid()` upper bound if `FLASH_END` changes
+- `makefile` — `MCU`, `F_CPU` if changed, and potentially `flash_*` targets if avrdude flags differ
+
+
+
+If you want KeyDU.BL (bootloader) to be larger than 8KB (say 10KB). It's a partition boundary shift:
+
+**Flash partition and linker**
+
+- `KeyDU.BL.ld` — `LENGTH` of flash region (8K → 10K)
+- `KeyDU.App.ld` — `ORIGIN` of flash region (0x2000 → 0x2800), `LENGTH` reduced by 2K
+- `fuses.c` — `BOOTSIZE` value (0x10 → 0x14, i.e. 20 × 512B pages)
+
+---
+
+**Shared partition boundary constant**
+
+- `usb_vendor.h` — `APP_START` (0x2000 → 0x2800)
+- `avrducore/bootmagic.h` — no change needed, but worth auditing since both sides include it
+
+---
+
+**Bootloader jump target**
+
+- `bl_main.c` — `APP_START` in `jump_to_application()` (picks it up from `usb_vendor.h` indirectly via the include chain, so if `APP_START` is updated there this may be free — verify the include path)
+
+---
+
+**Address validation**
+
+- `flash.h` / `flash.c` — `APP_START` guard in `flash_erase_pages()` and `flash_write_page()` (both use `APP_START` from `usb_vendor.h`, so again may be free if that one constant is updated cleanly)
+
+---
+
+The key insight: `APP_START` in `usb_vendor.h` is the single source of truth for the partition boundary at runtime. The linker scripts and the `BOOTSIZE` fuse are the compile/program-time counterparts. All three must be kept in sync manually — there's no mechanism that enforces agreement between them.

@@ -196,6 +196,51 @@
 #define SYS_RST         (SYS_BASE | 0x01)  // Soft reset
 #define SYS_BOOT        (SYS_BASE | 0x02)  // Enter bootloader
 
+// Compose Keys - Range 0x0600 - 0x06FF
+// Prefit: CP_ (ComPose)
+/* Compose — accented characters via host layout (CMS by default).
+ * Uncomment and extend as needed.  Only entries referenced in
+ * execute_compose() are compiled in; unused ones cost zero flash.
+ *
+ * Naming: CP_<letter>_<accent> for lowercase, CP_<LETTER>_<ACCENT> for upper.
+ * Accent abbreviations: ACU=acute, GRV=grave, CIR=circumflex,
+ *   DIA=diaeresis, CED=cedilla, TIL=tilde, MAC=macron, RNG=ring.
+ */
+#define CP_BASE         0x0600
+
+/* French everyday set */
+/* #define CP_E_ACU        (CP_BASE | 0x01) */  /* é */
+/* #define CP_E_GRV        (CP_BASE | 0x02) */  /* è */
+/* #define CP_E_CIR        (CP_BASE | 0x03) */  /* ê */
+/* #define CP_E_DIA        (CP_BASE | 0x04) */  /* ë */
+/* #define CP_A_GRV        (CP_BASE | 0x05) */  /* à */
+/* #define CP_A_CIR        (CP_BASE | 0x06) */  /* â */
+/* #define CP_U_GRV        (CP_BASE | 0x07) */  /* ù */
+/* #define CP_U_CIR        (CP_BASE | 0x08) */  /* û */
+/* #define CP_U_DIA        (CP_BASE | 0x09) */  /* ü */
+/* #define CP_I_CIR        (CP_BASE | 0x0A) */  /* î */
+/* #define CP_I_DIA        (CP_BASE | 0x0B) */  /* ï */
+/* #define CP_O_CIR        (CP_BASE | 0x0C) */  /* ô */
+/* #define CP_C_CED        (CP_BASE | 0x0D) */  /* ç */
+/* #define CP_OE           (CP_BASE | 0x0E) */  /* œ */
+/* #define CP_AE           (CP_BASE | 0x0F) */  /* æ */
+
+/* Uppercase variants */
+/* #define CP_E_ACU_U      (CP_BASE | 0x11) */  /* É */
+/* #define CP_E_GRV_U      (CP_BASE | 0x12) */  /* È */
+/* #define CP_E_CIR_U      (CP_BASE | 0x13) */  /* Ê */
+/* #define CP_E_DIA_U      (CP_BASE | 0x14) */  /* Ë */
+/* #define CP_A_GRV_U      (CP_BASE | 0x15) */  /* À */
+/* #define CP_U_GRV_U      (CP_BASE | 0x17) */  /* Ù */
+/* #define CP_C_CED_U      (CP_BASE | 0x1D) */  /* Ç */
+
+/* Spanish / Italian extras */
+/* #define CP_N_TIL        (CP_BASE | 0x20) */  /* ñ */
+/* #define CP_A_ACU        (CP_BASE | 0x21) */  /* á */
+/* #define CP_O_ACU        (CP_BASE | 0x22) */  /* ó */
+/* #define CP_U_ACU        (CP_BASE | 0x23) */  /* ú */
+
+
 // ============================================================================
 // Keycode type checking macros
 // ============================================================================
@@ -204,6 +249,7 @@
 #define IS_MACRO_KEY(kc)     (((kc) & 0xFF00) == MC_BASE)
 #define IS_LED_KEY(kc)       (((kc) & 0xFF00) == LD_BASE)
 #define IS_SYSTEM_KEY(kc)    (((kc) & 0xFF00) == SYS_BASE)
+#define IS_COMPOSE_KEY(kc)   (((kc) & 0xFF00) == CP_BASE)
 #define IS_BASIC_KEY(kc)     ((kc) <= 0xFF && (kc) > KC_TRNS)
 #define IS_TRANSPARENT(kc)   ((kc) == KC_TRNS)
 #define IS_MOD_KEY(kc)       ((kc) >= KC_LCTL && (kc) <= KC_RGUI)

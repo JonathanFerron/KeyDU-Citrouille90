@@ -38,6 +38,63 @@ typedef enum { HID_PROTO_BOOT = 0, HID_PROTO_REPORT = 1 } hid_protocol_t;
 extern hid_protocol_t hid_protocol[HID_IFACE_COUNT];
 
 /* ════════════════════════════════════════════════════════════════════════
+ *  Keyboard report queue  (Phase 2)
+ * 
+ *  Replaces the seqlock double-buffer used in phase 1.  kbd_stage() 
+ *  enqueues one entry; hid_flush() dequeues and sends one entry per SOF. 
+ * 
+ *  Design constraints: 
+ *    - head and tail are uint8_t — AVR 8-bit R/W is atomic, no lock needed 
+ *    - depth must be a power of 2 — index wraps with bitmask, no modulo 
+ *    - SPSC: kbd_stage() (main context) writes tail only; 
+ *            hid_flush() (SOF ISR) reads head only 
+ *    - full queue: new entry is silently dropped (zero flash overhead) 
+ *    - empty queue: hid_flush() checks head==tail before reading any slot 
+ * 
+ *  Sizing: count kbd_stage() calls for your worst-case sequence, add 2 
+ *  for headroom, round up to next power of 2.  Each slot is 
+ *  sizeof(kbd_queue_entry_t) bytes — see below. 
+ * 
+ *  Entry types: 
+ *    KBD_QUEUE_REPORT — normal keyboard report, sent to host this SOF 
+ *    KBD_QUEUE_WAIT   — sentinel: hid_flush() decrements wait_sofs each 
+ *                       SOF and discards the entry when it reaches zero, 
+ *                       sending nothing to the host during the countdown. 
+ *                       Replaces MACRO_ACTION_WAIT busy-wait in phase 2. 
+ * ════════════════════════════════════════════════════════════════════════ */ 
+ 
+/* Queue depth — power of 2.  Adjust after counting worst-case sequence. */ 
+#define KBD_QUEUE_DEPTH   8u 
+#define KBD_QUEUE_MASK    (KBD_QUEUE_DEPTH - 1u) 
+ 
+typedef enum { 
+    KBD_QUEUE_REPORT = 0,   /* normal keyboard report      */ 
+    KBD_QUEUE_WAIT   = 1,   /* wait sentinel — N SOF ticks */ 
+} kbd_queue_entry_type_t; 
+ 
+typedef struct { 
+    kbd_queue_entry_type_t type;   /* entry type tag              */ 
+    union { 
+        hid_kbd_report_t report;   /* KBD_QUEUE_REPORT: 8 bytes   */ 
+        uint8_t          wait_sofs;/* KBD_QUEUE_WAIT: countdown   */ 
+    }; 
+} kbd_queue_entry_t; 
+ 
+/* The queue itself — defined in usb_hid.c. 
+ * head: read by hid_flush() (SOF ISR). 
+ * tail: written by kbd_stage() (main context). 
+ * Both are uint8_t — atomic on AVR. */ 
+extern kbd_queue_entry_t  kbd_queue[KBD_QUEUE_DEPTH]; 
+extern volatile uint8_t   kbd_queue_head; 
+extern volatile uint8_t   kbd_queue_tail; 
+ 
+/* Enqueue a wait sentinel (N SOF ticks of silence). 
+ * Called from run_macro_sequence() in place of _delay_ms(). 
+ * If the queue is full the sentinel is silently dropped — the macro 
+ * delay will be shorter than requested but no deadlock occurs. */ 
+void kbd_stage_wait(uint8_t n_sofs); 
+ 
+/* ════════════════════════════════════════════════════════════════════════ 
  *  API
  *
  *  Lifecycle:
