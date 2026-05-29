@@ -11,6 +11,9 @@
 #   make flash_bl  — program KeyDU.BL via UPDI
 #   make clean     — remove all build artefacts
 #   make size      — print section sizes for both targets
+#   make bear      — regenerate compile_commands.json
+#   make format    — format all .c/.h files with astyle
+#   make help      — print available targets
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -45,21 +48,28 @@ BUILD = build
 COMMON_CFLAGS  = -mmcu=$(MCU)
 COMMON_CFLAGS += -DF_CPU=$(F_CPU)
 COMMON_CFLAGS += -Os
-COMMON_CFLAGS += -std=gnu99
+COMMON_CFLAGS += -std=gnu11              # upgraded from gnu99; makes _Static_assert explicit
 COMMON_CFLAGS += -Wall
+COMMON_CFLAGS += -Wextra                 # unused params, missing initialisers, sign-compare
+COMMON_CFLAGS += -Wshadow                # locals shadowing outer-scope names
+COMMON_CFLAGS += -Wundef                 # #if on undefined macro (typo guard)
+COMMON_CFLAGS += -Wformat=2              # stricter format-string checking
 COMMON_CFLAGS += -Wstrict-prototypes
 COMMON_CFLAGS += -ffunction-sections
 COMMON_CFLAGS += -fdata-sections
-COMMON_CFLAGS += -fpack-struct
+# Removed (applied selectively via USB_PACKED instead) COMMON_CFLAGS += -fpack-struct
+COMMON_CFLAGS += -fno-strict-aliasing    # pointer-cast-heavy USB code; avoids aliasing UB
 COMMON_CFLAGS += -fshort-enums
 
 COMMON_ASFLAGS  = -mmcu=$(MCU)
 COMMON_ASFLAGS += -DF_CPU=$(F_CPU)
 COMMON_ASFLAGS += -x assembler-with-cpp
+COMMON_ASFLAGS += -Wa,-adhlns=$(patsubst %.S,$(BUILD)/%.lst,$<)  # listing file in build tree
 
 COMMON_LDFLAGS  = -mmcu=$(MCU)
 COMMON_LDFLAGS += -Wl,--gc-sections
 COMMON_LDFLAGS += -Wl,--relax
+# Useful during development: -Wl,--print-gc-sections
 
 # =============================================================================
 # KeyDU.App — HID keyboard application
@@ -141,7 +151,7 @@ BL_OBJ   = $(BL_C_OBJ) $(BL_S_OBJ)
 # Top-level targets
 # =============================================================================
 
-.PHONY: all app bl clean size flash_updi flash_app flash_bl flash_usb flasher
+.PHONY: all app bl clean size flash_updi flash_app flash_bl flash_usb flasher bear format help
 
 all: app bl
 
@@ -266,11 +276,74 @@ flash_bl: $(BL_HEX)
 	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -D -U flash:w:$<:i
 
 # USB flash — send app image to running bootloader via vendor protocol.
-# Device must already be in bootloader mode (SYS_BOOT key or UPDI reset).
+# Device must already be in bootloader mode (SYS_BOOT key).
 flash_usb: $(APP_HEX) $(FLASHER_BIN)
 	@echo "Flashing KeyDU.App via USB vendor protocol..."
 	$(OBJCOPY) -I ihex -O binary $(APP_HEX) $(APP_OUT)/KeyDU.App.bin
 	$(FLASHER_BIN) $(APP_OUT)/KeyDU.App.bin
+
+# =============================================================================
+# compile_commands.json (bear)
+# Run after adding or removing source files.
+# Uses $(MAKE) so bear sees the same make binary and jobserver flags.
+# bear intercepts compiler calls during a full rebuild — run make clean first
+# or use: bear -- $(MAKE) -B all
+# =============================================================================
+ 
+bear:
+	bear -- $(MAKE) all
+ 
+# =============================================================================
+# Source formatting (astyle)
+# Explicit per-directory wildcards keep build/ and any future vendored
+# subdirectories out of scope. --project reads .astylerc at the project
+# root automatically. --suffix=none suppresses .orig backup files.
+# =============================================================================
+ 
+FORMAT_SRC = \
+    $(wildcard $(APP_DIR)/*.c)  \
+    $(wildcard $(APP_DIR)/*.h)  \
+    $(wildcard $(BL_DIR)/*.c)   \
+    $(wildcard $(BL_DIR)/*.h)   \
+    $(wildcard usbcore/*.c)     \
+    $(wildcard usbcore/*.h)     \
+    $(wildcard avrducore/*.c)   \
+    $(wildcard avrducore/*.h)
+ 
+format:
+	astyle --project --suffix=none $(FORMAT_SRC)
+ 
+# =============================================================================
+# Help
+# =============================================================================
+ 
+help:
+	@echo "KeyDU-Citrouille90 — AVR64DU32 keyboard firmware"
+	@echo ""
+	@echo "Build targets:"
+	@echo "  all          Build both KeyDU.App and KeyDU.BL (default)"
+	@echo "  app          Build KeyDU.App (HID keyboard) only"
+	@echo "  bl           Build KeyDU.BL (vendor bootloader) only"
+	@echo "  size         Build both and print section sizes"
+	@echo ""
+	@echo "Flash targets:"
+	@echo "  flash_updi   Program merged BL+App image via UPDI (full reflash)"
+	@echo "  flash_app    Program KeyDU.App only via UPDI (no erase)"
+	@echo "  flash_bl     Program KeyDU.BL only via UPDI (no erase)"
+	@echo "  flash_usb    Program KeyDU.App via USB vendor protocol"
+	@echo ""
+	@echo "Dev targets:"
+	@echo "  bear         Regenerate compile_commands.json (run make clean first)"
+	@echo "  format       Format all .c/.h files with astyle"
+	@echo "  clean        Remove all build artefacts"
+	@echo "  help         Show this message"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  MCU:         $(MCU)"
+	@echo "  F_CPU:       $(F_CPU)"
+	@echo "  Compiler:    $(CC)"
+	@echo "  Programmer:  $(PROG_ID) on $(PROG_PORT)"
+	@echo "  Build dir:   $(BUILD)"
 
 # =============================================================================
 # Clean

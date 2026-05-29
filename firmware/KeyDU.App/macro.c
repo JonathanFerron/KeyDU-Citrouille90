@@ -20,7 +20,6 @@
 
 #include "macro.h"
 #include "keyboard.h"
-#include "compose.h"
 #include "keycode.h"
 
 

@@ -62,6 +62,7 @@ Defined in `keycode.h` (header-only, no `.c` counterpart).
 | `MC_`  | `0x0300–0x03FF` | Macros                       |
 | `LD_`  | `0x0400–0x04FF` | LED control                  |
 | `SYS_` | `0x0500–0x05FF` | System / firmware            |
+| CP | 0x0600 to 0x06FF | Compose.  |
 
 - `KC_NO = 0x0000` — no event (HID Usage 0x00 is reserved/safe)
 
@@ -86,6 +87,7 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 #define IS_MACRO_KEY(kc)     (((kc) & 0xFF00) == 0x0300)
 #define IS_LED_KEY(kc)       (((kc) & 0xFF00) == 0x0400)
 #define IS_SYS_KEY(kc)       (((kc) & 0xFF00) == 0x0500)
+Is_compose...
 #define GET_LAYER(kc)        ((kc) & 0x00FF)
 #define MOD_BIT(kc)          /* converts KC_Lxxx modifier to HID bitmask */
 ```
@@ -378,33 +380,6 @@ All modifier positions on layers 1 and 2 must be `KC_TRNS`. Add a comment block 
 
 ---
 
-### 9.3 keymap_tick()
-
-Called once per 1 ms tick from `keyboard_task()`, after `encoder_scan()`. Owns the Alt-release timeout counter independently — no dependency on `system_millis`, no interrupt gate overhead.
-
-```c
-/* In keymap.c — static, not exposed */
-static bool    s_alt_held       = false;
-static uint16_t s_alt_idle_ticks = 0;     /* uint16_t: 600 ms fits in 16 bits at 1 kHz */
-
-#define ALT_RELEASE_TIMEOUT_MS  600       /* ticks == ms at 1 kHz scan rate */
-```
-
-Alt-tab session logic: when encoder step fires, Alt is pressed and held. Each subsequent step taps Tab. After `ALT_RELEASE_TIMEOUT_MS` ticks of no encoder activity, `keymap_tick()` releases Alt and resets state.
-
-### 9.4 Integration Point in keyboard.c
-
-```c
-void keyboard_task(void) {
-    matrix_scan();
-    encoder_scan();     /* hardware decode — may call encoder_step() */
-    keymap_tick();      /* Alt timeout countdown */
-    /* ... key processing, report building ... */
-}
-```
-
----
-
 ## 10. Macro System
 
 ### 10.1 Structure
@@ -671,13 +646,11 @@ These must happen in order; everything downstream depends on USB working:
 
 ### 18.2 After USB App Firmware is Stable
 
-1. **Write `macros.c`** — `execute_macro()` dispatch, initial set of PROGMEM sequences.
-2. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
+1. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
 
 ### 18.3 Deferred (Post-v1)
 
 - USB multipacket for bootloader upload speed
-- SOF phase lock optimization (SOF minus 200 us)
 - Boot mouse interface (eg on Interface 2, EP3 IN, if ever)
 - NKRO (not planned — 6KRO is sufficient)
 

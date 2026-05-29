@@ -70,7 +70,7 @@ typedef struct {
 } cc_usage_entry_t;
 
 // TODO: consider replacing this by a flat switch / case, after weighing the pros and cons
-static const cc_usage_entry_t cc_usage_table[] = {
+static const cc_usage_entry_t cc_usage_table[] PROGMEM = {
     { 0x01, 0x00E2 },   /* CC_MUTE  — Mute              */
     { 0x02, 0x00E9 },   /* CC_VOLU  — Volume Increment  */
     { 0x03, 0x00EA },   /* CC_VOLD  — Volume Decrement  */
@@ -86,9 +86,10 @@ static uint16_t cc_to_hid_usage(uint16_t cc_keycode)
 {
     uint8_t cc_low = (uint8_t)(cc_keycode & 0x00FFu);
     for (uint8_t i = 0; i < CC_TABLE_LEN; i++) {
-        if (cc_usage_table[i].cc_low == cc_low) {
-            return cc_usage_table[i].hid_usage;
-        }
+        uint8_t  entry_low   = pgm_read_byte(&cc_usage_table[i].cc_low);
+        uint16_t entry_usage = pgm_read_word(&cc_usage_table[i].hid_usage);
+        if (entry_low == cc_low)
+          return entry_usage;
     }
     return 0x0000u;   /* unknown — send no usage */
 }
@@ -320,7 +321,7 @@ static void process_key_press(uint8_t row, uint8_t col)
     }
     
     // Compose keys (accented characters)
-    if (IS_COMPOSE_KEY_KEY(keycode)) {
+    if (IS_COMPOSE_KEY(keycode)) {
         execute_compose(keycode);
         return;
     }
