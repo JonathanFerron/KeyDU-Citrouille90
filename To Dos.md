@@ -1,12 +1,10 @@
 # Citrouille90 To Dos
 
-To be addressed:
+## To be addressed:
 
-1. Compiler and Linker Flag Optimization
 
-2. bear and astyle Make Targets
 
-Nice to have (style issue):
+## Nice to have (style issue):
 
 - Look into fixing the following inconsistency:
     layer_key_released() is called unconditionally on every key release in keyboard.c
@@ -22,7 +20,7 @@ Nice to have (style issue):
       (active_layer_key_count == MAX_LAYER_KEYS) and the key wasn't tracked (because it was dropped on press), layer_key_released harmlessly 
       no-ops — but it still iterates the full array every release. Matching the press-path pattern here is the right fix.
 
-Keep for phase 2:
+## Keep for phase 2:
 
 1. hid_flush()-in-SOF-ISR vs EP0 Control Transfer Race
    This is the most serious correctness issue in the codebase. hid_flush() is called from usb_event_sof(), which runs inside USB0_BUSEVENT_vect. Meanwhile, 
