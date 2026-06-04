@@ -1,0 +1,32 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/avr-gcc",
+      "-mmcu=avr64du32",
+      "-DF_CPU=24000000UL",
+      "-Os",
+      "-std=gnu11",
+      "-Wall",
+      "-Wextra",
+      "-Wshadow",
+      "-Wundef",
+      "-Wformat=2",
+      "-Wstrict-prototypes",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fno-strict-aliasing",
+      "-fshort-enums",
+      "-IKeyDU.App",
+      "-Iusbcore",
+      "-IKeyDU.App/usbhid",
+      "-Iavrducore",
+      "-c",
+      "-o",
+      "build/app/KeyDU.App/matrix.o",
+      "KeyDU.App/matrix.c"
+    ],
+    "directory": "/home/jonathan/projects/KeyDU-Citrouille90/firmware",
+    "file": "/home/jonathan/projects/KeyDU-Citrouille90/firmware/KeyDU.App/matrix.c",
+    "output": "/home/jonathan/projects/KeyDU-Citrouille90/firmware/build/app/KeyDU.App/matrix.o"
+  }
+]

@@ -5,7 +5,6 @@
 #define LAYER_H
 
 #include <stdint.h>
-#include "config.h"
 
 // ============================================================================
 // Layer Configuration

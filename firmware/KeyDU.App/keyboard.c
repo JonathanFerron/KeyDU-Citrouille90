@@ -38,6 +38,7 @@
 #include "layer.h"
 #include "keymap.h"
 #include "macro.h"
+#include "compose.h"
 #include "led.h"
 #include "encoder.h"
 #include "usb_hid.h"
@@ -300,7 +301,7 @@ static void process_key_press(uint8_t row, uint8_t col)
             case SYS_RST:
                if (eeprom_read_byte(BOOT_MAGIC_EEPROM_ADDR) != 0xFFu)
                  eeprom_write_byte(BOOT_MAGIC_EEPROM_ADDR, 0xFFu);
-               wdt_enable(WDTO_8MS);
+               wdt_enable(WDTO_15MS);
                while (1);
                break;
             case SYS_BOOT:

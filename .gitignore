@@ -47,3 +47,5 @@ avrdude.conf.local
 *.zip
 *.gsheet
 *.gdoc
+
+firmware/.cache/
