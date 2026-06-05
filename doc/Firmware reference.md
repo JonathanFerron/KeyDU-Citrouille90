@@ -54,15 +54,15 @@ Defined in `keycode.h` (header-only, no `.c` counterpart).
 
 ### 3.2 Ranges and Prefixes
 
-| Prefix | Range           | Category                     |
-| ------ | --------------- | ---------------------------- |
-| `KC_`  | `0x0000–0x00FF` | HID keyboard (Page 0x07)     |
-| `CC_`  | `0x0100–0x01FF` | Consumer control (Page 0x0C) |
-| `LY_`  | `0x0200–0x02FF` | Layer switching              |
-| `MC_`  | `0x0300–0x03FF` | Macros                       |
-| `LD_`  | `0x0400–0x04FF` | LED control                  |
-| `SYS_` | `0x0500–0x05FF` | System / firmware            |
-| CP | 0x0600 to 0x06FF | Compose.  |
+| Prefix | Range            | Category                     |
+| ------ | ---------------- | ---------------------------- |
+| `KC_`  | `0x0000–0x00FF`  | HID keyboard (Page 0x07)     |
+| `CC_`  | `0x0100–0x01FF`  | Consumer control (Page 0x0C) |
+| `LY_`  | `0x0200–0x02FF`  | Layer switching              |
+| `MC_`  | `0x0300–0x03FF`  | Macros                       |
+| `LD_`  | `0x0400–0x04FF`  | LED control                  |
+| `SYS_` | `0x0500–0x05FF`  | System / firmware            |
+| CP     | 0x0600 to 0x06FF | Compose.                     |
 
 - `KC_NO = 0x0000` — no event (HID Usage 0x00 is reserved/safe)
 
@@ -631,7 +631,32 @@ The three ISR responsibilities are:
 - `UPDI`: never disable — critical for recovery
 - Clock: internal 24 MHz oscillator, no external crystal
 
----
+
+
+### 17.3 GCC 14 FLMAP Init Workaround
+
+GCC 14 injects a `.init3` startup stub from `libavr64du32.a(flmap_init.o)` that calls `__flmap_init_label` to initialize the NVMCTRL FLMAP bits before `main()`. This stub is intended for AVR devices with more than 64KB of flash where FLMAP configuration is required at startup. The AVR64DU32 has exactly 64KB of flash and does not need this initialization, but GCC 14 injects it regardless — apparently a device classification issue in the toolchain.
+
+The stub's `.init3` section overlaps the `.data` LMA when using a custom linker script with a non-zero flash origin (as required for the application partition starting at `0x2000`), causing a hard linker error.
+
+Both `KeyDU.App.ld` and `KeyDU.BL.ld` contain the following `/DISCARD/` entry to suppress the stub:
+
+```
+/DISCARD/ :
+{
+    *flmap_init*(.init3)
+}
+```
+
+This is intentional and must be preserved. If the toolchain is upgraded and the linker error reappears, verify that `flmap_init.o` is still the source via:
+
+```bash
+avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
+```
+
+If the object or section name has changed in the newer toolchain, update the pattern in `/DISCARD/` accordingly.
+
+
 
 ## 18. Open Items and Build Sequence
 
@@ -654,8 +679,6 @@ These must happen in order; everything downstream depends on USB working:
 - Boot mouse interface (eg on Interface 2, EP3 IN, if ever)
 - NKRO (not planned — 6KRO is sufficient)
 
-
-
 ## 19 Adapting to future changes
 
 If adopting a different matrix layount (same MCU), adapt:
@@ -665,8 +688,6 @@ If adopting a different matrix layount (same MCU), adapt:
 - `keymap.c` — `KEYMAP()` macro body (physical→electrical remap), keymap arrays
 - `keyboard.c` — no changes likely, but verify `PRESSED_KEY_MAX` is still sufficient
 
-
-
 If moving to an AVR-DU with more than 32 pins, adapt:
 
 - `matrix.c` — port/pin assignments, masks, `row_a_lut[]`, `scan_col_raw()` (new ports available)
@@ -674,8 +695,6 @@ If moving to an AVR-DU with more than 32 pins, adapt:
 - `led.c` / `led.h` — `LED_PORT`, `LED_A_PIN`, `LED_B_PIN`, PORTMUX routing if TCA0 moves
 - `gpio.h` — `GPIO_VPORT_READ` note: verify VPORT availability on new pincount variant
 - `fuses.c` — verify fuse constants still match new device header
-
-
 
 If moving to an AVR-DU with more flase or more SRAM, adapt:
 
@@ -687,8 +706,6 @@ If moving to an AVR-DU with more flase or more SRAM, adapt:
 - `bl_main.c` — `APP_START` in the jump address calculation
 - `usb_vendor.c` — `addr_valid()` upper bound if `FLASH_END` changes
 - `makefile` — `MCU`, `F_CPU` if changed, and potentially `flash_*` targets if avrdude flags differ
-
-
 
 If you want KeyDU.BL (bootloader) to be larger than 8KB (say 10KB). It's a partition boundary shift:
 
