@@ -88,7 +88,7 @@ static const uint8_t PROGMEM rd_kbd[] = {
 
     HID_END_COLLECTION
 };
-_Static_assert(sizeof(rd_kbd) == 65, "rd_kbd descriptor size changed");
+_Static_assert(sizeof(rd_kbd) == 67, "rd_kbd descriptor size changed");
 
 /*static const uint8_t PROGMEM rd_kbd[] = {
     0x05,0x01, 0x09,0x06, 0xA1,0x01,       // Usage Page Generic Desktop, Keyboard

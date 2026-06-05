@@ -23,12 +23,11 @@
 ## Keep for phase 2:
 
 1. hid_flush()-in-SOF-ISR vs EP0 Control Transfer Race
-   This is the most serious correctness issue in the codebase. hid_flush() is called from usb_event_sof(), which runs inside USB0_BUSEVENT_vect. Meanwhile, 
-   usb_event_ctrl_request() — which handles HID_REQ_GET_REPORT and reads directly from s_kbd_buf/s_con_buf — runs in the main loop via usb_ctrl_poll(). The seqlock in 
-   hid_kbd_stage() protects against a torn read between the scan loop and the SOF ISR, but it does not protect against ep_write_ctrl_stream(&s_kbd_buf, ...) in the main 
-   loop executing concurrently with memcpy(&snap, &s_kbd_buf, ...) inside the SOF ISR. The fix requires either moving GET_REPORT handling into the ISR context, or briefly 
-   disabling the SOF interrupt around the control transfer read. This should be the first rev 2 item because it's a latent data corruption path that could cause intermittent, 
-   hard-to-reproduce host-side misbehavior.
+   hid_flush() is called from usb_event_sof(), which runs inside USB0_BUSEVENT_vect. Meanwhile, usb_ctrl_poll() runs in the main loop and may be executing a control transfer — including ep_write_ctrl_stream() in usb_event_ctrl_request() — at the same moment the SOF ISR fires. Both paths call ep_select() and manipulate the global usb_ep_selected, usb_ep_handle, and usb_ep_fifo pointers. A SOF interrupt mid-control-transfer will clobber those globals, corrupting the in-progress EP0 transfer.
+
+    The specific s_kbd_buf reference that triggered a compile error has been removed — HID_REQ_GET_REPORT for the keyboard interface now snapshots via kbd_get_report(), which is safe because s_kbd_report is written exclusively in main-loop context. The s_con_buf read in the consumer branch of HID_REQ_GET_REPORT retains the original exposure.
+
+    The correct fix is to move hid_flush() out of the SOF ISR and into the main loop, called unconditionally before usb_ctrl_poll(). The SOF ISR would then only set a flag. This eliminates the re-entrancy entirely. The seqlock on the consumer report and the SPSC queue for the keyboard report were designed with this main-loop flush model in mind — neither requires ISR context.
 
 2. Stale Report on USB Resume (Phantom Keypresses)
    When the device resumes from USB suspend, the current HID report buffers still hold whatever state was staged before suspend. If a key was held at suspend time the host will see it as newly pressed on resume, producing a phantom keypress. The fix is to zero both s_kbd_buf and s_con_buf (and bump their seqlocks) inside usb_event_wakeup() in usb_hid.c, and to call hid_flush() immediately after to push the zero report before the first SOF arrives. This is a small, targeted fix but depends on the SOF race being resolved first, so it naturally slots in second.

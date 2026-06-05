@@ -26,8 +26,8 @@
 #include <stdbool.h>
 #include <avr/eeprom.h>
 
-#include "usbvendor/usb_vendor.h"   /* usb_vendor_init(), usb_vendor_task() */
-#include "../../avrducore/ccp.h"     // ccp_write_ioreg()
+#include "usb_vendor.h"   /* usb_vendor_init(), usb_vendor_task() */
+#include "../avrducore/ccp.h"     // ccp_write_ioreg()
 #include "bootmagic.h"
 
 /* ============================================================================

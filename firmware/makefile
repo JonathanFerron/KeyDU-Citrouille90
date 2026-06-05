@@ -69,6 +69,8 @@ COMMON_ASFLAGS += -Wa,-adhlns=$(patsubst %.S,$(BUILD)/%.lst,$<)  # listing file 
 COMMON_LDFLAGS  = -mmcu=$(MCU)
 COMMON_LDFLAGS += -Wl,--gc-sections
 COMMON_LDFLAGS += -Wl,--relax
+#COMMON_LDFLAGS += -Wl,--exclude-libs,libavr64du32.a
+#COMMON_LDFLAGS += -Wl,--defsym=__flmap_init_label=0
 # Useful during development: -Wl,--print-gc-sections
 
 # =============================================================================
@@ -219,6 +221,7 @@ $(BL_OUT)/%.o: %.c
 
 $(APP_OUT)/%.o: %.S
 	@mkdir -p $(dir $@)
+	@mkdir -p $(BUILD)/avrducore
 	@echo "[AS]  $<"
 	$(AS) $(APP_ASFLAGS) -c $< -o $@
 

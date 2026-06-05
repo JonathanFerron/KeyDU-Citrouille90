@@ -160,6 +160,11 @@ void kbd_stage(void)
     hid_kbd_stage(&s_kbd_report);
 }
 
+void kbd_get_report(hid_kbd_report_t *out)
+{
+    *out = s_kbd_report;
+}
+
 /* ============================================================================
  * Shared key-send helpers — used by macro.c and compose.c
  *

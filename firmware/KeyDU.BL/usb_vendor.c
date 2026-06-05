@@ -35,6 +35,7 @@
 #include "usb_ep_stream.h"
 #include "clock.h"
 #include "bootmagic.h"
+#include "../avrducore/ccp.h"     // ccp_write_ioreg()
 
 
 /* ============================================================================

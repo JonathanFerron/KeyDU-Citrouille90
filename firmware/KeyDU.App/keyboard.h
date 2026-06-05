@@ -45,6 +45,8 @@
 
 #include <stdint.h>
 
+#include "usb_hid.h"
+
 /* ── Subsystem lifecycle ──────────────────────────────────────────────── */
 
 /* Initialise matrix, layer, led, encoder, USB.
@@ -93,5 +95,8 @@ void kbd_consumer_set(uint16_t cc_keycode);
 
 /* Clear the consumer usage field and stage a zero report. */
 void kbd_consumer_clear(void);
+
+/* Return a snapshot of the current keyboard report (for GET_REPORT). */
+void kbd_get_report(hid_kbd_report_t *out);
 
 #endif /* KEYBOARD_H */

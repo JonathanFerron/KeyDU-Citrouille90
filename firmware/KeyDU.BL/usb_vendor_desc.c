@@ -12,7 +12,7 @@
 
 #include "usb_vendor_desc.h"
 #include "usb_vendor.h"          /* VENDOR_VID, VENDOR_PID, string literals */
-#include "../../usbcore/usb_types.h"
+#include "../usbcore/usb_types.h"
 #include <avr/pgmspace.h>
 
 /* ============================================================================

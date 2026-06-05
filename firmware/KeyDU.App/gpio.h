@@ -6,6 +6,7 @@
 
 #include <avr/io.h>
 #include <stdint.h>
+#include <stddef.h>
 
 /* -----------------------------------------------------------------------
  * PIN DESCRIPTOR

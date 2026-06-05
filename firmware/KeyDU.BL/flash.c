@@ -25,7 +25,7 @@
 #include <stddef.h>
 
 /* --- NVMCTRL command codes (CTRLA CMD[6:0], datasheet Table 11-4) --- */
-#define CMD_NOCMD    NVMCTRL_CMD_NOCMD_gc     /* 0x00 — clear command      */
+#define CMD_NOCMD    NVMCTRL_CMD_NONE_gc     /* 0x00 — clear command      */
 #define CMD_FLWR     NVMCTRL_CMD_FLWR_gc      /* 0x02 — flash write enable */
 #define CMD_FLPER    NVMCTRL_CMD_FLPER_gc     /* 0x08 — page erase         */
 #define CMD_FLMPER2  NVMCTRL_CMD_FLMPER2_gc   /* 0x09 — 2-page erase       */
@@ -44,7 +44,7 @@
 
 static void nvm_wait(void)
 {
-    while (NVMCTRL.STATUS & NVMCTRL_FBUSY_bm) {}
+    while (NVMCTRL.STATUS & NVMCTRL_FLBUSY_bm) {}
 }
 
 static void nvm_cmd(uint8_t cmd)

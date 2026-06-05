@@ -70,7 +70,8 @@ static void release_key(uint8_t kc)
  
 #define MAX_MACRO_STEPS  32u
 
-static void run_macro_sequence(const macro_action_t *sequence)
+// remove the unused attribute once we start making use of this function in the keymap
+static void __attribute__((unused)) run_macro_sequence(const macro_action_t *sequence)
 {
     for (uint8_t i = 0; i < MAX_MACRO_STEPS; i++) {
         macro_action_t action;
@@ -118,19 +119,25 @@ static void run_macro_sequence(const macro_action_t *sequence)
  * ========================================================================= */
 
 /* Excel: Alt, E, S — Paste Special */
+/*
 static const macro_action_t PROGMEM macro_excel_paste_special[] = {
     MT(KC_LALT), MT(KC_E), MT(KC_S), MACRO_END
 };
+*/
 
 /* Excel: Ctrl+Shift+Right — select to end of data */
+/*
 static const macro_action_t PROGMEM macro_excel_select_right[] = {
     MD(KC_LCTL), MD(KC_LSFT), MT(KC_RGHT), MU(KC_LSFT), MU(KC_LCTL), MACRO_END
 };
+*/
 
 /* Excel: Ctrl+Shift+Down — select to end of column */
+/*
 static const macro_action_t PROGMEM macro_excel_select_down[] = {
     MD(KC_LCTL), MD(KC_LSFT), MT(KC_DOWN), MU(KC_LSFT), MU(KC_LCTL), MACRO_END
 };
+*/
 
 /* ============================================================================
  * execute_macro — called from keyboard.c on MC_* keycode press

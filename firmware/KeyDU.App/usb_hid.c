@@ -1,9 +1,10 @@
 #include "usb_hid.h"
+#include "keyboard.h"
 #include "../usbcore/usb_types.h"
 #include "../usbcore/usb_ep.h"
 #include "../usbcore/usb_ep_stream.h"
 #include "../usbcore/usb_ctrl.h"
-#include "../../avrducore/clock.h"
+#include "../avrducore/clock.h"
 #include <string.h>
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -236,7 +237,9 @@ void usb_event_ctrl_request(void)
         ep_select(EP_CTRL);
         ep_clear_setup();
         if (iface == HID_IFACE_KBD) {
-            ep_write_ctrl_stream(&s_kbd_buf, sizeof(s_kbd_buf));
+            hid_kbd_report_t snap;
+            kbd_get_report(&snap);
+            ep_write_ctrl_stream(&snap, sizeof(snap));
         } else {
             ep_write_ctrl_stream(&s_con_buf, sizeof(s_con_buf));
         }
