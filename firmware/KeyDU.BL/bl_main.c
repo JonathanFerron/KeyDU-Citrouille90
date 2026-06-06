@@ -28,7 +28,7 @@
 
 #include "usb_vendor.h"   /* usb_vendor_init(), usb_vendor_task() */
 #include "../avrducore/ccp.h"     // ccp_write_ioreg()
-#include "bootmagic.h"
+#include "../avrducore/bootmagic.h"
 
 /* ============================================================================
    jump_to_application — clear EEPROM and transfer control to 0x2000
@@ -40,10 +40,10 @@ static void jump_to_application(void)
     eeprom_write_byte(BOOT_MAGIC_EEPROM_ADDR, 0xFFu);
 
   /* Disable USB and interrupts before handing off. */
-  cli();
+  cli();  // disable global interrupts
   USB0.CTRLB  &= ~USB_ATTACH_bm;
   USB0.CTRLA  &= ~USB_ENABLE_bm;
-  ccp_write_ioreg((void*)&CPUINT.CTRLA, 0x00);
+  ccp_write_ioreg((void*)&CPUINT.CTRLA, 0x00); // resets interupt vector select to default (appcode)
 
   /* Jump to application reset vector (word address). */
   void (*app)(void) = (void (*)(void))(uintptr_t)((uint32_t)(APP_START) >> 1);
@@ -86,7 +86,7 @@ int main(void)
   bool magic_valid = (magic == BOOT_MAGIC);
 
   if(soft && magic_valid)
-  { ccp_write_ioreg((void*)&CPUINT.CTRLA, CPUINT_IVSEL_bm);
+  { ccp_write_ioreg((void*)&CPUINT.CTRLA, CPUINT_IVSEL_bm);  // sets interrupt vector to bootcode
     usb_vendor_init();   /* clock, USB hardware, state init, sei() */
     usb_vendor_task();   /* bare loop — never returns */
   }

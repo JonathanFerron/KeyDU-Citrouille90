@@ -1,4 +1,5 @@
 # KeyDU Development Cheat Sheet
+
 AVR64DU32 · Curiosity Nano (pkobn_updi) · avrdude 8.x
 
 ---
@@ -12,6 +13,7 @@ Port       : usb
 ```
 
 ### Flash
+
 ```bash
 # Full flash (BL + App merged) — use after any bootloader change
 avrdude -c pkobn_updi -p avr64du32 -P usb \
@@ -69,6 +71,7 @@ avrdude -c pkobn_updi -p avr64du32 -P usb \
 ```
 
 ### EEPROM
+
 ```bash
 # Read EEPROM
 avrdude -c pkobn_updi -p avr64du32 -P usb \
@@ -85,6 +88,7 @@ avrdude -c pkobn_updi -p avr64du32 -P usb \
 ```
 
 ### Other memories
+
 ```bash
 # Read signature / serial number
 avrdude -c pkobn_updi -p avr64du32 -P usb \
@@ -105,27 +109,27 @@ avrdude -c pkobn_updi -p avr64du32 -P usb \
 
 From datasheet section 8.10. All are R/W unless noted.
 
-| avrdude name | Alias     | DS offset | Default | KeyDU value | Description |
-|---|---|---|---|---|---|
-| `fuse0`  | `wdtcfg`  | 0x00 | 0x00 | 0x00 | Watchdog config (off) |
-| `fuse1`  | `bodcfg`  | 0x01 | 0x00 | 0x00 | Brownout detection (off) |
-| `fuse2`  | `osccfg`  | 0x02 | 0x00 | 0x00 | Oscillator: CLKSEL=0000=OSCHF |
-| `fuse5`  | `syscfg0` | 0x05 | 0xD0 | 0xD8 | See below |
-| `fuse6`  | `syscfg1` | 0x06 | 0x00 | 0x08 | USBSINK=1 (bit3), SUT=0ms |
-| `fuse7`  | `codesize`| 0x07 | 0x00 | 0x00 | APPCODE size in 512B blocks (0=APPCODE runs to FLASHEND) |
-| `fuse8`  | `bootsize`| 0x08 | 0x00 | **0x10** | BOOT size in 512B blocks (0x10 = 16×512 = 8KB) |
-| `fusea`  | `pdicfg`  | 0x0A | 0x0003 | 0x0003 | UPDI lock (2 bytes) |
+| avrdude name | Alias      | DS offset | Default | KeyDU value | Description                                              |
+| ------------ | ---------- | --------- | ------- | ----------- | -------------------------------------------------------- |
+| `fuse0`      | `wdtcfg`   | 0x00      | 0x00    | 0x00        | Watchdog config (off)                                    |
+| `fuse1`      | `bodcfg`   | 0x01      | 0x00    | 0x00        | Brownout detection (off)                                 |
+| `fuse2`      | `osccfg`   | 0x02      | 0x00    | 0x00        | Oscillator: CLKSEL=0000=OSCHF                            |
+| `fuse5`      | `syscfg0`  | 0x05      | 0xD0    | 0xD8        | See below                                                |
+| `fuse6`      | `syscfg1`  | 0x06      | 0x00    | 0x08        | USBSINK=1 (bit3), SUT=0ms                                |
+| `fuse7`      | `codesize` | 0x07      | 0x00    | 0x00        | APPCODE size in 512B blocks (0=APPCODE runs to FLASHEND) |
+| `fuse8`      | `bootsize` | 0x08      | 0x00    | **0x10**    | BOOT size in 512B blocks (0x10 = 16×512 = 8KB)           |
+| `fusea`      | `pdicfg`   | 0x0A      | 0x0003  | 0x0003      | UPDI lock (2 bytes)                                      |
 
 ### SYSCFG0 (fuse5) bit breakdown — KeyDU value 0xD8 = 1101\_1000
 
-| Bits | Field | Value | Meaning |
-|---|---|---|---|
-| 7:6 | CRCSRC | 11 | NOCRC — no CRC scan on reset |
-| 5 | CRCSEL | 0 | CRC16-CCITT |
-| 4 | UPDIPINCFG | 1 | PF7 = UPDI pin (factory default, must keep) |
-| 3 | RSTPINCFG | 1 | PF6 = external RESET with pull-up |
-| 1 | BROWSAVE | 0 | Boot row erased on chip erase |
-| 0 | EESAVE | 0 | EEPROM erased on chip erase |
+| Bits | Field      | Value | Meaning                                     |
+| ---- | ---------- | ----- | ------------------------------------------- |
+| 7:6  | CRCSRC     | 11    | NOCRC — no CRC scan on reset                |
+| 5    | CRCSEL     | 0     | CRC16-CCITT                                 |
+| 4    | UPDIPINCFG | 1     | PF7 = UPDI pin (factory default, must keep) |
+| 3    | RSTPINCFG  | 1     | PF6 = external RESET with pull-up           |
+| 1    | BROWSAVE   | 0     | Boot row erased on chip erase               |
+| 0    | EESAVE     | 0     | EEPROM erased on chip erase                 |
 
 > **Warning:** Factory default is 0xD0 (RSTPINCFG=0 = PF6 is GPIO). KeyDU sets RSTPINCFG=1 to enable the reset button on the Curiosity Nano and Citrouille90.
 
@@ -145,25 +149,26 @@ CODEEND  = FLASHEND (CODESIZE=0 means APPCODE runs to end)
 
 ### AVR64DU32 memory types summary
 
-| avrdude name | Size | Notes |
-|---|---|---|
-| `flash` | 64KB | Main flash: BOOT + APPCODE + APPDATA |
-| `eeprom` | 256B | Survives reset; erased by chip erase (unless EESAVE=1) |
-| `fuses` | 16B | All fuseX as one logical block |
-| `fuse0`–`fuse8`,`fusea` | 1–2B | Individual fuse bytes (see table above) |
-| `prodsig` / `sigrow` | — | Factory read-only: signature, calibration, serial |
-| `sernum` | 16B | Unique device serial number (subset of prodsig) |
-| `bootrow` | 256B | Extra page; BL-only write access; not erased by chip erase |
-| `userrow` | 512B | Extra EEPROM page; read/write; **not** erased by chip erase |
-| `sib` | — | System info block: AVR family, silicon revision |
-| `lock` | — | Lock bits |
-| `signature` | 3B | Device signature: 0x1E 0x96 0x21 for AVR64DU32 |
+| avrdude name            | Size | Notes                                                       |
+| ----------------------- | ---- | ----------------------------------------------------------- |
+| `flash`                 | 64KB | Main flash: BOOT + APPCODE + APPDATA                        |
+| `eeprom`                | 256B | Survives reset; erased by chip erase (unless EESAVE=1)      |
+| `fuses`                 | 16B  | All fuseX as one logical block                              |
+| `fuse0`–`fuse8`,`fusea` | 1–2B | Individual fuse bytes (see table above)                     |
+| `prodsig` / `sigrow`    | —    | Factory read-only: signature, calibration, serial           |
+| `sernum`                | 16B  | Unique device serial number (subset of prodsig)             |
+| `bootrow`               | 256B | Extra page; BL-only write access; not erased by chip erase  |
+| `userrow`               | 512B | Extra EEPROM page; read/write; **not** erased by chip erase |
+| `sib`                   | —    | System info block: AVR family, silicon revision             |
+| `lock`                  | —    | Lock bits                                                   |
+| `signature`             | 3B   | Device signature: 0x1E 0x96 0x21 for AVR64DU32              |
 
 ---
 
 ## AVR Inspection Tools
 
 ### avr-nm — symbol table
+
 ```bash
 # Show all symbols with addresses
 avr-nm build/bl/KeyDU.BL.elf
@@ -176,6 +181,7 @@ avr-nm -n build/bl/KeyDU.BL.elf | head -30
 ```
 
 ### avr-objdump — disassembly and inspection
+
 ```bash
 # Full disassembly
 avr-objdump -D build/bl/KeyDU.BL.elf | head -60
@@ -198,6 +204,7 @@ avr-objdump -D build/bl/KeyDU.BL.elf | grep -A 20 "^.*2fe:"
 ```
 
 ### avr-size — memory usage
+
 ```bash
 avr-size --format=avr --mcu=avr64du32 build/bl/KeyDU.BL.elf
 avr-size --format=avr --mcu=avr64du32 build/app/KeyDU.App.elf
@@ -208,6 +215,7 @@ avr-size --format=avr --mcu=avr64du32 build/app/KeyDU.App.elf
 ## Hex / Binary Inspection
 
 ### xxd
+
 ```bash
 xxd fuses.bin               # hex dump
 xxd fuses.bin | head -4     # first 4 lines only
@@ -215,6 +223,7 @@ xxd -l 32 fuses.bin         # first 32 bytes only
 ```
 
 ### srec_info — Intel HEX file analysis
+
 ```bash
 # Show address ranges and format
 srec_info build/KeyDU.merged.hex -Intel
@@ -229,6 +238,7 @@ srec_info build/KeyDU.merged.hex -Intel
 ## Linux Shell Tools
 
 ### dmesg — kernel messages
+
 ```bash
 dmesg -w &              # watch in background, see USB events live
 dmesg | tail -20        # last 20 lines
@@ -236,6 +246,7 @@ dmesg | grep -i "usb\|hid\|error"
 ```
 
 ### lsusb — list USB devices
+
 ```bash
 lsusb                   # quick list
 lsusb -t                # tree view showing bus topology
@@ -244,6 +255,7 @@ lsusb | grep -i "1209\|03eb\|keydu\|atmel"     # filter by known VID
 ```
 
 ### find
+
 ```bash
 find /usr/lib/avr -name "*64du*"              # find avr64du32 support files
 find /usr/lib/avr -name "crt*.o" | grep xmega2   # find CRT objects
@@ -251,6 +263,7 @@ find . -name "*.c" | xargs grep -l "BOOTSIZE" # find files containing a symbol
 ```
 
 ### grep
+
 ```bash
 grep -i "pattern"           # case insensitive
 grep -r "pattern" dir/      # recursive
@@ -262,6 +275,7 @@ grep -n "pattern" file.c    # show line numbers
 ```
 
 ### Redirect / suppress
+
 ```bash
 command 2>/dev/null         # suppress stderr
 command 2>&1 | grep foo     # merge stderr into stdout, then grep
@@ -269,6 +283,7 @@ command 2>&1 | head -20     # merge and show first 20 lines
 ```
 
 ### head / tail
+
 ```bash
 head -20 file               # first 20 lines
 tail -20 file               # last 20 lines
@@ -296,17 +311,18 @@ newgrp wireshark            # activate group without logout
 ```
 
 In Wireshark:
+
 - Capture interface: `usbmon1` (match bus number from `lsusb -t`)
 - Display filter for enumeration: `usb.addr contains "1."` or no filter
 - Look for: `GET DESCRIPTOR Request DEVICE` → `Response` → `SET ADDRESS` → `GET DESCRIPTOR CONFIGURATION`
 - Failure modes:
 
-| dmesg message | Cause |
-|---|---|
-| No dmesg at all | D+ never pulled high — USB_ATTACH_bm not set, or clock/VREG issue |
-| `device descriptor read/8, error -71` | Device not responding — USB peripheral not initialised |
-| `device not accepting address` | EP0 not responding — descriptor or stack issue |
-| `device descriptor read/64, error -32` | Device reset mid-transfer |
+| dmesg message                          | Cause                                                             |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| No dmesg at all                        | D+ never pulled high — USB_ATTACH_bm not set, or clock/VREG issue |
+| `device descriptor read/8, error -71`  | Device not responding — USB peripheral not initialised            |
+| `device not accepting address`         | EP0 not responding — descriptor or stack issue                    |
+| `device descriptor read/64, error -32` | Device reset mid-transfer                                         |
 
 ---
 
@@ -327,3 +343,48 @@ make flash_fuses        # write fuses via avrdude
 make format             # run astyle on all source files
 make bear               # regenerate compile_commands.json
 ```
+
+---
+
+# Kate for development
+
+For push/pull, the plugin has basic support but many people find it more natural to just use the built-in terminal panel for those two operations.
+
+## Git workflow recommendation
+
+Use Kate's Git panel for the visual diff/stage/commit cycle, and use the terminal for push, pull, clone, and anything branchy. The commands you'll use 95% of the time are maybe 6-8 total.
+
+The rough mental model coming from GitHub Desktop:
+
+| GitHub Desktop action | Terminal equivalent       |
+| --------------------- | ------------------------- |
+| Clone                 | `git clone <url>`         |
+| Pull                  | `git pull`                |
+| Stage all             | `git add .`               |
+| Stage file            | `git add filename`        |
+| Commit                | `git commit -m "message"` |
+| Push                  | `git push`                |
+| See status            | `git status`              |
+| See log               | `git log --oneline`       |
+
+## Your actual workflow in the terminal is just:
+
+```bash
+git pull
+# do your work
+git diff
+git add .        # stage everything (what GitHub Desktop did silently)
+git status
+git commit -m "message"
+git push
+```
+
+## One-time git config
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+git config --global credential.helper store   # saves your token after first use
+```
+
+For GitHub auth, use a **Personal Access Token** (classic, with repo scope) as your password the first time you push — `credential.helper store` will cache it so you never type it again.
