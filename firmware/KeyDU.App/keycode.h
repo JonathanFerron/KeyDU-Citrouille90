@@ -199,13 +199,13 @@
 // Compose Keys - Range 0x0600 - 0x06FF
 // Prefit: CP_ (ComPose)
 /* Compose — accented characters via host layout (CMS by default).
- * Uncomment and extend as needed.  Only entries referenced in
- * execute_compose() are compiled in; unused ones cost zero flash.
- *
- * Naming: CP_<letter>_<accent> for lowercase, CP_<LETTER>_<ACCENT> for upper.
- * Accent abbreviations: ACU=acute, GRV=grave, CIR=circumflex,
- *   DIA=diaeresis, CED=cedilla, TIL=tilde, MAC=macron, RNG=ring.
- */
+   Uncomment and extend as needed.  Only entries referenced in
+   execute_compose() are compiled in; unused ones cost zero flash.
+
+   Naming: CP_<letter>_<accent> for lowercase, CP_<LETTER>_<ACCENT> for upper.
+   Accent abbreviations: ACU=acute, GRV=grave, CIR=circumflex,
+     DIA=diaeresis, CED=cedilla, TIL=tilde, MAC=macron, RNG=ring.
+*/
 #define CP_BASE         0x0600
 
 /* French everyday set */

@@ -47,7 +47,7 @@
 
 /* Stream timeout in ms (used by ep_wait_ready) */
 #ifndef USB_STREAM_TIMEOUT_MS
-#define USB_STREAM_TIMEOUT_MS  100u
+  #define USB_STREAM_TIMEOUT_MS  100u
 #endif
 
 /* Total endpoint slots in hardware table (EP0..EP15) */
@@ -61,13 +61,13 @@
 
 /* --- USB device state machine states --- */
 
-typedef enum {
-    USB_STATE_UNATTACHED  = 0,
-    USB_STATE_POWERED     = 1,
-    USB_STATE_DEFAULT     = 2,
-    USB_STATE_ADDRESSED   = 3,
-    USB_STATE_CONFIGURED  = 4,
-    USB_STATE_SUSPENDED   = 5,
+typedef enum
+{ USB_STATE_UNATTACHED  = 0,
+  USB_STATE_POWERED     = 1,
+  USB_STATE_DEFAULT     = 2,
+  USB_STATE_ADDRESSED   = 3,
+  USB_STATE_CONFIGURED  = 4,
+  USB_STATE_SUSPENDED   = 5,
 } usb_dev_state_t;
 
 /* --- Standard control request types --- */
@@ -111,12 +111,12 @@ typedef enum {
 #define STATUS_REMOTE_WAKEUP  (1u << 1)
 
 /* Packed SETUP packet received in usb_ctrl_req */
-typedef struct USB_PACKED {
-    uint8_t  bm_request_type;
-    uint8_t  b_request;
-    uint16_t w_value;
-    uint16_t w_index;
-    uint16_t w_length;
+typedef struct USB_PACKED
+{ uint8_t  bm_request_type;
+  uint8_t  b_request;
+  uint16_t w_value;
+  uint16_t w_index;
+  uint16_t w_length;
 } usb_request_t;
 
 _Static_assert(sizeof(usb_request_t) == 8, "usb_request_t must be 8 bytes");
@@ -157,65 +157,65 @@ _Static_assert(sizeof(usb_request_t) == 8, "usb_request_t must be 8 bytes");
 /* Using USB-IF field names (bLength, bDescriptorType, etc.)
    to match what you will write in usb_desc.c */
 
-typedef struct USB_PACKED {
-    uint8_t b_length;
-    uint8_t b_descriptor_type;
+typedef struct USB_PACKED
+{ uint8_t b_length;
+  uint8_t b_descriptor_type;
 } usb_desc_header_t;
 
-typedef struct USB_PACKED {
-    uint8_t  b_length;
-    uint8_t  b_descriptor_type;
-    uint16_t bcd_usb;
-    uint8_t  b_device_class;
-    uint8_t  b_device_sub_class;
-    uint8_t  b_device_protocol;
-    uint8_t  b_max_packet_size0;
-    uint16_t id_vendor;
-    uint16_t id_product;
-    uint16_t bcd_device;
-    uint8_t  i_manufacturer;
-    uint8_t  i_product;
-    uint8_t  i_serial_number;
-    uint8_t  b_num_configurations;
+typedef struct USB_PACKED
+{ uint8_t  b_length;
+  uint8_t  b_descriptor_type;
+  uint16_t bcd_usb;
+  uint8_t  b_device_class;
+  uint8_t  b_device_sub_class;
+  uint8_t  b_device_protocol;
+  uint8_t  b_max_packet_size0;
+  uint16_t id_vendor;
+  uint16_t id_product;
+  uint16_t bcd_device;
+  uint8_t  i_manufacturer;
+  uint8_t  i_product;
+  uint8_t  i_serial_number;
+  uint8_t  b_num_configurations;
 } usb_desc_device_t;
 
-typedef struct USB_PACKED {
-    uint8_t  b_length;
-    uint8_t  b_descriptor_type;
-    uint16_t w_total_length;
-    uint8_t  b_num_interfaces;
-    uint8_t  b_configuration_value;
-    uint8_t  i_configuration;
-    uint8_t  bm_attributes;
-    uint8_t  b_max_power;
+typedef struct USB_PACKED
+{ uint8_t  b_length;
+  uint8_t  b_descriptor_type;
+  uint16_t w_total_length;
+  uint8_t  b_num_interfaces;
+  uint8_t  b_configuration_value;
+  uint8_t  i_configuration;
+  uint8_t  bm_attributes;
+  uint8_t  b_max_power;
 } usb_desc_config_t;
 
-typedef struct USB_PACKED {
-    uint8_t b_length;
-    uint8_t b_descriptor_type;
-    uint8_t b_interface_number;
-    uint8_t b_alternate_setting;
-    uint8_t b_num_endpoints;
-    uint8_t b_interface_class;
-    uint8_t b_interface_sub_class;
-    uint8_t b_interface_protocol;
-    uint8_t i_interface;
+typedef struct USB_PACKED
+{ uint8_t b_length;
+  uint8_t b_descriptor_type;
+  uint8_t b_interface_number;
+  uint8_t b_alternate_setting;
+  uint8_t b_num_endpoints;
+  uint8_t b_interface_class;
+  uint8_t b_interface_sub_class;
+  uint8_t b_interface_protocol;
+  uint8_t i_interface;
 } usb_desc_interface_t;
 
-typedef struct USB_PACKED {
-    uint8_t  b_length;
-    uint8_t  b_descriptor_type;
-    uint8_t  b_endpoint_address;
-    uint8_t  bm_attributes;
-    uint16_t w_max_packet_size;
-    uint8_t  b_interval;
+typedef struct USB_PACKED
+{ uint8_t  b_length;
+  uint8_t  b_descriptor_type;
+  uint8_t  b_endpoint_address;
+  uint8_t  bm_attributes;
+  uint16_t w_max_packet_size;
+  uint8_t  b_interval;
 } usb_desc_endpoint_t;
 
 /* String descriptor — variable length; use USB_STRING_LEN() for b_length */
-typedef struct USB_PACKED {
-    uint8_t b_length;
-    uint8_t b_descriptor_type;
-    wchar_t unicode_string[];
+typedef struct USB_PACKED
+{ uint8_t b_length;
+  uint8_t b_descriptor_type;
+  wchar_t unicode_string[];
 } usb_desc_string_t;
 
 /* --- Shared globals (defined in usb_ctrl.c, declared here) --- */

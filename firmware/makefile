@@ -4,17 +4,22 @@
 # for the AVR64DU32.
 #
 # Usage:
-#   make           — build both targets
+#   make or make all   — build both targets
 #   make app       — build KeyDU.App only
 #   make bl        — build KeyDU.BL only
+#   make merged    - build the merged KeyDU.BL+KeyDU.App Hex file
 #   make flash_app — program KeyDU.App via UPDI
 #   make flash_bl  — program KeyDU.BL via UPDI
+#   make flash_merged  — program merged KeyDU.BL+App via UPDI (full reflash)
+#   make flash_usb  — program KeyDU.App via USB vendor protocol
 #   make clean     — remove all build artefacts
 #   make size      — print section sizes for both targets
 #   make bear      — regenerate compile_commands.json
 #   make format    — format all .c/.h files with astyle
 #   make help      — print available targets
 # =============================================================================
+
+MAKEFLAGS += -j$(shell nproc --ignore=2)
 
 # -----------------------------------------------------------------------------
 # Toolchain
@@ -60,6 +65,7 @@ COMMON_CFLAGS += -fdata-sections
 # Removed (applied selectively via USB_PACKED instead) COMMON_CFLAGS += -fpack-struct
 COMMON_CFLAGS += -fno-strict-aliasing    # pointer-cast-heavy USB code; avoids aliasing UB
 COMMON_CFLAGS += -fshort-enums
+COMMON_CFLAGS += -mrodata-in-ram
 
 COMMON_ASFLAGS  = -mmcu=$(MCU)
 COMMON_ASFLAGS += -DF_CPU=$(F_CPU)
@@ -69,6 +75,7 @@ COMMON_ASFLAGS += -Wa,-adhlns=$(patsubst %.S,$(BUILD)/%.lst,$<)  # listing file 
 COMMON_LDFLAGS  = -mmcu=$(MCU)
 COMMON_LDFLAGS += -Wl,--gc-sections
 COMMON_LDFLAGS += -Wl,--relax
+COMMON_LDFLAGS += -mrodata-in-ram
 #COMMON_LDFLAGS += -Wl,--exclude-libs,libavr64du32.a
 #COMMON_LDFLAGS += -Wl,--defsym=__flmap_init_label=0
 # Useful during development: -Wl,--print-gc-sections
@@ -101,7 +108,6 @@ APP_C_SRC = \
     usbcore/usb_ctrl.c          \
     usbcore/usb_ep.c            \
     usbcore/usb_ep_stream.c     \
-    avrducore/fuses.c           \
     avrducore/clock.c
 
 APP_S_SRC = \
@@ -109,7 +115,8 @@ APP_S_SRC = \
 
 APP_CFLAGS  = $(COMMON_CFLAGS) $(APP_INC)
 APP_ASFLAGS = $(COMMON_ASFLAGS) $(APP_INC)
-APP_LDFLAGS = $(COMMON_LDFLAGS) -T$(APP_LD)
+#APP_LDFLAGS = $(COMMON_LDFLAGS) -T$(APP_LD)
+APP_LDFLAGS = $(COMMON_LDFLAGS) -Wl,--section-start=.text=0x2000
 
 APP_C_OBJ = $(patsubst %.c,  $(APP_OUT)/%.o, $(APP_C_SRC))
 APP_S_OBJ = $(patsubst %.S,  $(APP_OUT)/%.o, $(APP_S_SRC))
@@ -136,6 +143,7 @@ BL_C_SRC = \
     usbcore/usb_ctrl.c                    \
     usbcore/usb_ep.c                      \
     usbcore/usb_ep_stream.c               \
+    avrducore/fuses.c           \
     avrducore/clock.c
 
 BL_S_SRC = \
@@ -143,17 +151,26 @@ BL_S_SRC = \
 
 BL_CFLAGS  = $(COMMON_CFLAGS) $(BL_INC)
 BL_ASFLAGS = $(COMMON_ASFLAGS) $(BL_INC)
-BL_LDFLAGS = $(COMMON_LDFLAGS) -T$(BL_LD)
+#BL_LDFLAGS = $(COMMON_LDFLAGS) -T$(BL_LD)
+BL_LDFLAGS = $(COMMON_LDFLAGS)
 
 BL_C_OBJ = $(patsubst %.c,  $(BL_OUT)/%.o, $(BL_C_SRC))
 BL_S_OBJ = $(patsubst %.S,  $(BL_OUT)/%.o, $(BL_S_SRC))
 BL_OBJ   = $(BL_C_OBJ) $(BL_S_OBJ)
 
+MERGED_HEX = $(BUILD)/KeyDU.merged.hex
+
+#CRT_OBJ = /usr/lib/avr/lib/avrxmega2/crtavr64du32.o
+#CRT_LIB = /usr/lib/avr/lib/avrxmega2/libavr64du32.a
+
+#BL_LDFLAGS  = $(COMMON_LDFLAGS) -T$(BL_LD)  $(CRT_OBJ) $(CRT_LIB)
+#APP_LDFLAGS = $(COMMON_LDFLAGS) -T$(APP_LD) $(CRT_OBJ) $(CRT_LIB)
+
 # =============================================================================
 # Top-level targets
 # =============================================================================
 
-.PHONY: all app bl clean size flash_updi flash_app flash_bl flash_usb flasher bear format help
+.PHONY: all app bl clean size flash_merged flash_app flash_bl flash_usb flasher bear format help merged
 
 all: app bl
 
@@ -168,6 +185,12 @@ bl: $(BL_HEX)
 	$(SIZE) --format=avr --mcu=$(MCU) $(BL_ELF)
 
 size: app bl
+
+merged: app bl $(MERGED_HEX)
+	@echo ""
+	@echo "=== Merged image ==="
+	$(SIZE) --format=avr --mcu=$(MCU) $(APP_ELF)
+	$(SIZE) --format=avr --mcu=$(MCU) $(BL_ELF)
 
 flasher: $(FLASHER_BIN)
 
@@ -234,7 +257,7 @@ $(BL_OUT)/%.o: %.S
 # Merged hex (BL + App combined for full UPDI flash)
 # =============================================================================
 
-MERGED_HEX = $(BUILD)/KeyDU.merged.hex
+
 
 $(MERGED_HEX): $(BL_HEX) $(APP_HEX)
 	@mkdir -p $(BUILD)
@@ -260,7 +283,7 @@ $(FLASHER_BIN): $(FLASHER_SRC)
 
 # Full UPDI flash — merged BL + App in one shot.
 # Use this for initial bring-up and any time the bootloader changes.
-flash_updi: $(MERGED_HEX)
+flash_merged: $(MERGED_HEX)
 	@echo "Flashing merged image (BL + App) via UPDI..."
 	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -U flash:w:$<:i
 
@@ -327,10 +350,11 @@ help:
 	@echo "  all          Build both KeyDU.App and KeyDU.BL (default)"
 	@echo "  app          Build KeyDU.App (HID keyboard) only"
 	@echo "  bl           Build KeyDU.BL (vendor bootloader) only"
+	@echo "  merged       Build merged BL+App hex image"
 	@echo "  size         Build both and print section sizes"
 	@echo ""
 	@echo "Flash targets:"
-	@echo "  flash_updi   Program merged BL+App image via UPDI (full reflash)"
+	@echo "  flash_merged Program merged BL+App image via UPDI (full reflash)"
 	@echo "  flash_app    Program KeyDU.App only via UPDI (no erase)"
 	@echo "  flash_bl     Program KeyDU.BL only via UPDI (no erase)"
 	@echo "  flash_usb    Program KeyDU.App via USB vendor protocol"

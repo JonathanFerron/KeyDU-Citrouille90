@@ -6,31 +6,31 @@
 #include "usb_ep_stream.h"
 
 /*
- * usb_ctrl — standard USB control request handling and device init/task.
- *
- * usb_init() brings up the USB hardware. usb_ctrl_poll() must be called every
- * iteration of the main loop (ungated) to poll EP0 for pending SETUP packets.
- *
- * Three callbacks MUST be implemented by the caller (usb_desc.c for the App,
- * usb_vendor.c for the BL):
- *
- *   uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index,
- *                         const void **addr);
- *     Return size of the requested descriptor and set *addr to its location in
- *     flash (PROGMEM). Return NO_DESCRIPTOR if not found.
- *
- * Four event callbacks have weak stub definitions here and may be overridden
- * by usb_hid.c (or usb_vendor.c for the bootloader):
- *
- *   void usb_event_reset(void)
- *   void usb_event_config_changed(void)
- *   void usb_event_suspend(void)
- *   void usb_event_wakeup(void)
- *
- * Class-specific control requests are forwarded to:
- *   void usb_event_ctrl_request(void)   — weak stub, override in caller
- * If not handled there, the request is automatically stalled.
- */
+   usb_ctrl — standard USB control request handling and device init/task.
+
+   usb_init() brings up the USB hardware. usb_ctrl_poll() must be called every
+   iteration of the main loop (ungated) to poll EP0 for pending SETUP packets.
+
+   Three callbacks MUST be implemented by the caller (usb_desc.c for the App,
+   usb_vendor.c for the BL):
+
+     uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index,
+                           const void **addr);
+       Return size of the requested descriptor and set *addr to its location in
+       flash (PROGMEM). Return NO_DESCRIPTOR if not found.
+
+   Four event callbacks have weak stub definitions here and may be overridden
+   by usb_hid.c (or usb_vendor.c for the bootloader):
+
+     void usb_event_reset(void)
+     void usb_event_config_changed(void)
+     void usb_event_suspend(void)
+     void usb_event_wakeup(void)
+
+   Class-specific control requests are forwarded to:
+     void usb_event_ctrl_request(void)   — weak stub, override in caller
+   If not handled there, the request is automatically stalled.
+*/
 
 /* --- Options flags for usb_init --- */
 
@@ -60,7 +60,7 @@ void usb_ctrl_poll(void);
 /* --- Descriptor callback — implemented in usb_desc.c (App) or usb_vendor_desc.c (BL) --- */
 
 /* Return descriptor size; set *addr to PROGMEM address. Return NO_DESCRIPTOR if absent. */
-uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index, const void **addr);
+uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index, const void** addr);
 
 /* --- Event callbacks — weak stubs, override in usb_hid.c / usb_vendor.c --- */
 
@@ -86,7 +86,11 @@ void usb_event_sof(void)            USB_WEAK;
 
 /* --- SOF interrupt control --- */
 
-static inline void usb_sof_enable(void)  { USB0.INTCTRLA |=  USB_SOF_bm; }
-static inline void usb_sof_disable(void) { USB0.INTCTRLA &= ~USB_SOF_bm; }
+static inline void usb_sof_enable(void)
+{ USB0.INTCTRLA |=  USB_SOF_bm;
+}
+static inline void usb_sof_disable(void)
+{ USB0.INTCTRLA &= ~USB_SOF_bm;
+}
 
 #endif /* USB_CTRL_H */

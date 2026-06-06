@@ -1,0 +1,126 @@
+/*
+ * KeyDU.BL — Bootloader linker script
+ * AVR64DU32: BOOT region 0x0000–0x1FFF (8KB)
+ */
+
+ENTRY(main)
+
+MEMORY
+{
+    flash  (rx)  : ORIGIN = 0x0000, LENGTH = 8K
+    sram   (rw!x): ORIGIN = 0x802000, LENGTH = 8K
+}
+
+SECTIONS
+{
+    .text :
+    {
+        KEEP(*(.vectors))
+        *(.progmem)
+        *(.progmem.*)
+        . = ALIGN(2);
+        *(.trampolines)
+        *(.trampolines*)
+        . = ALIGN(2);
+        __ctors_start = . ;
+        *(.ctors)
+        __ctors_end = . ;
+        __dtors_start = . ;
+        *(.dtors)
+        __dtors_end = . ;
+        KEEP(SORT(*)(.ctors))
+        KEEP(SORT(*)(.dtors))
+        *(.init0)
+        KEEP(*(.init0))
+        *(.init1)
+        KEEP(*(.init1))
+        *(.init2)
+        KEEP(*(.init2))
+        *(.init3)
+        KEEP(*(.init3))
+        *(.init4)
+        KEEP(*(.init4))
+        *(.init5)
+        KEEP(*(.init5))
+        *(.init6)
+        KEEP(*(.init6))
+        *(.init7)
+        KEEP(*(.init7))
+        *(.init8)
+        KEEP(*(.init8))
+        *(.init9)
+        KEEP(*(.init9))
+        *(.text)
+        . = ALIGN(2);
+        *(.text.*)
+        . = ALIGN(2);
+        *(.rodata)
+        *(.rodata*)
+        *(.fini9)
+        KEEP(*(.fini9))
+        *(.fini8)
+        KEEP(*(.fini8))
+        *(.fini7)
+        KEEP(*(.fini7))
+        *(.fini6)
+        KEEP(*(.fini6))
+        *(.fini5)
+        KEEP(*(.fini5))
+        *(.fini4)
+        KEEP(*(.fini4))
+        *(.fini3)
+        KEEP(*(.fini3))
+        *(.fini2)
+        KEEP(*(.fini2))
+        *(.fini1)
+        KEEP(*(.fini1))
+        *(.fini0)
+        KEEP(*(.fini0))
+        _etext = . ;
+    } > flash
+
+    /* Satisfy libavr64du32.a flmap_init.o reference */
+    __flmap_init_label = 0 ;
+
+    .data : AT (ADDR(.text) + SIZEOF(.text))
+    {
+        PROVIDE(__data_start = .) ;
+        *(.data)
+        *(.data.*)
+        . = ALIGN(2);
+        PROVIDE(__data_end = .) ;
+    } > sram
+
+    .bss :
+    {
+        PROVIDE(__bss_start = .) ;
+        *(.bss)
+        *(.bss.*)
+        *(COMMON)
+        PROVIDE(__bss_end = .) ;
+    } > sram
+
+    .noinit ADDR(.bss) + SIZEOF(.bss) : AT (ADDR(.noinit))
+    {
+        PROVIDE(__noinit_start = .) ;
+        *(.noinit .noinit.*)
+        PROVIDE(__noinit_end = .) ;
+        _end = . ;
+    } > sram
+
+    __data_load_start = LOADADDR(.data);
+    __data_load_end   = __data_load_start + SIZEOF(.data);
+
+    .eeprom :
+    {
+        KEEP(*(.eeprom*))
+    }
+
+    .fuse :
+    {
+        KEEP(*(.fuse))
+        KEEP(*(.lfuse))
+        KEEP(*(.hfuse))
+        KEEP(*(.efuse))
+    }
+}

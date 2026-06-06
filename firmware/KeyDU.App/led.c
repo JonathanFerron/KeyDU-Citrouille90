@@ -10,14 +10,12 @@ static uint8_t led_level_b    = LED_BRIGHTNESS_DEFAULT;
 bool    led_enabled    = true;
 
 static void led_write(uint8_t a, uint8_t b)
-{
-  TCA0.SPLIT.HCMP1 = a;  // PA4 / WO4 — takes effect at next HCNT underflow
+{ TCA0.SPLIT.HCMP1 = a;  // PA4 / WO4 — takes effect at next HCNT underflow
   TCA0.SPLIT.HCMP2 = b;  // PA5 / WO5
 }
 
 void led_init(void)
-{
-  LED_PORT.DIRSET = (1 << LED_A_PIN) | (1 << LED_B_PIN);
+{ LED_PORT.DIRSET = (1 << LED_A_PIN) | (1 << LED_B_PIN);
 
   // PORTA is the hardware default for TCA0 — stated explicitly for clarity
   PORTMUX.TCAROUTEA = PORTMUX_TCA0_PORTA_gc;
@@ -36,36 +34,34 @@ void led_init(void)
 }
 
 void led_set(uint8_t brightness)
-{
-  led_brightness = brightness;
+{ led_brightness = brightness;
   led_level_a    = brightness;
   led_level_b    = brightness;
-  if (led_enabled) led_write(led_level_a, led_level_b);
+  if(led_enabled) led_write(led_level_a, led_level_b);
 }
 
 void led_step(bool dir, uint8_t step)
-{
-  if (dir) {
-    led_brightness = (led_brightness > LED_BRIGHTNESS_MAX - step)
-      ? LED_BRIGHTNESS_MAX
-      : led_brightness + step;
-  } else {
-    led_brightness = (led_brightness < LED_BRIGHTNESS_MIN + step)
-      ? LED_BRIGHTNESS_MIN
-      : led_brightness - step;
+{ if(dir)
+  { led_brightness = (led_brightness > LED_BRIGHTNESS_MAX - step)
+                     ? LED_BRIGHTNESS_MAX
+                     : led_brightness + step;
+  }
+  else
+  { led_brightness = (led_brightness < LED_BRIGHTNESS_MIN + step)
+                     ? LED_BRIGHTNESS_MIN
+                     : led_brightness - step;
   }
 
   led_level_a = led_brightness;
   led_level_b = led_brightness;
-  if (led_enabled) led_write(led_level_a, led_level_b);
+  if(led_enabled) led_write(led_level_a, led_level_b);
 }
 
 void led_update_layer(uint8_t layer)
-{
-  uint16_t v;
+{ uint16_t v;
 
-  switch (layer) {
-    case 0:
+  switch(layer)
+  { case 0:
       led_level_a = led_brightness;
       led_level_b = led_brightness;
       break;
@@ -80,19 +76,17 @@ void led_update_layer(uint8_t layer)
       led_level_b = led_level_a;
       break;
   }
-  if (led_enabled) led_write(led_level_a, led_level_b);
+  if(led_enabled) led_write(led_level_a, led_level_b);
 }
 
 void led_off(void)
-{
-  led_enabled = false;
+{ led_enabled = false;
   TCA0.SPLIT.CTRLB &= ~(TCA_SPLIT_HCMP1EN_bm | TCA_SPLIT_HCMP2EN_bm);
   LED_PORT.OUTCLR = (1 << LED_A_PIN) | (1 << LED_B_PIN);
 }
 
 void led_on(void)
-{
-  led_enabled = true;
+{ led_enabled = true;
   led_write(led_level_a, led_level_b);
   TCA0.SPLIT.CTRLB |= TCA_SPLIT_HCMP1EN_bm | TCA_SPLIT_HCMP2EN_bm;
 }

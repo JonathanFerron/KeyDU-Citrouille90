@@ -56,31 +56,31 @@
 #define HID_REQ_SET_PROTOCOL    0x0Bu
 
 /* ── HID descriptor struct (USB-IF HID 1.11 §6.2.1) ────────────────────── */
-typedef struct USB_PACKED {
-    uint8_t  b_length;
-    uint8_t  b_descriptor_type;          /* HID_DTYPE_HID                    */
-    uint16_t bcd_hid;
-    uint8_t  b_country_code;
-    uint8_t  b_num_descriptors;          /* always 1                         */
-    uint8_t  b_report_descriptor_type;   /* HID_DTYPE_REPORT                 */
-    uint16_t w_report_descriptor_length;
+typedef struct USB_PACKED
+{ uint8_t  b_length;
+  uint8_t  b_descriptor_type;          /* HID_DTYPE_HID                    */
+  uint16_t bcd_hid;
+  uint8_t  b_country_code;
+  uint8_t  b_num_descriptors;          /* always 1                         */
+  uint8_t  b_report_descriptor_type;   /* HID_DTYPE_REPORT                 */
+  uint16_t w_report_descriptor_length;
 } usb_desc_hid_t;
 
 /* ── Full configuration descriptor layout ──────────────────────────────── */
-typedef struct USB_PACKED {
-    usb_desc_config_t    cfg;
-    /* Interface 0 — boot keyboard */
-    usb_desc_interface_t iface_kbd;
-    usb_desc_hid_t       hid_kbd;
-    usb_desc_endpoint_t  ep_kbd_in;
-    usb_desc_endpoint_t  ep_kbd_out;     /* LED output report                */
-    /* Interface 1 — consumer/system */
-    usb_desc_interface_t iface_consumer;
-    usb_desc_hid_t       hid_consumer;
-    usb_desc_endpoint_t  ep_consumer_in;
+typedef struct USB_PACKED
+{ usb_desc_config_t    cfg;
+  /* Interface 0 — boot keyboard */
+  usb_desc_interface_t iface_kbd;
+  usb_desc_hid_t       hid_kbd;
+  usb_desc_endpoint_t  ep_kbd_in;
+  usb_desc_endpoint_t  ep_kbd_out;     /* LED output report                */
+  /* Interface 1 — consumer/system */
+  usb_desc_interface_t iface_consumer;
+  usb_desc_hid_t       hid_consumer;
+  usb_desc_endpoint_t  ep_consumer_in;
 } usb_config_desc_t;
 
 /* ── Required usbcore callback — implemented in usb_desc.c ─────────────── */
-uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index, const void **addr);
+uint16_t usb_get_desc(uint16_t w_value, uint16_t w_index, const void** addr);
 
 #endif /* USB_DESC_H */

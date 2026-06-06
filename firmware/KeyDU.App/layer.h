@@ -12,10 +12,10 @@
 #define MAX_LAYER_KEYS      4  // Max simultaneous layer hold keys
 
 // Track which physical keys are holding which layers
-typedef struct {
-    uint8_t row;
-    uint8_t col;
-    uint8_t target_layer;
+typedef struct
+{ uint8_t row;
+  uint8_t col;
+  uint8_t target_layer;
 } layer_key_t;
 
 extern uint8_t current_layer;

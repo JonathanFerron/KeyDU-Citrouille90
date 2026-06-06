@@ -1,15 +1,15 @@
 /* matrix.h — Key matrix interface for Citrouille90 / AVR64DU32
- * SPDX-License-Identifier: GPL-3.0-or-later
- * Copyright (C) 2026 Jonathan Ferron
- *
- * matrix_scan() performs a full column-output-low / row-input-pullup scan,
- * applies per-key debounce, and maintains debounced current and previous
- * state arrays.  After matrix_scan() returns, callers may query any key's
- * edge or level state via the functions below.
- *
- * There is no register_key() callback in this model.  Edge detection lives
- * entirely inside matrix.c; keyboard.c consumes it through matrix_is_key_*().
- */
+   SPDX-License-Identifier: GPL-3.0-or-later
+   Copyright (C) 2026 Jonathan Ferron
+
+   matrix_scan() performs a full column-output-low / row-input-pullup scan,
+   applies per-key debounce, and maintains debounced current and previous
+   state arrays.  After matrix_scan() returns, callers may query any key's
+   edge or level state via the functions below.
+
+   There is no register_key() callback in this model.  Edge detection lives
+   entirely inside matrix.c; keyboard.c consumes it through matrix_is_key_*().
+*/
 
 #ifndef MATRIX_H
 #define MATRIX_H
@@ -29,8 +29,8 @@
 void matrix_init(void);
 
 /* Scan the full matrix once.  Call exactly once per 1 kHz tick.
- * Updates internal debounced current/previous state arrays.
- * After this returns, use the query functions below. */
+   Updates internal debounced current/previous state arrays.
+   After this returns, use the query functions below. */
 void matrix_scan(void);
 
 /* Level query: true if key is currently debounced-pressed. */
