@@ -243,7 +243,12 @@ void usb_ctrl_poll(void)
   ep_select(EP_CTRL);
 
   if(ep_setup_received())
-    usb_process_ctrl_request();
+  { /* Longer pulse — visually distinct from the 3ms ISR pulse */
+    PORTF.OUTTGL = (1 << 2);
+    for(volatile uint32_t d = 0; d < 240000UL; d++) {}  /* ~60ms */
+      PORTF.OUTTGL = (1 << 2);
+      usb_process_ctrl_request();
+  }
 
   ep_select(saved);
 }
@@ -355,5 +360,8 @@ ISR(USB0_BUSEVENT_vect)
     ep_configure(EP_CTRL, EP_TYPE_CONTROL, usb_ctrl_ep_size, 1);
 
     usb_event_reset();
+
+    PORTF.OUTTGL = (1 << 2);  // quick pulse: ISR is firing
+    PORTF.OUTTGL = (1 << 2);
   }
 } // ISB USB BUSEVENT

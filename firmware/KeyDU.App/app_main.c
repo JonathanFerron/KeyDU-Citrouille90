@@ -64,6 +64,15 @@ int main(void)
 
   //set_sleep_mode(SLEEP_MODE_IDLE);
   //sleep_enable();
+
+  PORTF.DIRSET = (1 << 2);
+
+  // 1 blink = reached past keyboard_init() (PLL wait didn't hang, attach done)
+  PORTF.OUTTGL = (1 << 2);
+  for(volatile uint16_t d = 0; d < 24000u; d++) {}
+  PORTF.OUTTGL = (1 << 2);
+  for(volatile uint16_t d = 0; d < 24000u; d++) {}
+
   sei(); // enable global interrupts
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO: remove this once issue is resolved */

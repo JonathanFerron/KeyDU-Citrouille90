@@ -134,7 +134,7 @@ void ep_clear_all(void)
 
 bool ep_in_ready(void)
 { ep_select((uint8_t)(usb_ep_selected | EP_DIR_IN));
-  return (ep_status_get() & USB_BUSNAK_bm) != 0;
+  return (ep_status_get() & (USB_BUSNAK_bm | USB_TRNCOMPL_bm)) != 0;
 }
 
 bool ep_out_received(void)
