@@ -200,6 +200,7 @@ hid_led_report_t hid_get_led_report(void)
 void usb_event_config_changed(void)
 { hid_configure();
   clock_autotune_enable();
+  usb_sof_enable();
 }
 
 /* ════════════════════════════════════════════════════════════════════════
