@@ -60,11 +60,13 @@ int main(void)
 {
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO, remove this once issue is resolved */
+  /*
   PORTF.DIRSET = (1 << 2);
   for(uint8_t i = 0; i < 6; i++)
   { PORTF.OUTTGL = (1 << 2);
     for(volatile uint32_t d = 0; d < 200000UL; d++) {}
   }
+  */
 
   /* Step 1: Read and immediately clear RSTFR.
      Must be done before any peripheral init.  Writing back the observed

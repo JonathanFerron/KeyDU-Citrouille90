@@ -51,11 +51,13 @@ int main(void)
 { wdt_disable();
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO: remove this once issue is resolved */
+  /*
   PORTF.DIRSET = (1 << 2);
   for(uint8_t i = 0; i < 10; i++)
   { PORTF.OUTTGL = (1 << 2);
     for(volatile uint32_t d = 0; d < 50000UL; d++) {}
   }
+  */
 
   system_init();
   keyboard_init();
@@ -66,7 +68,7 @@ int main(void)
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO: remove this once issue is resolved */
   PORTF.DIRSET = (1 << 2);
-  for(uint8_t i = 0; i < 8; i++)
+  for(uint8_t i = 0; i < 6; i++)
   { PORTF.OUTTGL = (1 << 2);
     for(volatile uint32_t d = 0; d < 100000UL; d++) {}
   }

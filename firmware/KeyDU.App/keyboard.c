@@ -225,8 +225,8 @@ void keyboard_init(void)
   led_init();
   encoder_init();
 
-  //usb_init(USB_OPT_VREG_ENABLE);
-  usb_init(0);   /* no VREG — for Nano testing only : TODO: remove this and revert back to prior line when testing on the nano is complete */
+  usb_init(USB_OPT_VREG_ENABLE);
+  //usb_init(0);   /* no VREG — for Nano testing only : TODO: remove this and revert back to prior line when testing on the nano is complete */
 }
 
 /* ============================================================================
