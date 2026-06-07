@@ -62,8 +62,8 @@ int main(void)
   system_init();
   keyboard_init();
 
-  set_sleep_mode(SLEEP_MODE_IDLE);
-  sleep_enable();
+  //set_sleep_mode(SLEEP_MODE_IDLE);
+  //sleep_enable();
   sei(); // enable global interrupts
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO: remove this once issue is resolved */
@@ -79,6 +79,6 @@ int main(void)
     { s_tick_flag = 0;
       keyboard_task();
     }
-    sleep_cpu();    /* IDLE: wakes on TCB0, USB SOF, USB bus events    */
+    //sleep_cpu();    /* IDLE: wakes on TCB0, USB SOF, USB bus events    */
   }
 }

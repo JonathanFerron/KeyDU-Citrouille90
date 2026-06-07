@@ -288,6 +288,8 @@ void usb_init(uint8_t options)
   else
     SYSCFG.VUSBCTRL = SYSCFG_USBVREG_DISABLE_gc;
 
+  CLKCTRL.USBPLLSTATUS = CLKCTRL_PLLS_bm;
+
   SREG = sreg;
 
   usb_is_initialized = true;
