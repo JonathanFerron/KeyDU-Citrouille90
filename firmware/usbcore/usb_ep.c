@@ -10,10 +10,14 @@ volatile uint8_t   usb_ep_selected;
 volatile USB_EP_t* usb_ep_handle;
 volatile ep_fifo_t* usb_ep_fifo;
 
+volatile uint8_t usb_ep_trncompl_in  = 0;
+volatile uint8_t usb_ep_trncompl_out = 0;
+
 /* --- Status register RMW helpers --- */
 
 static inline void ep_status_clr(uint8_t bits)
-{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm);
+{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm){}
+
   if(usb_ep_selected & EP_DIR_IN)
     USB0.STATUS[usb_ep_selected & EP_NUM_MASK].INCLR  = bits;
   else
@@ -21,7 +25,8 @@ static inline void ep_status_clr(uint8_t bits)
 }
 
 static inline void ep_status_set(uint8_t bits)
-{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm);
+{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm){}
+
   if(usb_ep_selected & EP_DIR_IN)
     USB0.STATUS[usb_ep_selected & EP_NUM_MASK].INSET  = bits;
   else
@@ -90,7 +95,7 @@ bool ep_configure(uint8_t address, uint8_t type, uint16_t size, uint8_t banks)
   if((address & EP_NUM_MASK) >= EP_TABLE_COUNT) return false;
   if(size > EP_MAX_SIZE)                        return false;
 
-  uint8_t cfg = (uint8_t)(USB_TCDSBL_bm | ep_size_to_mask(size));
+  uint8_t cfg = (uint8_t)(ep_size_to_mask(size));
 
   switch(type)
   { case EP_TYPE_CONTROL:
@@ -133,14 +138,36 @@ void ep_clear_all(void)
 /* --- Packet state predicates --- */
 
 bool ep_in_ready(void)
-{ ep_select((uint8_t)(usb_ep_selected | EP_DIR_IN));
-  return (ep_status_get() & (USB_BUSNAK_bm | USB_TRNCOMPL_bm)) != 0;
+{ ep_select(usb_ep_selected | EP_DIR_IN);
+  uint8_t bit = (uint8_t)(1u << (usb_ep_selected & EP_NUM_MASK));
+  if(ep_status_get() & (USB_BUSNAK_bm | USB_TRNCOMPL_bm))
+    return true;
+  if(usb_ep_trncompl_in & bit)
+  { usb_ep_trncompl_in &= (uint8_t)~bit;
+    return true;
+  }
+  if(USB0.INTFLAGSB & USB_TRNCOMPL_bm)
+  { USB0.INTFLAGSB = USB_TRNCOMPL_bm;
+    return true;
+  }
+  return false;
 }
 
 bool ep_out_received(void)
 { ep_select((uint8_t)(usb_ep_selected & ~EP_DIR_IN));
+  uint8_t bit = (uint8_t)(1u << (usb_ep_selected & EP_NUM_MASK));
   if(ep_status_get() & USB_TRNCOMPL_bm)
   { usb_ep_fifo->length = (uint8_t)usb_ep_handle->CNT;
+    return true;
+  }
+  if(usb_ep_trncompl_out & bit)
+  { usb_ep_trncompl_out &= (uint8_t)~bit;
+    usb_ep_fifo->length = (uint8_t)usb_ep_handle->CNT;
+    return true;
+  }
+  if(USB0.INTFLAGSB & USB_TRNCOMPL_bm)
+  { USB0.INTFLAGSB = USB_TRNCOMPL_bm;
+    usb_ep_fifo->length = (uint8_t)usb_ep_handle->CNT;
     return true;
   }
   return false;
@@ -173,13 +200,15 @@ void ep_clear_setup(void)
 }
 
 void ep_clear_in(void)
-{ usb_ep_handle->CNT = usb_ep_fifo->position;   /* tell HW how many bytes to send */
+{ usb_ep_handle->CNT = usb_ep_fifo->position;
   ep_status_clr(USB_TRNCOMPL_bm | USB_BUSNAK_bm | USB_UNFOVF_bm);
+  usb_ep_trncompl_in &= (uint8_t)~(1u << (usb_ep_selected & EP_NUM_MASK));
   usb_ep_fifo->position = 0;
 }
 
 void ep_clear_out(void)
 { ep_status_clr(USB_TRNCOMPL_bm | USB_BUSNAK_bm | USB_UNFOVF_bm);
+  usb_ep_trncompl_out &= (uint8_t)~(1u << (usb_ep_selected & EP_NUM_MASK));
   usb_ep_fifo->position = 0;
 }
 

@@ -212,21 +212,22 @@ void kbd_consumer_clear(void)
    keyboard_init
    ========================================================================= */
 void keyboard_init(void)
-{ s_pressed_key_count = 0;
-  memset(s_pressed_keys, 0, sizeof(s_pressed_keys));
-
-  /* Zero reports; set consumer report_id which must always be 0x01. */
-  memset(&s_kbd_report, 0, sizeof(s_kbd_report));
-  memset(&s_con_report, 0, sizeof(s_con_report));
-  s_con_report.report_id = 0x01u;
-
-  layer_init();
-  matrix_init();
-  led_init();
-  encoder_init();
+{
+  // commented the below to make usb enumeration debug work easier: TODO : uncomment
+  // s_pressed_key_count = 0;
+  // memset(s_pressed_keys, 0, sizeof(s_pressed_keys));
+  //
+  // /* Zero reports; set consumer report_id which must always be 0x01. */
+  // memset(&s_kbd_report, 0, sizeof(s_kbd_report));
+  // memset(&s_con_report, 0, sizeof(s_con_report));
+  // s_con_report.report_id = 0x01u;
+  //
+  // layer_init();
+  // matrix_init();
+  // led_init();
+  // encoder_init();
 
   usb_init(USB_OPT_VREG_ENABLE);
-  //usb_init(0);   /* no VREG — for Nano testing only : TODO: remove this and revert back to prior line when testing on the nano is complete */
 }
 
 /* ============================================================================

@@ -205,6 +205,20 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
       rem--;
     }
     ep_clear_in();
+
+    /* Wait ~100ms for host to ACK the IN packet, then read STATUS directly */
+    /*
+    for(volatile uint32_t d = 0; d < 2400000UL; d++) {}
+    uint8_t raw = ((ep_hw_table_t*)USB0.EPPTR)->endpoints[0].IN.STATUS;
+    uint8_t blinks = (raw & (USB_BUSNAK_bm | USB_TRNCOMPL_bm)) ? 1u : 3u;
+    for(uint8_t i = 0; i < blinks; i++)
+    { PORTF.OUTCLR = PIN2_bm;
+      for(volatile uint32_t d = 0; d < 600000UL; d++) {}
+      PORTF.OUTSET = PIN2_bm;
+      for(volatile uint32_t d = 0; d < 600000UL; d++) {}
+    }
+    while(1) {}   // halt — remove after diagnosis
+    */
   }
 
   /* Same ZLP fix as ep_write_ctrl_stream above. */

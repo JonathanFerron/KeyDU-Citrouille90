@@ -14,6 +14,7 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>     /* wdt_disable() — guards against a previously armed WDT */
+#include <stdint.h>
 
 #include "clock.h"
 #include "keyboard.h"
@@ -23,9 +24,22 @@
 static volatile uint8_t s_tick_flag;
 
 ISR(TCB0_INT_vect)
-{ s_tick_flag = 1;
+{ // s_tick_flag = 1;
+  s_tick_flag++; // Increment instead of setting to 1, for debugging only
   TCB0.INTFLAGS = TCB_CAPT_bm;    /* clear interrupt flag */
-}
+
+  // Debug addition:
+  //static uint8_t debug_counter = 0;
+  // Debug: Toggle every 250 ticks (1 ms * 250 = 250 ms)
+  //debug_counter++;
+  /*
+  if (debug_counter >= 250)
+  {
+    debug_counter = 0;
+    PORTF.OUTTGL = (1 << 2);      // Visible 2Hz flash pattern
+  }
+  */
+} // ISR TCB0
 
 ISR(BADISR_vect)
 { /* Unexpected interrupt — return silently.
@@ -60,36 +74,55 @@ int main(void)
   */
 
   system_init();
+  PORTF.DIRSET = PIN2_bm;
+  PORTF.OUTSET = PIN2_bm;
   keyboard_init();
 
   //set_sleep_mode(SLEEP_MODE_IDLE);
   //sleep_enable();
 
-  PORTF.DIRSET = (1 << 2);
+  /*PORTF.DIRSET = (1 << 2);
 
   // 1 blink = reached past keyboard_init() (PLL wait didn't hang, attach done)
   PORTF.OUTTGL = (1 << 2);
   for(volatile uint16_t d = 0; d < 24000u; d++) {}
   PORTF.OUTTGL = (1 << 2);
   for(volatile uint16_t d = 0; d < 24000u; d++) {}
+  */
 
   sei(); // enable global interrupts
 
   /* Blink PF2 (Nano LED0) — confirms app is reached and clock works : TODO: remove this once issue is resolved */
+
   /*
-  PORTF.DIRSET = (1 << 2);
+  PORTF.DIRSET = PIN2_bm;
   for(uint8_t i = 0; i < 6; i++)
-  { PORTF.OUTTGL = (1 << 2);
+  { PORTF.OUTTGL = PIN2_bm;
     for(volatile uint32_t d = 0; d < 100000UL; d++) {}
   }
   */
 
+
+  //uint8_t i = 0;
+
+
   while(1)
-  { usb_ctrl_poll();             /* ungated — polls EP0 for SETUP packets    */
+  { usb_ctrl_poll();             // ungated — polls EP0 for SETUP packets
+
+
     if(s_tick_flag)
-    { s_tick_flag = 0;
-      keyboard_task();
+    {
+      s_tick_flag = 0;
+
+      // keyboard_task();  // commented out to make usb enumeration debug work easier: TODO: uncomment
+      //i++; // for debugging only
+      //if (!i) // for debugging only
+      //{
+      //  PORTF.OUTTGL = (1 << 2);
+      //}
+
     }
-    //sleep_cpu();    /* IDLE: wakes on TCB0, USB SOF, USB bus events    */
-  }
-}
+    //sleep_cpu();    // IDLE: wakes on TCB0, USB SOF, USB bus events
+  } // while
+
+} // main

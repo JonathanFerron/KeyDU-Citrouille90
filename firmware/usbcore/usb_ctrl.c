@@ -243,12 +243,23 @@ void usb_ctrl_poll(void)
   ep_select(EP_CTRL);
 
   if(ep_setup_received())
-  { /* Longer pulse — visually distinct from the 3ms ISR pulse */
+  { /* Longer pulse — about 60 ms */
+    /*
     PORTF.OUTTGL = (1 << 2);
-    for(volatile uint32_t d = 0; d < 240000UL; d++) {}  /* ~60ms */
-      PORTF.OUTTGL = (1 << 2);
-      usb_process_ctrl_request();
+    for(volatile uint32_t d = 0; d < 240000UL; d++) {}
+    PORTF.OUTTGL = (1 << 2);
+    for(volatile uint32_t d = 0; d < 240000UL; d++) {}
+    */
+    usb_process_ctrl_request();
   }
+
+  /* Short pulse — about 30 ms */
+  /*
+  PORTF.OUTTGL = (1 << 2);
+  for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+  PORTF.OUTTGL = (1 << 2);
+  for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+  */
 
   ep_select(saved);
 }
@@ -269,8 +280,12 @@ static void usb_init_device(void)
 
   ep_configure(EP_CTRL, EP_TYPE_CONTROL, usb_ctrl_ep_size, 1);
 
+  USB0.FIFORP = USB0.FIFOWP;   /* discard pre-reset FIFO entries */
+
   /* Enable bus-event interrupts: suspend, resume, reset */
   USB0.INTCTRLA |= USB_SUSPEND_bm | USB_RESUME_bm | USB_RESET_bm;
+
+  USB0.INTCTRLB = USB_TRNCOMPL_bm;
 
   USB0.CTRLB |= USB_ATTACH_bm;
 }
@@ -282,8 +297,19 @@ void usb_init(uint8_t options)
   cli();
 
   USB0.EPPTR = (intptr_t)&usb_ep_table[0];
-  USB0.CTRLA = (uint8_t)(USB_STFRNUM_bm |
+  USB0.CTRLA = (uint8_t)(USB_STFRNUM_bm | USB_FIFOEN_bm |
                          ((EP_TABLE_COUNT - 1u) << USB_MAXEP_gp));
+
+  /* Trap misconfigured CTRLA at startup — halts with rapid blink if FIFOEN absent */
+  /*
+  if(!(USB0.CTRLA & USB_FIFOEN_bm))
+  { while(1)
+    { PORTF.OUTTGL = PIN2_bm;
+      for(volatile uint16_t d = 0; d < 60000u; d++) {}
+    }
+  }
+  */
+
 
   if(options & USB_OPT_BUS_INT_HIGH)
     CPUINT.LVL1VEC = USB0_BUSEVENT_vect_num;
@@ -359,9 +385,30 @@ ISR(USB0_BUSEVENT_vect)
     ep_clear_all();
     ep_configure(EP_CTRL, EP_TYPE_CONTROL, usb_ctrl_ep_size, 1);
 
+    USB0.FIFORP = USB0.FIFOWP;        /* discard stale FIFO entries from before reset */
+    usb_ep_trncompl_in  = 0;
+    usb_ep_trncompl_out = 0;
+    USB0.INTCTRLB = USB_TRNCOMPL_bm; /* re-enable — hardware likely clears this on bus reset */
+
     usb_event_reset();
 
-    PORTF.OUTTGL = (1 << 2);  // quick pulse: ISR is firing
-    PORTF.OUTTGL = (1 << 2);
+    //PORTF.OUTTGL = (1 << 2);  // quick pulse: ISR is firing
+    //PORTF.OUTTGL = (1 << 2);
   }
 } // ISB USB BUSEVENT
+
+
+ISR(USB0_TRNCOMPL_vect)
+{ //PORTF.OUTTGL = PIN2_bm;     /* fires at all? */
+  ep_hw_table_t* tbl = (ep_hw_table_t*)USB0.EPPTR;
+  while(USB0.FIFOWP != USB0.FIFORP)
+  { uint8_t entry  = tbl->fifo[USB0.FIFORP & 0x1Fu];
+    USB0.FIFORP    = (uint8_t)((USB0.FIFORP + 1u) & 0x1Fu);
+    uint8_t ep_num = (uint8_t)((entry & USB_EPNUM_gm) >> USB_EPNUM_gp);
+    if(entry & USB_DIR_bm)
+      usb_ep_trncompl_in  |= (uint8_t)(1u << ep_num);
+    else
+      usb_ep_trncompl_out |= (uint8_t)(1u << ep_num);
+  }
+  USB0.INTFLAGSB = USB_TRNCOMPL_bm;
+}

@@ -30,7 +30,8 @@ typedef struct
 
 /* Hardware endpoint table layout for AVR DU (pointed to by USB0.EPPTR) */
 typedef struct USB_PACKED
-{ USB_EP_PAIR_t  endpoints[EP_TABLE_COUNT];
+{ uint8_t        fifo[32];           /* transaction complete FIFO — only used when FIFOEN is set */
+  USB_EP_PAIR_t  endpoints[EP_TABLE_COUNT];
   uint16_t       frame_num;
 } ep_hw_table_t;
 
@@ -200,5 +201,8 @@ static inline uint16_t ep_get_frame_number(void)
 static inline void usb_send_remote_wakeup(void)
 { USB0.CTRLB |= USB_URESUME_bm;
 }
+
+extern volatile uint8_t usb_ep_trncompl_in;   /* bit n = EP_n IN completed */
+extern volatile uint8_t usb_ep_trncompl_out;  /* bit n = EP_n OUT completed */
 
 #endif /* USB_EP_H */
