@@ -1,8 +1,18 @@
 # Citrouille90 To Dos
 
+## Next steps:
+
+**1. Prove the data path end to end — get a real keypress through.** Enumeration only exercises EP0. Re-enable a minimal `keyboard_task()` (or just hardcode staging one keycode on a timer), then confirm a press actually lands with `evtest` on the input device or by typing into a terminal. This is where you'll flush out the EP1 IN data-toggle and `ep_in_ready()` behavior on a non-control endpoint, plus the LED OUT path. Do this *before* anything else, because almost every later feature rides on this working. Tackle the SOF-ISR vs main-loop `ep_select()` contention here too, since re-enabling the scan loop is exactly what makes that race live — bracket `hid_flush()` with `usb_sof_disable()`/`usb_sof_enable()` or move it off the ISR as you'd planned.
+
+**2. Burn down the post-enumeration correctness bugs you already logged.** You have a clean list from before: `usb_sof_enable()` wiring, `usb_vendor_task()` calling the wrong function, the `process_key_release()` guard, and the EEPROM bootloader magic-flag integration. These are known, scoped, and cheap now that the stack is alive. Knocking them out while the USB layer is fresh in your head is far easier than rediscovering them in three months.
+
+**3. Lock in a regression baseline before you build features on top.** Tag this commit (something like `v0.1-enumeration`), and write down — in your `Hardware_notebook.md` or a `BUGS_FIXED.md` — the three root causes from this session, especially the `EPPTR = &endpoints[0]` offset and the FIFO-lives-before-EPPTR rule. That detail is invisible in the datasheet's prose and you will absolutely need it again for KeyDU v2's six-endpoint layout. A tagged known-good point means that if v2's endpoint expansion breaks enumeration, you can `git diff` against a state you trust instead of re-debugging from scratch.
+
+On Claude Code: it's well suited to steps 2 and 3 — multi-file edits across the `usbcore`/`usbhid`/`bootloader` modules, running your `make` build, and grepping the codebase for the logged bugs. It's less useful for step 1, where the bottleneck is hardware observation (`evtest`, `dmesg`, LED blinks, maybe Bloom/a logic analyzer) rather than code generation. If you do set it up, point it at your existing conventions — snake_case, static module state, no return codes from hardware drivers, the SRAM/flash budgets — so its edits match the codebase rather than drifting.
+
+
+
 ## To be addressed:
-
-
 
 ## Nice to have (style issue):
 
@@ -24,9 +34,9 @@
 
 1. hid_flush()-in-SOF-ISR vs EP0 Control Transfer Race
    hid_flush() is called from usb_event_sof(), which runs inside USB0_BUSEVENT_vect. Meanwhile, usb_ctrl_poll() runs in the main loop and may be executing a control transfer — including ep_write_ctrl_stream() in usb_event_ctrl_request() — at the same moment the SOF ISR fires. Both paths call ep_select() and manipulate the global usb_ep_selected, usb_ep_handle, and usb_ep_fifo pointers. A SOF interrupt mid-control-transfer will clobber those globals, corrupting the in-progress EP0 transfer.
-
+   
     The specific s_kbd_buf reference that triggered a compile error has been removed — HID_REQ_GET_REPORT for the keyboard interface now snapshots via kbd_get_report(), which is safe because s_kbd_report is written exclusively in main-loop context. The s_con_buf read in the consumer branch of HID_REQ_GET_REPORT retains the original exposure.
-
+   
     The correct fix is to move hid_flush() out of the SOF ISR and into the main loop, called unconditionally before usb_ctrl_poll(). The SOF ISR would then only set a flag. This eliminates the re-entrancy entirely. The seqlock on the consumer report and the SPSC queue for the keyboard report were designed with this main-loop flush model in mind — neither requires ISR context.
 
 2. Stale Report on USB Resume (Phantom Keypresses)

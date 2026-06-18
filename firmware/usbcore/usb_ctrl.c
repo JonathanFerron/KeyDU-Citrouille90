@@ -68,15 +68,30 @@ static void send_internal_serial(void)
    and normal descriptor lookup) now complete the status stage.
 */
 static void ctrl_get_descriptor(void)
-{ /* Internal serial number shortcut */
+{ //PORTF.OUTTGL = PIN2_bm;  // quick pulse
+  //PORTF.OUTTGL = PIN2_bm;
+
+  /* Internal serial number shortcut */
   if(usb_ctrl_req.w_value == ((uint16_t)(DTYPE_STRING << 8) | 0xDCu))
   { send_internal_serial();
     return;
   }
 
   const void* addr;
-  uint16_t size = usb_get_desc(usb_ctrl_req.w_value,
-                               usb_ctrl_req.w_index, &addr);
+
+  // diagnostic code to be removed once debugging is complete
+  // uint16_t size = usb_get_desc(usb_ctrl_req.w_value, usb_ctrl_req.w_index, &addr);
+  // if(size == NO_DESCRIPTOR)
+  // { uint8_t dtype = (uint8_t)(usb_ctrl_req.w_value >> 8);   /* 1=DEVICE 2=CONFIG 3=STRING */
+  //   for(uint8_t k = 0; k < dtype; k++)
+  //   { PORTF.OUTCLR = PIN2_bm; for(volatile uint32_t d=0; d<120000UL; d++){}
+  //   PORTF.OUTSET = PIN2_bm; for(volatile uint32_t d=0; d<180000UL; d++){} }
+  //   for(;;){}
+  // }
+  // end of diagnostic code
+
+
+  uint16_t size = usb_get_desc(usb_ctrl_req.w_value, usb_ctrl_req.w_index, &addr);
   if(size == NO_DESCRIPTOR) return;
 
   ep_clear_setup();
@@ -96,6 +111,7 @@ static void ctrl_set_address(void)
      Guard against disconnect — consistent with ep_complete_ctrl_status(). */
   while(!ep_in_ready())
   { if(usb_device_state == USB_STATE_UNATTACHED) return;
+    if(ep_setup_received()) return;
   }
   USB0.ADDR = addr;
   usb_device_state = addr ? USB_STATE_ADDRESSED : USB_STATE_DEFAULT;
@@ -181,7 +197,13 @@ static void ctrl_clear_set_feature(void)
 /* --- Main control request dispatcher --- */
 
 void usb_process_ctrl_request(void)
-{ /* Read the 8-byte SETUP packet from the FIFO into usb_ctrl_req */
+{ // short pulse
+  // PORTF.OUTTGL = (1 << 2);
+  // for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+  // PORTF.OUTTGL = (1 << 2);
+  // for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+
+  /* Read the 8-byte SETUP packet from the FIFO into usb_ctrl_req */
   uint8_t* req = (uint8_t*)&usb_ctrl_req;
   for(uint8_t i = 0; i < sizeof(usb_request_t); i++)
     req[i] = ep_read_u8();
@@ -238,6 +260,9 @@ void usb_process_ctrl_request(void)
 
 void usb_ctrl_poll(void)
 { if(usb_device_state == USB_STATE_UNATTACHED) return;
+
+  //PORTF.OUTTGL = (1 << 2);
+  //PORTF.OUTTGL = (1 << 2);
 
   uint8_t saved = ep_get_current();
   ep_select(EP_CTRL);
@@ -296,20 +321,9 @@ void usb_init(uint8_t options)
 { uint8_t sreg = SREG;
   cli();
 
-  USB0.EPPTR = (intptr_t)&usb_ep_table[0];
+  USB0.EPPTR = (intptr_t)((ep_hw_table_t*)usb_ep_table)->endpoints;   /* base + 32, like MCC's endpointTable.EP */
   USB0.CTRLA = (uint8_t)(USB_STFRNUM_bm | USB_FIFOEN_bm |
                          ((EP_TABLE_COUNT - 1u) << USB_MAXEP_gp));
-
-  /* Trap misconfigured CTRLA at startup — halts with rapid blink if FIFOEN absent */
-  /*
-  if(!(USB0.CTRLA & USB_FIFOEN_bm))
-  { while(1)
-    { PORTF.OUTTGL = PIN2_bm;
-      for(volatile uint16_t d = 0; d < 60000u; d++) {}
-    }
-  }
-  */
-
 
   if(options & USB_OPT_BUS_INT_HIGH)
     CPUINT.LVL1VEC = USB0_BUSEVENT_vect_num;
@@ -386,6 +400,7 @@ ISR(USB0_BUSEVENT_vect)
     ep_configure(EP_CTRL, EP_TYPE_CONTROL, usb_ctrl_ep_size, 1);
 
     USB0.FIFORP = USB0.FIFOWP;        /* discard stale FIFO entries from before reset */
+    USB0.INTFLAGSB = USB_SETUP_bm | USB_TRNCOMPL_bm;
     usb_ep_trncompl_in  = 0;
     usb_ep_trncompl_out = 0;
     USB0.INTCTRLB = USB_TRNCOMPL_bm; /* re-enable — hardware likely clears this on bus reset */
@@ -399,11 +414,16 @@ ISR(USB0_BUSEVENT_vect)
 
 
 ISR(USB0_TRNCOMPL_vect)
-{ //PORTF.OUTTGL = PIN2_bm;     /* fires at all? */
-  ep_hw_table_t* tbl = (ep_hw_table_t*)USB0.EPPTR;
-  while(USB0.FIFOWP != USB0.FIFORP)
-  { uint8_t entry  = tbl->fifo[USB0.FIFORP & 0x1Fu];
-    USB0.FIFORP    = (uint8_t)((USB0.FIFORP + 1u) & 0x1Fu);
+{
+  ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
+
+  /* Read FIFORP exactly once — hardware auto-manages FIFORP advancement.
+   *      Do NOT write back to USB0.FIFORP. Process one entry per invocation;
+   *      hardware re-asserts TRNCOMPL if FIFOWP != FIFORP after advancement. */
+  uint8_t rp = USB0.FIFORP;
+
+  if(USB0.FIFOWP != rp)
+  {   uint8_t entry  = tbl->fifo[rp & 0x1Fu];
     uint8_t ep_num = (uint8_t)((entry & USB_EPNUM_gm) >> USB_EPNUM_gp);
     if(entry & USB_DIR_bm)
       usb_ep_trncompl_in  |= (uint8_t)(1u << ep_num);

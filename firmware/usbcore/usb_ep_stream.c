@@ -131,64 +131,67 @@ ep_ready_result_t ep_write_stream_P(const void* buf, uint16_t length,
 }
 
 /* --- Control endpoint stream helpers --- */
-/*
-   Control streams differ from bulk streams in two ways:
-   (1) They handle host-abort (SETUP received mid-transfer) as a normal exit.
-   (2) They auto-send the last partial packet rather than waiting for a full bank.
-   The caller is always responsible for clearing the status-stage packet after
-   these functions return.
+ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
+{
+  //PORTF.OUTTGL = PIN2_bm;  // quick pulse
+  //PORTF.OUTTGL = PIN2_bm;
 
-   ZLP rule: a zero-length IN packet must follow any transfer whose total
-   length is an exact multiple of the control EP bank size, so the host
-   knows the transfer is complete.  The divisor is usb_ctrl_ep_size (the
-   actual bank size configured for EP0, typically 8 for this device) — NOT
-   EP_MAX_SIZE (64).  Using EP_MAX_SIZE was bug #14: for an 8-byte bank, a
-   descriptor that is, say, 18 bytes would never trigger the ZLP even when
-   its length happened to be a multiple of 8, because 18 % 64 != 0.
-
-   The check uses the original `length` (unclamped), not `rem` (which may
-   have been shortened to w_length).  This is intentional: if the host
-   requested fewer bytes than the descriptor's actual size, the transfer
-   ends short and no ZLP is required regardless of the descriptor length.
-*/
-
-ep_ready_result_t ep_write_ctrl_stream(const void* buf, uint16_t length)
-{ const uint8_t* p   = (const uint8_t*)buf;
+  const uint8_t* p   = (const uint8_t*)buf;
   uint16_t       rem = length;
 
-  /* Clamp to wLength if host asked for less */
   if(rem > usb_ctrl_req.w_length)
     rem = usb_ctrl_req.w_length;
 
   while(rem)
-  { /* Wait for IN endpoint to be ready */
+  {
+    /* Wait for endpoint ready.
+     *          Iteration 1: BUSNAK=1 from ep_configure_prv → immediate.
+     *          Iteration 2+: hardware sets BUSNAK=1 when MCNT=CNT (batch done). */
     while(!ep_in_ready())
     { if(usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
-      if(ep_setup_received())                      return EP_READY_OK;  /* host aborted */
+      if(ep_setup_received())                      return EP_READY_OK;
     }
 
-    /* Fill up to the bank size */
-    while(rem && ep_rw_allowed())
-    { ep_write_u8(*p++);
-      rem--;
-    }
+    /* Load entire batch (up to 64 B) into the FIFO buffer. */
+    uint8_t batch = (rem > (uint16_t)EP_MAX_SIZE) ? (uint8_t)EP_MAX_SIZE : (uint8_t)rem;
+    for(uint8_t i = 0; i < batch; i++)
+      usb_ep_fifo->data[i] = pgm_read_byte(p++);
+
+    /* Commit: CNT = batch, MCNT = 0.  MULTIPKT sends in BUFSIZE-byte
+     *          sub-packets with auto-toggle until MCNT == CNT, then BUSNAK=1. */
+    usb_ep_fifo->position = batch;
     ep_clear_in();
+
+    rem -= batch;
+    /* Do NOT wait here for batch completion:
+     *          - If rem > 0: next ep_in_ready() call blocks until BUSNAK=1.
+     *          - If rem == 0: ep_complete_ctrl_status() naturally waits for the
+     *            host STATUS ZLP, which only arrives after all IN data is received. */
   }
 
-  /* Send a ZLP if the descriptor length is an exact multiple of the
-     control EP bank size — use usb_ctrl_ep_size, not EP_MAX_SIZE. */
+  // led toggle test
+  // for(uint8_t i = 0; i < 3; i++)
+  // { PORTF.OUTTGL = PIN2_bm;
+  //   for(volatile uint16_t d = 0; d < 24000u; d++) {}
+  //   PORTF.OUTTGL = PIN2_bm;
+  //   for(volatile uint16_t d = 0; d < 24000u; d++) {}
+  // }
+
+  /* ZLP when total is an exact multiple of the control EP packet size. */
   if(length && (length % usb_ctrl_ep_size == 0))
   { while(!ep_in_ready())
     { if(usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
     }
+    usb_ep_fifo->position = 0;
     ep_clear_in();
   }
 
   return EP_READY_OK;
 }
 
-ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
-{ const uint8_t* p   = (const uint8_t*)buf;
+ep_ready_result_t ep_write_ctrl_stream(const void* buf, uint16_t length)
+{
+  const uint8_t* p   = (const uint8_t*)buf;
   uint16_t       rem = length;
 
   if(rem > usb_ctrl_req.w_length)
@@ -200,32 +203,21 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
       if(ep_setup_received())                      return EP_READY_OK;
     }
 
-    while(rem && ep_rw_allowed())
-    { ep_write_u8(pgm_read_byte(p++));
-      rem--;
-    }
+    uint8_t batch = (rem > (uint16_t)EP_MAX_SIZE) ? (uint8_t)EP_MAX_SIZE : (uint8_t)rem;
+    for(uint8_t i = 0; i < batch; i++)
+      usb_ep_fifo->data[i] = *p++;
+
+    usb_ep_fifo->position = batch;
     ep_clear_in();
 
-    /* Wait ~100ms for host to ACK the IN packet, then read STATUS directly */
-    /*
-    for(volatile uint32_t d = 0; d < 2400000UL; d++) {}
-    uint8_t raw = ((ep_hw_table_t*)USB0.EPPTR)->endpoints[0].IN.STATUS;
-    uint8_t blinks = (raw & (USB_BUSNAK_bm | USB_TRNCOMPL_bm)) ? 1u : 3u;
-    for(uint8_t i = 0; i < blinks; i++)
-    { PORTF.OUTCLR = PIN2_bm;
-      for(volatile uint32_t d = 0; d < 600000UL; d++) {}
-      PORTF.OUTSET = PIN2_bm;
-      for(volatile uint32_t d = 0; d < 600000UL; d++) {}
-    }
-    while(1) {}   // halt — remove after diagnosis
-    */
+    rem -= batch;
   }
 
-  /* Same ZLP fix as ep_write_ctrl_stream above. */
   if(length && (length % usb_ctrl_ep_size == 0))
   { while(!ep_in_ready())
     { if(usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
     }
+    usb_ep_fifo->position = 0;
     ep_clear_in();
   }
 

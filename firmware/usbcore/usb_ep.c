@@ -44,7 +44,7 @@ void ep_select(uint8_t address)
   usb_ep_selected = address;
 
   ep_fifo_pair_t* pair    = &usb_ep_fifos[num];
-  ep_hw_table_t*  hw_tbl  = (ep_hw_table_t*)USB0.EPPTR;
+  ep_hw_table_t* hw_tbl = (ep_hw_table_t*)usb_ep_table;   /* was (ep_hw_table_t*)USB0.EPPTR */
 
   if(address & EP_DIR_IN)
   { usb_ep_fifo   = &pair->in;
@@ -100,6 +100,7 @@ bool ep_configure(uint8_t address, uint8_t type, uint16_t size, uint8_t banks)
   switch(type)
   { case EP_TYPE_CONTROL:
       cfg |= USB_TYPE_CONTROL_gc;
+      cfg |= USB_MULTIPKT_bm;    /* enables auto-toggle between packets */
       break;
     case EP_TYPE_ISOCHRONOUS:
       cfg |= USB_TYPE_ISO_gc;
@@ -128,7 +129,8 @@ bool ep_configure_table(const ep_table_entry_t* table, uint8_t count)
 }
 
 void ep_clear_all(void)
-{ ep_hw_table_t* tbl = (ep_hw_table_t*)USB0.EPPTR;
+{
+  ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
   for(uint8_t i = 0; i < EP_TABLE_COUNT; i++)
   { tbl->endpoints[i].IN.CTRL  = 0;
     tbl->endpoints[i].OUT.CTRL = 0;
@@ -175,32 +177,48 @@ bool ep_out_received(void)
 
 bool ep_setup_received(void)
 { ep_select((uint8_t)(usb_ep_selected & ~EP_DIR_IN));
-  if(ep_status_get() & USB_EPSETUP_bm)
+
+  /* DIAGNOSTIC — latch LED solid-ON the first time each condition is seen.
+   *  Read by eye: if LED comes on and stays on, that condition fired. */
+  // if(USB0.INTFLAGSB & USB_SETUP_bm)
+  // { PORTF.OUTCLR = PIN2_bm;        /* LED ON (Cnano LED is active-low) — SETUP via INTFLAGSB */
+  //   for(;;) { }                    /* freeze so we know exactly which path hit */
+  // }
+  // if(ep_status_get() & USB_EPSETUP_bm)
+  // { PORTF.OUTSET = PIN2_bm;        /* LED OFF held — SETUP via STATUS.EPSETUP */
+  //   for(;;) { }
+  // }
+
+  if((USB0.INTFLAGSB & USB_SETUP_bm) || (ep_status_get() & USB_EPSETUP_bm))
   { usb_ep_fifo->length = (uint8_t)usb_ep_handle->CNT;
     return true;
   }
+
   return false;
 }
 
 /* --- Packet clear operations --- */
 
 void ep_clear_setup(void)
-{ /* OUT side: clear setup flag, transaction complete, NAK, over/underflow;
-     set toggle to sync data phase */
+{ /* OUT side */
   ep_select((uint8_t)(usb_ep_selected & ~EP_DIR_IN));
+  usb_ep_handle->CTRL &= ~USB_DOSTALL_bm;          /* ← clear any leftover stall */
   ep_status_clr(USB_EPSETUP_bm | USB_TRNCOMPL_bm | USB_BUSNAK_bm | USB_UNFOVF_bm);
   ep_status_set(USB_TOGGLE_bm);
   usb_ep_fifo->position = 0;
+  USB0.INTFLAGSB = USB_SETUP_bm;   /* clear SETUP flag — FIFOEN=1 path */
 
-  /* IN side: clear setup flag, set toggle */
+  /* IN side — re-arm with DATA1 toggle and BUSNAK=1 */
   ep_select((uint8_t)(usb_ep_selected | EP_DIR_IN));
-  ep_status_clr(USB_EPSETUP_bm);
-  ep_status_set(USB_TOGGLE_bm);
+  usb_ep_handle->CTRL &= ~USB_DOSTALL_bm;          /* ← clear any leftover stall */
+  ep_status_clr(USB_EPSETUP_bm | USB_TRNCOMPL_bm | USB_UNFOVF_bm);
+  ep_status_set(USB_TOGGLE_bm | USB_BUSNAK_bm);
   usb_ep_fifo->position = 0;
 }
 
 void ep_clear_in(void)
-{ usb_ep_handle->CNT = usb_ep_fifo->position;
+{ usb_ep_handle->MCNT  = 0;
+  usb_ep_handle->CNT = usb_ep_fifo->position;
   ep_status_clr(USB_TRNCOMPL_bm | USB_BUSNAK_bm | USB_UNFOVF_bm);
   usb_ep_trncompl_in &= (uint8_t)~(1u << (usb_ep_selected & EP_NUM_MASK));
   usb_ep_fifo->position = 0;
@@ -222,7 +240,6 @@ void ep_stall(void)
 }
 
 /* --- Primitive byte I/O --- */
-
 uint8_t ep_read_u8(void)
 { return usb_ep_fifo->data[usb_ep_fifo->position++];
 }
@@ -232,12 +249,12 @@ void ep_write_u8(uint8_t data)
 }
 
 /* --- Status stage completion for CONTROL transfers --- */
-
 void ep_complete_ctrl_status(void)
 { if(usb_ctrl_req.bm_request_type & REQ_DIR_DEV_TO_HOST)
   { /* Data was IN; status stage is a zero-length OUT from host */
     while(!ep_out_received())
     { if(usb_device_state == USB_STATE_UNATTACHED) return;
+      if(ep_setup_received()) return;    /* host aborted, new SETUP pending */
     }
     ep_clear_out();
   }
@@ -245,13 +262,13 @@ void ep_complete_ctrl_status(void)
   { /* Data was OUT (or no data); status stage is a zero-length IN */
     while(!ep_in_ready())
     { if(usb_device_state == USB_STATE_UNATTACHED) return;
+      if(ep_setup_received()) return;
     }
     ep_clear_in();
   }
 }
 
 /* --- ep_wait_ready (non-control endpoints) --- */
-
 ep_ready_result_t ep_wait_ready(void)
 { uint16_t timeout = USB_STREAM_TIMEOUT_MS;
   uint16_t prev_frame = ep_get_frame_number();

@@ -1,0 +1,6515 @@
+=== ./main.c ===
+
+#include "mcc_generated_files/system/system.h"
+
+int main(void)
+{
+    SYSTEM_Initialize();
+
+    while(1)
+    {
+    }
+}
+=== ./system/ccp.h ===
+
+static inline void ccp_write_io(void *addr, uint8_t value)
+{
+	protected_write_io(addr, CCP_IOREG_gc, value);
+}
+
+
+static inline void ccp_write_spm(void *addr, uint8_t value)
+{
+	protected_write_io(addr, CCP_SPM_gc, value);
+}
+
+=== ./system/port.h ===
+
+#include "utils/compiler.h"
+
+enum port_pull_mode {
+	PORT_PULL_OFF,
+	PORT_PULL_UP,
+};
+
+
+enum port_dir {
+	PORT_DIR_IN,
+	PORT_DIR_OUT,
+	PORT_DIR_OFF,
+};
+
+
+static inline void PORTA_set_pin_pull_mode(const uint8_t pin, const enum port_pull_mode pull_mode)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTA + 0x10 + pin);
+
+	if (pull_mode == PORT_PULL_UP) {
+		*port_pin_ctrl |= PORT_PULLUPEN_bm;
+	} else if (pull_mode == PORT_PULL_OFF) {
+		*port_pin_ctrl &= ~PORT_PULLUPEN_bm;
+	}
+}
+
+
+static inline void PORTA_pin_set_inverted(const uint8_t pin, const bool inverted)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTA + 0x10 + pin);
+
+	if (inverted) {
+		*port_pin_ctrl |= PORT_INVEN_bm;
+	} else {
+		*port_pin_ctrl &= ~PORT_INVEN_bm;
+	}
+}
+
+
+static inline void PORTA_pin_set_isc(const uint8_t pin, const PORT_ISC_t isc)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTA + 0x10 + pin);
+
+	*port_pin_ctrl = (*port_pin_ctrl & ~PORT_ISC_gm) | isc;
+}
+
+
+static inline void PORTA_set_port_dir(const uint8_t mask, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTA.DIR &= ~mask;
+		break;
+	case PORT_DIR_OUT:
+		VPORTA.DIR |= mask;
+		break;
+	case PORT_DIR_OFF:
+
+		{
+			for (uint8_t i = 0; i < 8; i++) {
+				if (mask & 1 << i) {
+					*((uint8_t *)&PORTA + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTA_set_pin_dir(const uint8_t pin, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTA.DIR &= ~(1 << pin);
+		break;
+	case PORT_DIR_OUT:
+		VPORTA.DIR |= (1 << pin);
+		break;
+	case PORT_DIR_OFF:
+		*((uint8_t *)&PORTA + 0x10 + pin) |= 1 << PORT_PULLUPEN_bp;
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTA_set_port_level(const uint8_t mask, const bool level)
+{
+	if (level == true) {
+		VPORTA.OUT |= mask;
+	} else {
+		VPORTA.OUT &= ~mask;
+	}
+}
+
+
+static inline void PORTA_set_pin_level(const uint8_t pin, const bool level)
+{
+	if (level == true) {
+		VPORTA.OUT |= (1 << pin);
+	} else {
+		VPORTA.OUT &= ~(1 << pin);
+	}
+}
+
+
+static inline void PORTA_toggle_port_level(const uint8_t mask)
+{
+	PORTA.OUTTGL = mask;
+}
+
+
+static inline void PORTA_toggle_pin_level(const uint8_t pin)
+{
+	PORTA.OUTTGL = 1 << pin;
+}
+
+
+static inline uint8_t PORTA_get_port_level()
+{
+	return VPORTA.IN;
+}
+
+
+static inline bool PORTA_get_pin_level(const uint8_t pin)
+{
+	return VPORTA.IN & (1 << pin);
+}
+
+
+static inline void PORTA_write_port(const uint8_t value)
+{
+	VPORTA.OUT = value;
+}
+
+
+static inline void PORTC_set_pin_pull_mode(const uint8_t pin, const enum port_pull_mode pull_mode)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTC + 0x10 + pin);
+
+	if (pull_mode == PORT_PULL_UP) {
+		*port_pin_ctrl |= PORT_PULLUPEN_bm;
+	} else if (pull_mode == PORT_PULL_OFF) {
+		*port_pin_ctrl &= ~PORT_PULLUPEN_bm;
+	}
+}
+
+
+static inline void PORTC_pin_set_inverted(const uint8_t pin, const bool inverted)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTC + 0x10 + pin);
+
+	if (inverted) {
+		*port_pin_ctrl |= PORT_INVEN_bm;
+	} else {
+		*port_pin_ctrl &= ~PORT_INVEN_bm;
+	}
+}
+
+
+static inline void PORTC_pin_set_isc(const uint8_t pin, const PORT_ISC_t isc)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTC + 0x10 + pin);
+
+	*port_pin_ctrl = (*port_pin_ctrl & ~PORT_ISC_gm) | isc;
+}
+
+
+static inline void PORTC_set_port_dir(const uint8_t mask, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTC.DIR &= ~mask;
+		break;
+	case PORT_DIR_OUT:
+		VPORTC.DIR |= mask;
+		break;
+	case PORT_DIR_OFF:
+
+		{
+			for (uint8_t i = 0; i < 8; i++) {
+				if (mask & 1 << i) {
+					*((uint8_t *)&PORTC + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTC_set_pin_dir(const uint8_t pin, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTC.DIR &= ~(1 << pin);
+		break;
+	case PORT_DIR_OUT:
+		VPORTC.DIR |= (1 << pin);
+		break;
+	case PORT_DIR_OFF:
+		*((uint8_t *)&PORTC + 0x10 + pin) |= 1 << PORT_PULLUPEN_bp;
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTC_set_port_level(const uint8_t mask, const bool level)
+{
+	if (level == true) {
+		VPORTC.OUT |= mask;
+	} else {
+		VPORTC.OUT &= ~mask;
+	}
+}
+
+
+static inline void PORTC_set_pin_level(const uint8_t pin, const bool level)
+{
+	if (level == true) {
+		VPORTC.OUT |= (1 << pin);
+	} else {
+		VPORTC.OUT &= ~(1 << pin);
+	}
+}
+
+
+static inline void PORTC_toggle_port_level(const uint8_t mask)
+{
+	PORTC.OUTTGL = mask;
+}
+
+
+static inline void PORTC_toggle_pin_level(const uint8_t pin)
+{
+	PORTC.OUTTGL = 1 << pin;
+}
+
+
+static inline uint8_t PORTC_get_port_level()
+{
+	return VPORTC.IN;
+}
+
+
+static inline bool PORTC_get_pin_level(const uint8_t pin)
+{
+	return VPORTC.IN & (1 << pin);
+}
+
+
+static inline void PORTC_write_port(const uint8_t value)
+{
+	VPORTC.OUT = value;
+}
+
+
+static inline void PORTD_set_pin_pull_mode(const uint8_t pin, const enum port_pull_mode pull_mode)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTD + 0x10 + pin);
+
+	if (pull_mode == PORT_PULL_UP) {
+		*port_pin_ctrl |= PORT_PULLUPEN_bm;
+	} else if (pull_mode == PORT_PULL_OFF) {
+		*port_pin_ctrl &= ~PORT_PULLUPEN_bm;
+	}
+}
+
+
+static inline void PORTD_pin_set_inverted(const uint8_t pin, const bool inverted)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTD + 0x10 + pin);
+
+	if (inverted) {
+		*port_pin_ctrl |= PORT_INVEN_bm;
+	} else {
+		*port_pin_ctrl &= ~PORT_INVEN_bm;
+	}
+}
+
+
+static inline void PORTD_pin_set_isc(const uint8_t pin, const PORT_ISC_t isc)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTD + 0x10 + pin);
+
+	*port_pin_ctrl = (*port_pin_ctrl & ~PORT_ISC_gm) | isc;
+}
+
+
+static inline void PORTD_set_port_dir(const uint8_t mask, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTD.DIR &= ~mask;
+		break;
+	case PORT_DIR_OUT:
+		VPORTD.DIR |= mask;
+		break;
+	case PORT_DIR_OFF:
+
+		{
+			for (uint8_t i = 0; i < 8; i++) {
+				if (mask & 1 << i) {
+					*((uint8_t *)&PORTD + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTD_set_pin_dir(const uint8_t pin, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTD.DIR &= ~(1 << pin);
+		break;
+	case PORT_DIR_OUT:
+		VPORTD.DIR |= (1 << pin);
+		break;
+	case PORT_DIR_OFF:
+		*((uint8_t *)&PORTD + 0x10 + pin) |= 1 << PORT_PULLUPEN_bp;
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTD_set_port_level(const uint8_t mask, const bool level)
+{
+	if (level == true) {
+		VPORTD.OUT |= mask;
+	} else {
+		VPORTD.OUT &= ~mask;
+	}
+}
+
+
+static inline void PORTD_set_pin_level(const uint8_t pin, const bool level)
+{
+	if (level == true) {
+		VPORTD.OUT |= (1 << pin);
+	} else {
+		VPORTD.OUT &= ~(1 << pin);
+	}
+}
+
+
+static inline void PORTD_toggle_port_level(const uint8_t mask)
+{
+	PORTD.OUTTGL = mask;
+}
+
+
+static inline void PORTD_toggle_pin_level(const uint8_t pin)
+{
+	PORTD.OUTTGL = 1 << pin;
+}
+
+
+static inline uint8_t PORTD_get_port_level()
+{
+	return VPORTD.IN;
+}
+
+
+static inline bool PORTD_get_pin_level(const uint8_t pin)
+{
+	return VPORTD.IN & (1 << pin);
+}
+
+
+static inline void PORTD_write_port(const uint8_t value)
+{
+	VPORTD.OUT = value;
+}
+
+
+static inline void PORTF_set_pin_pull_mode(const uint8_t pin, const enum port_pull_mode pull_mode)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTF + 0x10 + pin);
+
+	if (pull_mode == PORT_PULL_UP) {
+		*port_pin_ctrl |= PORT_PULLUPEN_bm;
+	} else if (pull_mode == PORT_PULL_OFF) {
+		*port_pin_ctrl &= ~PORT_PULLUPEN_bm;
+	}
+}
+
+
+static inline void PORTF_pin_set_inverted(const uint8_t pin, const bool inverted)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTF + 0x10 + pin);
+
+	if (inverted) {
+		*port_pin_ctrl |= PORT_INVEN_bm;
+	} else {
+		*port_pin_ctrl &= ~PORT_INVEN_bm;
+	}
+}
+
+
+static inline void PORTF_pin_set_isc(const uint8_t pin, const PORT_ISC_t isc)
+{
+	volatile uint8_t *port_pin_ctrl = ((uint8_t *)&PORTF + 0x10 + pin);
+
+	*port_pin_ctrl = (*port_pin_ctrl & ~PORT_ISC_gm) | isc;
+}
+
+
+static inline void PORTF_set_port_dir(const uint8_t mask, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTF.DIR &= ~mask;
+		break;
+	case PORT_DIR_OUT:
+		VPORTF.DIR |= mask;
+		break;
+	case PORT_DIR_OFF:
+
+		{
+			for (uint8_t i = 0; i < 8; i++) {
+				if (mask & 1 << i) {
+					*((uint8_t *)&PORTF + 0x10 + i) |= 1 << PORT_PULLUPEN_bp;
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTF_set_pin_dir(const uint8_t pin, const enum port_dir dir)
+{
+	switch (dir) {
+	case PORT_DIR_IN:
+		VPORTF.DIR &= ~(1 << pin);
+		break;
+	case PORT_DIR_OUT:
+		VPORTF.DIR |= (1 << pin);
+		break;
+	case PORT_DIR_OFF:
+		*((uint8_t *)&PORTF + 0x10 + pin) |= 1 << PORT_PULLUPEN_bp;
+		break;
+	default:
+		break;
+	}
+}
+
+
+static inline void PORTF_set_port_level(const uint8_t mask, const bool level)
+{
+	if (level == true) {
+		VPORTF.OUT |= mask;
+	} else {
+		VPORTF.OUT &= ~mask;
+	}
+}
+
+
+static inline void PORTF_set_pin_level(const uint8_t pin, const bool level)
+{
+	if (level == true) {
+		VPORTF.OUT |= (1 << pin);
+	} else {
+		VPORTF.OUT &= ~(1 << pin);
+	}
+}
+
+
+static inline void PORTF_toggle_port_level(const uint8_t mask)
+{
+	PORTF.OUTTGL = mask;
+}
+
+
+static inline void PORTF_toggle_pin_level(const uint8_t pin)
+{
+	PORTF.OUTTGL = 1 << pin;
+}
+
+
+static inline uint8_t PORTF_get_port_level()
+{
+	return VPORTF.IN;
+}
+
+
+static inline bool PORTF_get_pin_level(const uint8_t pin)
+{
+	return VPORTF.IN & (1 << pin);
+}
+
+
+static inline void PORTF_write_port(const uint8_t value)
+{
+	VPORTF.OUT = value;
+}
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+=== ./system/protected_io.h ===
+
+extern void protected_write_io(void *addr, uint8_t magic, uint8_t value);
+
+
+=== ./system/src/clock.c ===
+
+#include "../clock.h"
+
+void CLOCK_Initialize(void)
+{
+    ccp_write_io((void*)&(CLKCTRL.MCLKCTRLA),(0 << CLKCTRL_CLKOUT_bp)
+            | CLKCTRL_CLKSEL_OSCHF_gc
+            );
+    ccp_write_io((void*)&(CLKCTRL.MCLKCTRLB),CLKCTRL_PDIV_DIV2_gc
+            | (0 << CLKCTRL_PEN_bp)
+            );
+    ccp_write_io((void*)&(CLKCTRL.OSC32KCTRLA),(0 << CLKCTRL_RUNSTDBY_bp)
+            );
+    ccp_write_io((void*)&(CLKCTRL.OSCHFCTRLA),CLKCTRL_AUTOTUNE_OFF_gc
+            | CLKCTRL_FRQSEL_24M_gc
+            | (0 << CLKCTRL_RUNSTDBY_bp)
+            | CLKCTRL_ALGSEL_BIN_gc
+            );
+    ccp_write_io((void*)&(CLKCTRL.OSCHFTUNE),0x0
+            );
+
+    ccp_write_io((void*)&(CLKCTRL.XOSC32KCTRLA),CLKCTRL_CSUT_1K_gc
+            | (0 << CLKCTRL_ENABLE_bp)
+            | (0 << CLKCTRL_LPMODE_bp)
+            | (0 << CLKCTRL_RUNSTDBY_bp)
+            | CLKCTRL_SEL_XTAL_gc
+            );
+    ccp_write_io((void*)&(CLKCTRL.MCLKCTRLC),(0 << CLKCTRL_CFDEN_bp)
+            | CLKCTRL_CFDSRC_CLKMAIN_gc
+            | (0 << CLKCTRL_CFDTST_bp)
+            );
+    ccp_write_io((void*)&(CLKCTRL.MCLKINTCTRL),(0 << CLKCTRL_CFD_bp)
+            | CLKCTRL_INTTYPE_INT_gc
+            );
+    ccp_write_io((void*)&(CLKCTRL.MCLKINTFLAGS),(0 << CLKCTRL_CFD_bp)
+            );
+    ccp_write_io((void*)&(CLKCTRL.XOSCHFCTRLA),CLKCTRL_CSUTHF_256_gc
+            | (0 << CLKCTRL_ENABLE_bp)
+            | CLKCTRL_FRQRANGE_8M_gc
+            | (0 << CLKCTRL_RUNSTBY_bp)
+            | CLKCTRL_SELHF_XTAL_gc
+            );
+
+    ccp_write_io((void*)&(CLKCTRL.MCLKTIMEBASE),0x18
+            );
+
+
+    while(!(CLKCTRL.MCLKSTATUS & CLKCTRL_OSCHFS_bm))
+    {
+    }
+
+}
+
+void CFD_Enable(CLKCTRL_CFDSRC_t cfd_source)
+{
+
+    ccp_write_io((uint8_t *) & CLKCTRL.MCLKCTRLC, cfd_source | CLKCTRL_CFDEN_bm);
+}
+
+void CFD_Disable(void)
+{
+
+    ccp_write_io((uint8_t *) & CLKCTRL.MCLKCTRLC, CLKCTRL.MCLKCTRLC & ~CLKCTRL_CFDEN_bm);
+}
+
+=== ./system/src/config_bits.c ===
+
+#include <avr/io.h>
+
+
+FUSES =
+{
+  .BODCFG = ACTIVE_DISABLE_gc | LVL_BODLEVEL0_gc | SAMPFREQ_128Hz_gc | SLEEP_DISABLE_gc,
+  .BOOTSIZE = 0x0,
+  .CODESIZE = 0x0,
+  .OSCCFG = CLKSEL_OSCHF_gc,
+  .PDICFG = KEY_NOTACT_gc | LEVEL_BASIC_gc,
+  .SYSCFG0 = CRCSEL_CRC16_gc | CRCSRC_NOCRC_gc | RSTPINCFG_GPIO_gc | UPDIPINCFG_UPDI_gc,
+  .SYSCFG1 = SUT_0MS_gc | USBSINK_ENABLE_gc,
+  .WDTCFG = PERIOD_OFF_gc | WINDOW_OFF_gc,
+};
+
+=== ./system/src/interrupt.c ===
+
+
+#include "../interrupt.h"
+
+int8_t CPUINT_Initialize()
+{
+    ccp_write_io((void*)&(CPUINT.CTRLA),0x0);
+    CPUINT.LVL0PRI = 0x0;
+    CPUINT.LVL1VEC = 0x0;
+    return 0;
+}
+
+
+=== ./system/src/syscfg.c ===
+
+#include "../../system/utils/compiler.h"
+#include "../syscfg.h"
+
+void SYSCFG_Initialize(void)
+{
+  SYSCFG.VUSBCTRL = (0 << SYSCFG_USBVREG_bp);
+}
+uint8_t SYSCFG_GetRevId(void)
+{
+  return SYSCFG.REVID;
+}
+inline void SYSCFG_UsbVregEnable(void)
+{
+  SYSCFG.VUSBCTRL = SYSCFG_USBVREG_bm;
+}
+inline void SYSCFG_UsbVregDisable(void)
+{
+  SYSCFG.VUSBCTRL = ~SYSCFG_USBVREG_bm;
+}
+
+
+=== ./system/src/system.c ===
+
+
+
+#include "../system.h"
+
+void SYSTEM_Initialize(void)
+{
+    CLOCK_Initialize();
+    SYSCFG_Initialize();
+    PIN_MANAGER_Initialize();
+    USB0_Initialize();
+    USBDevice_Initialize();
+    CPUINT_Initialize();
+}
+
+
+
+=== ./system/utils/assembler/gas.h ===
+
+// gas.h: GNU assembler macros omitted for brevity
+
+=== ./system/utils/assembler.h ===
+
+
+
+
+#ifndef ASSEMBLER_H_INCLUDED
+#define ASSEMBLER_H_INCLUDED
+
+#if !defined(__ASSEMBLER__) && !defined(__IAR_SYSTEMS_ASM__) && !defined(__DOXYGEN__)
+#error This file may only be included from assembly files
+#endif
+
+#if defined(__ASSEMBLER__)
+#include "assembler/gas.h"
+#include <avr/io.h>
+#elif defined(__IAR_SYSTEMS_ASM__)
+#include "assembler/iar.h"
+#include <ioavr.h>
+#endif
+
+#endif
+
+
+=== ./system/utils/atomic.h ===
+
+#ifndef ATOMIC_H
+#define ATOMIC_H
+
+#define ENTER_CRITICAL(UNUSED) __asm__ __volatile__ (   \
+   "in __tmp_reg__, __SREG__"                    "\n\t" \
+   "cli"                                         "\n\t" \
+   "push __tmp_reg__"                            "\n\t" \
+   ::: "memory"                                         \
+   )
+
+#define EXIT_CRITICAL(UNUSED)  __asm__ __volatile__ (   \
+   "pop __tmp_reg__"                             "\n\t" \
+   "out __SREG__, __tmp_reg__"                   "\n\t" \
+   ::: "memory"                                         \
+   )
+
+#define DISABLE_INTERRUPTS()        __asm__ __volatile__ ( "cli" ::: "memory")
+#define ENABLE_INTERRUPTS()         __asm__ __volatile__ ( "sei" ::: "memory")
+
+#endif
+
+=== ./system/utils/compiler.h ===
+
+#ifndef UTILS_COMPILER_H
+#define UTILS_COMPILER_H
+
+#if defined(__GNUC__)
+#include <avr/io.h>
+#include <avr/builtins.h>
+#endif
+#endif
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+#include "interrupt_avr8.h"
+
+#define UNUSED(v) (void)(v)
+
+#endif
+
+=== ./system/utils/interrupt_avr8.h ===
+
+#ifndef UTILS_INTERRUPT_AVR8_H
+#define UTILS_INTERRUPT_AVR8_H
+
+#ifdef ISR_CUSTOM_H
+#include ISR_CUSTOM_H
+#else
+
+
+#if defined(__GNUC__)
+#include <avr/interrupt.h>
+#endif
+#endif
+
+#ifdef __GNUC__
+#define cpu_irq_enable() sei()
+#define cpu_irq_disable() cli()
+#else
+#define cpu_irq_enable() __enable_interrupt()
+#define cpu_irq_disable() __disable_interrupt()
+#endif
+
+#define Enable_global_interrupt() cpu_irq_enable()
+#define Disable_global_interrupt() cpu_irq_disable()
+#define Is_global_interrupt_enabled() cpu_irq_is_enabled()
+
+#endif
+
+=== ./system/utils/utils_assert.h ===
+
+#ifndef _ASSERT_H_INCLUDED
+#define _ASSERT_H_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdbool.h>
+
+#ifdef DEBUG
+#define ASSERT(condition)                                                                                              \
+	if (!(condition))                                                                                                  \
+		while (true)                                                                                                   \
+			;
+#else
+#define ASSERT(condition) ((void)0)
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+
+=== ./system/utils/utils.h ===
+
+
+
+#ifndef UTILS_H_INCLUDED
+#define UTILS_H_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+
+=== ./usb/src/usb0.c ===
+
+#include <stddef.h>
+#include "../usb0.h"
+#include "../../system/syscfg.h"
+#include "../../system/utils/compiler.h"
+
+static void USB0_DefaultTrnComplCallback(void);
+static void USB0_DefaultBusEventCallback(void);
+static void (*USB0_TrnCompl_isr_cb)(void) = &USB0_DefaultTrnComplCallback;
+static void (*USB0_BusEvent_isr_cb)(void) = &USB0_DefaultBusEventCallback;
+
+void USB0_Initialize(void)
+{
+
+    USB0.INTCTRLA = 0x0;
+
+    USB0.INTCTRLB = 0x0;
+    SYSCFG_UsbVregDisable();
+}
+
+void USB0_TrnComplCallbackRegister(USB_cb_t cb)
+{
+    USB0_TrnCompl_isr_cb = cb;
+}
+
+void USB0_BusEventCallbackRegister(USB_cb_t cb)
+{
+    USB0_BusEvent_isr_cb = cb;
+}
+
+static void USB0_DefaultTrnComplCallback(void)
+{
+
+    USB0.INTFLAGSB = USB_TRNCOMPL_bm | USB_GNDONE_bm | USB_SETUP_bm;
+}
+
+static void USB0_DefaultBusEventCallback(void)
+{
+
+    USB0.INTFLAGSA = USB_SOF_bm | USB_SUSPEND_bm | USB_RESUME_bm | USB_RESET_bm | USB_STALLED_bm | USB_UNF_bm | USB_OVF_bm;
+}
+
+ISR(USB0_TRNCOMPL_vect) {
+    if (USB0_TrnCompl_isr_cb != NULL)
+    {
+        (*USB0_TrnCompl_isr_cb)();
+    }
+}
+
+ISR(USB0_BUSEVENT_vect) {
+    if (USB0_BusEvent_isr_cb != NULL) {
+        (*USB0_BusEvent_isr_cb)();
+    }
+}
+
+
+=== ./usb/usb0.h ===
+
+#ifndef USB0_H
+#define USB0_H
+
+typedef void (*USB_cb_t)(void);
+
+#endif
+
+
+=== ./usb/usb_common/usb_common_elements.h ===
+
+typedef enum RETURN_CODE_enum
+{
+    UNSUPPORTED = 2,
+    UNINITIALIZED = 1,
+    SUCCESS = 0,
+
+    ENDPOINT_SIZE_ERROR = -1,
+    ENDPOINT_ADDRESS_ERROR = -2,
+    ENDPOINT_DIRECTION_ERROR = -3,
+    ENDPOINT_TYPE_ERROR = -4,
+    ENDPOINT_AZLP_ERROR = -5,
+    ENDPOINT_ALIGN_ERROR = -6,
+
+    PIPE_BUSY_ERROR = -10,
+    PIPE_TRANSFER_ERROR = -11,
+
+    CONTROL_SIZE_ERROR = -20,
+    CONTROL_TRANSACTION_STATUS_ERROR = -21,
+    CONTROL_SETUP_CALLBACK_ERROR = -22,
+    CONTROL_SETUP_DIRECTION_ERROR = -23,
+
+    DESCRIPTOR_POINTER_ERROR = -30,
+    DESCRIPTOR_CONFIGURATIONS_ERROR = -31,
+    DESCRIPTOR_INTERFACE_ERROR = -32,
+    DESCRIPTOR_ENDPOINT_ERROR = -33,
+    DESCRIPTOR_REQUEST_ERROR = -34,
+    DESCRIPTOR_SEARCH_ERROR = -35,
+
+    INTERFACE_SET_ERROR = -40,
+    INTERFACE_GET_ERROR = -41,
+
+    USB_CONNECTION_ERROR = -50,
+
+    USB_CLASS_ERROR = -60,
+} RETURN_CODE_t;
+
+
+#define MAX_ENDPOINT_SIZE_DEFAULT (64)
+
+=== ./usb/usb_common/usb_core.c ===
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_core.h>
+#include <usb_core_descriptors.h>
+#include <usb_core_events.h>
+#include <usb_core_requests.h>
+#include <usb_core_transfer.h>
+#include <usb_peripheral.h>
+#include <usb_protocol_headers.h>
+
+RETURN_CODE_t USB_SetupProcess(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_REQUEST_TYPE_STANDARD == (USB_REQUEST_TYPE_t)setupRequestPtr->bmRequestType.type)
+    {
+
+        if ((USB_REQUEST_DIR_IN == (USB_REQUEST_DIR_t)setupRequestPtr->bmRequestType.dataPhaseTransferDirection) && (0u == setupRequestPtr->wLength))
+        {
+            status = CONTROL_SETUP_DIRECTION_ERROR;
+        }
+        else
+        {
+
+            USB_ControlTransferDataSet(NULL, 0u);
+
+            switch (setupRequestPtr->bmRequestType.recipient)
+            {
+            case USB_REQUEST_RECIPIENT_DEVICE:
+            {
+                status = USB_SetupProcessDeviceRequest(setupRequestPtr);
+                break;
+            }
+            case USB_REQUEST_RECIPIENT_ENDPOINT:
+            {
+                status = USB_SetupProcessEndpointRequest(setupRequestPtr);
+                break;
+            }
+            case USB_REQUEST_RECIPIENT_INTERFACE:
+            {
+                status = USB_SetupProcessInterfaceRequest(setupRequestPtr);
+                break;
+            }
+            case USB_REQUEST_RECIPIENT_OTHER:
+            {
+                if (NULL != event.OtherRequest)
+                {
+                    status = event.OtherRequest(setupRequestPtr);
+                }
+                else
+                {
+                    status = UNSUPPORTED;
+                }
+                break;
+            }
+            default:
+                status = UNSUPPORTED;
+                break;
+            }
+        }
+    }
+    else if (USB_REQUEST_TYPE_CLASS == (USB_REQUEST_TYPE_t)setupRequestPtr->bmRequestType.type)
+    {
+        if (NULL != event.ClassRequest)
+        {
+            status = event.ClassRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else if (USB_REQUEST_TYPE_VENDOR == (USB_REQUEST_TYPE_t)setupRequestPtr->bmRequestType.type)
+    {
+        if (NULL != event.VendorRequest)
+        {
+            status = event.VendorRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else
+    {
+        status = UNSUPPORTED;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_Start(void)
+{
+    RETURN_CODE_t status = SUCCESS;
+
+
+    USB_ControlProcessSetupCallbackRegister(USB_SetupProcess);
+
+
+    USB_PeripheralInitialize();
+
+
+    USB_PIPE_t pipe = { .address = 0 };
+    while (pipe.address < USB_EP_NUM)
+    {
+        if (status == SUCCESS)
+        {
+            pipe.direction = USB_EP_DIR_OUT;
+            status = USB_PipeReset(pipe);
+        }
+        if (status == SUCCESS)
+        {
+            pipe.direction = USB_EP_DIR_IN;
+            status = USB_PipeReset(pipe);
+        }
+        pipe.address++;
+    }
+
+
+    if (status == SUCCESS)
+    {
+        status = USB_ControlEndpointsInit();
+    }
+
+
+    if (status == SUCCESS)
+    {
+        status = USB_ControlTransferReset();
+    }
+
+    if (status == SUCCESS)
+    {
+        USB_BusAttach();
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_Stop(void)
+{
+    RETURN_CODE_t status = SUCCESS;
+
+
+    USB_BusDetach();
+    USB_PeripheralDisable();
+
+
+    USB_PIPE_t pipe = { .address = 0 };
+    while (pipe.address < USB_EP_NUM)
+    {
+        if (status == SUCCESS)
+        {
+            pipe.direction = USB_EP_DIR_OUT;
+            status = USB_TransferAbort(pipe);
+        }
+        if (status == SUCCESS)
+        {
+            pipe.direction = USB_EP_DIR_IN;
+            status = USB_TransferAbort(pipe);
+        }
+        pipe.address++;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_Reset(void)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+    status = USB_Stop();
+    if (status == SUCCESS)
+    {
+        status = USB_Start();
+    }
+    return status;
+}
+
+=== ./usb/usb_common/usb_core_descriptors.c ===
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_core.h>
+#include <usb_core_descriptors.h>
+#include <usb_core_events.h>
+#include <usb_peripheral.h>
+#include <usb_protocol_headers.h>
+
+#define USB_DEFAULT_INTERFACE 0u
+
+#define USB_DEFAULT_ALTERNATE_SETTING 0u
+
+#define USB_DESCRIPTOR_SEARCH_LIMIT 30u
+
+typedef union USB_DESCRIPTOR_PTR_union
+{
+    uint8_t *bytePtr;
+    USB_DESCRIPTOR_HEADER_t *headerPtr;
+    USB_ENDPOINT_DESCRIPTOR_t *endpointPtr;
+    USB_INTERFACE_DESCRIPTOR_t *interfacePtr;
+    USB_CONFIGURATION_DESCRIPTOR_t *configurationPtr;
+} USB_DESCRIPTOR_PTR_t;
+
+
+STATIC USB_CONFIGURATION_DESCRIPTOR_t *activeConfigurationPtr = NULL;
+STATIC uint8_t activeInterfaces[USB_INTERFACE_NUM];
+STATIC USB_DESCRIPTOR_POINTERS_t *applicationPointers = NULL;
+
+RETURN_CODE_t USB_DescriptorPointersSet(USB_DESCRIPTOR_POINTERS_t *descriptorPointersPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (NULL != descriptorPointersPtr)
+    {
+
+        if ((NULL == descriptorPointersPtr->devicePtr) || (USB_DESCRIPTOR_TYPE_DEVICE != (USB_DESCRIPTOR_TYPE_t)descriptorPointersPtr->devicePtr->header.bDescriptorType))
+        {
+            status = DESCRIPTOR_POINTER_ERROR;
+        }
+
+        else if ((NULL == descriptorPointersPtr->configurationsPtr) || (USB_DESCRIPTOR_TYPE_CONFIGURATION != (USB_DESCRIPTOR_TYPE_t)descriptorPointersPtr->configurationsPtr->header.bDescriptorType))
+        {
+            status = DESCRIPTOR_POINTER_ERROR;
+        }
+        else
+        {
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+        status = DESCRIPTOR_POINTER_ERROR;
+    }
+
+    if (SUCCESS == status)
+    {
+
+        applicationPointers = descriptorPointersPtr;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DescriptorConfigurationEnable(uint8_t configurationValue)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+
+    USB_DESCRIPTOR_PTR_t currentDescriptor;
+
+    if (NULL == applicationPointers)
+    {
+        status = DESCRIPTOR_POINTER_ERROR;
+    }
+    else
+    {
+        if (NULL != activeConfigurationPtr)
+        {
+            status = SUCCESS;
+
+
+            currentDescriptor.configurationPtr = activeConfigurationPtr;
+            uint8_t numInterfaces = activeConfigurationPtr->bNumInterfaces;
+            while ((SUCCESS == status) && (numInterfaces > 0u))
+            {
+                status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_INTERFACE, &currentDescriptor.headerPtr);
+
+                if (SUCCESS == status)
+                {
+                    if (activeInterfaces[currentDescriptor.interfacePtr->bInterfaceNumber] == currentDescriptor.interfacePtr->bAlternateSetting)
+                    {
+                        status = USB_DescriptorInterfaceConfigure(currentDescriptor.interfacePtr->bInterfaceNumber, USB_DEFAULT_ALTERNATE_SETTING, false);
+                        numInterfaces--;
+                    }
+                }
+            }
+        }
+        else
+        {
+
+            status = SUCCESS;
+        }
+
+        if (SUCCESS == status)
+        {
+            if (USB_REQUEST_DEVICE_DISABLE_CONFIGURATION == configurationValue)
+            {
+
+                activeConfigurationPtr = NULL;
+            }
+            else
+            {
+
+                status = ConfigurationPointerGet(configurationValue, &activeConfigurationPtr);
+
+                if (SUCCESS == status)
+                {
+
+                    currentDescriptor.configurationPtr = activeConfigurationPtr;
+                    uint8_t numInterfaces = activeConfigurationPtr->bNumInterfaces;
+                    while ((SUCCESS == status) && (numInterfaces > 0u))
+                    {
+                        status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_INTERFACE, &currentDescriptor.headerPtr);
+                        if (SUCCESS == status)
+                        {
+                            if (USB_DEFAULT_ALTERNATE_SETTING == currentDescriptor.interfacePtr->bAlternateSetting)
+                            {
+                                status = USB_DescriptorInterfaceConfigure(currentDescriptor.interfacePtr->bInterfaceNumber, USB_DEFAULT_ALTERNATE_SETTING, true);
+                                numInterfaces--;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return status;
+}
+
+uint8_t USB_DescriptorActiveConfigurationValueGet(void)
+{
+    uint8_t configurationValue = USB_REQUEST_DEVICE_DISABLE_CONFIGURATION;
+
+    if (NULL != activeConfigurationPtr)
+    {
+        configurationValue = activeConfigurationPtr->bConfigurationValue;
+    }
+
+    return configurationValue;
+}
+
+bool USB_DescriptorActiveConfigurationSelfPoweredGet(void)
+{
+    return (activeConfigurationPtr->bmAttributes & USB_CONFIG_ATTR_SELF_POWERED) == USB_CONFIG_ATTR_SELF_POWERED;
+}
+
+bool USB_DescriptorActiveConfigurationRemoteWakeupGet(void)
+{
+    return (activeConfigurationPtr->bmAttributes & USB_CONFIG_ATTR_REMOTE_WAKEUP) == USB_CONFIG_ATTR_REMOTE_WAKEUP;
+}
+
+RETURN_CODE_t ConfigurationPointerGet(uint8_t configurationValue, USB_CONFIGURATION_DESCRIPTOR_t **configurationPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    if (configurationValue > applicationPointers->devicePtr->bNumConfigurations)
+    {
+        status = DESCRIPTOR_CONFIGURATIONS_ERROR;
+    }
+    else
+    {
+
+        if (1u == applicationPointers->devicePtr->bNumConfigurations)
+        {
+            *configurationPtr = applicationPointers->configurationsPtr;
+            status = SUCCESS;
+        }
+        else
+        {
+
+
+            USB_DESCRIPTOR_PTR_t currentDescriptor = { .configurationPtr = applicationPointers->configurationsPtr };
+
+            uint8_t i = applicationPointers->devicePtr->bNumConfigurations;
+            while (i-- > 0u)
+            {
+                if (currentDescriptor.configurationPtr->bConfigurationValue != configurationValue)
+                {
+                    status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_CONFIGURATION, &currentDescriptor.headerPtr);
+                }
+                else
+                {
+                    status = SUCCESS;
+
+
+                    i = 0;
+                }
+
+                if (SUCCESS != status)
+                {
+
+                    i = 0;
+                }
+            }
+
+            if (SUCCESS == status)
+            {
+                if (currentDescriptor.configurationPtr->bConfigurationValue == configurationValue)
+                {
+                    *configurationPtr = currentDescriptor.configurationPtr;
+                }
+                else
+                {
+
+                    status = DESCRIPTOR_SEARCH_ERROR;
+                }
+            }
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_t descriptorType, USB_DESCRIPTOR_HEADER_t **descriptorHeaderPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    USB_DESCRIPTOR_PTR_t currentDescriptor = { .headerPtr = *descriptorHeaderPtr };
+
+    uint8_t incrementCount = 0u;
+    while (UNINITIALIZED == status)
+    {
+
+        if ((USB_DESCRIPTOR_TYPE_CONFIGURATION == descriptorType) && (USB_DESCRIPTOR_TYPE_CONFIGURATION == (USB_DESCRIPTOR_TYPE_t)currentDescriptor.headerPtr->bDescriptorType))
+        {
+
+            currentDescriptor.bytePtr = &currentDescriptor.bytePtr[currentDescriptor.configurationPtr->wTotalLength];
+        }
+        else
+        {
+
+            currentDescriptor.bytePtr = &currentDescriptor.bytePtr[currentDescriptor.headerPtr->bLength];
+        }
+
+
+        if (descriptorType == (USB_DESCRIPTOR_TYPE_t)currentDescriptor.headerPtr->bDescriptorType)
+        {
+            status = SUCCESS;
+            *descriptorHeaderPtr = currentDescriptor.headerPtr;
+        }
+        else
+        {
+
+            if (incrementCount++ > USB_DESCRIPTOR_SEARCH_LIMIT)
+            {
+                status = DESCRIPTOR_SEARCH_ERROR;
+            }
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DescriptorInterfaceConfigure(uint8_t interfaceNumber, uint8_t alternateSetting, bool enable)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (NULL != activeConfigurationPtr)
+    {
+
+
+        USB_DESCRIPTOR_PTR_t currentDescriptor = { .configurationPtr = activeConfigurationPtr };
+
+
+        uint8_t *endOfConfiguration = &currentDescriptor.bytePtr[currentDescriptor.configurationPtr->wTotalLength];
+
+
+        status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_INTERFACE, &currentDescriptor.headerPtr);
+
+
+        USB_INTERFACE_DESCRIPTOR_t *enableInterfacePtr = NULL;
+        while ((SUCCESS == status) && (currentDescriptor.bytePtr < endOfConfiguration))
+        {
+
+            if ((interfaceNumber == currentDescriptor.interfacePtr->bInterfaceNumber) && (activeInterfaces[interfaceNumber] == currentDescriptor.interfacePtr->bAlternateSetting))
+            {
+
+                status = DescriptorEndpointsConfigure(currentDescriptor.interfacePtr, false);
+                if (SUCCESS == status)
+                {
+
+                    status = ActiveAlternateSettingSet(interfaceNumber, USB_DEFAULT_ALTERNATE_SETTING);
+                }
+            }
+
+            if (enable)
+            {
+                if (interfaceNumber == currentDescriptor.interfacePtr->bInterfaceNumber)
+                {
+                    if (alternateSetting == currentDescriptor.interfacePtr->bAlternateSetting)
+                    {
+
+                        enableInterfacePtr = currentDescriptor.interfacePtr;
+                    }
+                }
+            }
+
+            status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_INTERFACE, &currentDescriptor.headerPtr);
+            if (DESCRIPTOR_SEARCH_ERROR == status)
+            {
+
+                if ((false == enable) || (NULL != enableInterfacePtr))
+                {
+
+                    status = SUCCESS;
+
+
+                    currentDescriptor.bytePtr = endOfConfiguration;
+                }
+            }
+        }
+
+        if (SUCCESS == status)
+        {
+            if (true == enable)
+            {
+                if (NULL != enableInterfacePtr)
+                {
+
+                    status = DescriptorEndpointsConfigure(enableInterfacePtr, true);
+                    if (SUCCESS == status)
+                    {
+                        status = ActiveAlternateSettingSet(interfaceNumber, alternateSetting);
+                    }
+                }
+                else
+                {
+                    status = DESCRIPTOR_SEARCH_ERROR;
+                }
+            }
+        }
+    }
+    else
+    {
+        status = DESCRIPTOR_POINTER_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t ActiveAlternateSettingSet(uint8_t interfaceNumber, uint8_t alternateSetting)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (interfaceNumber < USB_INTERFACE_NUM)
+    {
+        activeInterfaces[interfaceNumber] = alternateSetting;
+        status = SUCCESS;
+    }
+    else
+    {
+        status = INTERFACE_SET_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t ActiveAlternateSettingGet(uint8_t interfaceNumber, uint8_t *alternateSetting)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (interfaceNumber < USB_INTERFACE_NUM)
+    {
+        *alternateSetting = activeInterfaces[interfaceNumber];
+        status = SUCCESS;
+    }
+    else
+    {
+        status = INTERFACE_GET_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t DescriptorEndpointsConfigure(USB_INTERFACE_DESCRIPTOR_t *interfacePtr, bool enable)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_DESCRIPTOR_TYPE_INTERFACE == interfacePtr->header.bDescriptorType)
+    {
+
+        uint8_t numEndpoints = interfacePtr->bNumEndpoints;
+        if (numEndpoints > 0u)
+        {
+
+            USB_DESCRIPTOR_PTR_t currentDescriptor = { .interfacePtr = interfacePtr };
+
+            while (numEndpoints > 0u)
+            {
+
+                currentDescriptor.bytePtr = &currentDescriptor.bytePtr[currentDescriptor.headerPtr->bLength];
+
+                if (USB_DESCRIPTOR_TYPE_ENDPOINT == (USB_DESCRIPTOR_TYPE_t)currentDescriptor.headerPtr->bDescriptorType)
+                {
+                    if (true == enable)
+                    {
+
+                        status
+                            = USB_EndpointConfigure(currentDescriptor.endpointPtr->bEndpointAddress, currentDescriptor.endpointPtr->wMaxPacketSize, currentDescriptor.endpointPtr->bmAttributes.type);
+                    }
+                    else
+                    {
+
+                        status = USB_TransferAbort(currentDescriptor.endpointPtr->bEndpointAddress);
+                        if (SUCCESS == status)
+                        {
+                            status = USB_EndpointDisable(currentDescriptor.endpointPtr->bEndpointAddress);
+                        }
+                    }
+
+                    numEndpoints--;
+
+                    if (SUCCESS != status)
+                    {
+
+                        numEndpoints = 0;
+                    }
+                }
+            }
+        }
+        else
+        {
+
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+        status = DESCRIPTOR_ENDPOINT_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DescriptorPointerGet(USB_DESCRIPTOR_TYPE_t descriptor, uint8_t attribute, uint8_t **descriptorPtr, uint16_t *descriptorLength)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    USB_DESCRIPTOR_PTR_t localDescriptorPtr;
+
+    switch (descriptor)
+    {
+    case USB_DESCRIPTOR_TYPE_DEVICE:
+
+        if (applicationPointers != NULL)
+        {
+            *descriptorPtr = (uint8_t *)applicationPointers->devicePtr;
+            *descriptorLength = (uint16_t)applicationPointers->devicePtr->header.bLength;
+            status = SUCCESS;
+        }
+        else
+        {
+            status = DESCRIPTOR_POINTER_ERROR;
+        }
+        break;
+    case USB_DESCRIPTOR_TYPE_CONFIGURATION:;
+
+
+        status = ConfigurationPointerGet(attribute, &localDescriptorPtr.configurationPtr);
+        if (SUCCESS == status)
+        {
+            *descriptorPtr = localDescriptorPtr.bytePtr;
+            *descriptorLength = localDescriptorPtr.configurationPtr->wTotalLength;
+        }
+        break;
+    case USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
+
+        status = UNSUPPORTED;
+        break;
+    case USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
+
+        status = UNSUPPORTED;
+        break;
+    case USB_DESCRIPTOR_TYPE_BOS:
+        if (NULL != applicationPointers->deviceBOSptr)
+        {
+            *descriptorPtr = (uint8_t *)applicationPointers->deviceBOSptr;
+            *descriptorLength = (uint16_t)applicationPointers->deviceBOSptr->wTotalLength;
+            status = SUCCESS;
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+        break;
+    default:
+
+        if (descriptor >= USB_DESCRIPTOR_TYPE_CLASS)
+        {
+            localDescriptorPtr.configurationPtr = activeConfigurationPtr;
+
+
+            status = NextDescriptorPointerGet(descriptor, &localDescriptorPtr.headerPtr);
+            if (SUCCESS == status)
+            {
+                *descriptorPtr = (uint8_t *)localDescriptorPtr.headerPtr;
+                *descriptorLength = localDescriptorPtr.headerPtr->bLength;
+            }
+        }
+        else
+        {
+            status = DESCRIPTOR_REQUEST_ERROR;
+        }
+
+        break;
+    }
+
+    if (SUCCESS != status)
+    {
+        *descriptorPtr = NULL;
+        *descriptorLength = 0u;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DescriptorStringPointerGet(uint8_t stringIndex, uint16_t langID, uint8_t **descriptorAddressPtr, uint16_t *descriptorLength)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (NULL != applicationPointers->langIDptr)
+    {
+        if (stringIndex == 0u)
+        {
+
+            *descriptorAddressPtr = (uint8_t *)applicationPointers->langIDptr;
+            *descriptorLength = (uint16_t)applicationPointers->langIDptr->header.bLength;
+            status = SUCCESS;
+        }
+        else
+        {
+
+            uint8_t langIdx = 0;
+            for (langIdx = 0; langIdx < LANG_ID_NUM; langIdx++)
+            {
+                if (langID == applicationPointers->langIDptr->id_array[langIdx])
+                {
+
+                    break;
+                }
+            }
+
+            if (LANG_ID_NUM == langIdx)
+            {
+
+                status = UNSUPPORTED;
+            }
+            else if (NULL != applicationPointers->stringPtrs[langIdx])
+            {
+
+                USB_DESCRIPTOR_HEADER_t *stringHeader = applicationPointers->stringPtrs[langIdx];
+                if (1u == stringIndex)
+                {
+                    status = SUCCESS;
+                }
+                else
+                {
+                    for (uint8_t i = 1u; i < stringIndex; i++)
+                    {
+                        status = NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_STRING, &stringHeader);
+                    }
+                }
+
+
+                if (SUCCESS == status)
+                {
+                    *descriptorAddressPtr = (uint8_t *)stringHeader;
+                    *descriptorLength = (uint16_t)stringHeader->bLength;
+                }
+            }
+            else
+            {
+
+                status = DESCRIPTOR_POINTER_ERROR;
+            }
+        }
+    }
+    else
+    {
+
+        status = UNSUPPORTED;
+    }
+
+    return status;
+}
+
+=== ./usb/usb_common/usb_core_descriptors.h ===
+
+
+
+
+#ifndef USB_CORE_DESCRIPTORS_H
+
+#define USB_CORE_DESCRIPTORS_H
+
+#include <stdbool.h>
+
+#include <usb_common_elements.h>
+#include <usb_protocol_headers.h>
+
+
+RETURN_CODE_t USB_DescriptorPointersSet(USB_DESCRIPTOR_POINTERS_t *descriptorPtr);
+
+
+RETURN_CODE_t USB_DescriptorConfigurationEnable(uint8_t configurationValue);
+
+
+bool USB_DescriptorActiveConfigurationSelfPoweredGet(void);
+
+
+bool USB_DescriptorActiveConfigurationRemoteWakeupGet(void);
+
+
+uint8_t USB_DescriptorActiveConfigurationValueGet(void);
+
+
+RETURN_CODE_t USB_DescriptorInterfaceConfigure(uint8_t interfaceNumber, uint8_t alternateSetting, bool enable);
+
+
+RETURN_CODE_t USB_DescriptorPointerGet(USB_DESCRIPTOR_TYPE_t descriptor, uint8_t attribute, uint8_t **descriptorPtr, uint16_t *descriptorLength);
+
+
+RETURN_CODE_t USB_DescriptorStringPointerGet(uint8_t stringIndex, uint16_t langID, uint8_t **descriptorAddressPtr, uint16_t *descriptorLength);
+
+
+RETURN_CODE_t ActiveAlternateSettingGet(uint8_t interfaceNumber, uint8_t *alternateSetting);
+
+
+RETURN_CODE_t ActiveAlternateSettingSet(uint8_t interfaceNumber, uint8_t alternateSetting);
+
+
+RETURN_CODE_t ConfigurationPointerGet(uint8_t configurationValue, USB_CONFIGURATION_DESCRIPTOR_t **configurationPtr);
+
+
+RETURN_CODE_t DescriptorEndpointsConfigure(USB_INTERFACE_DESCRIPTOR_t *interfacePtr, bool enable);
+
+
+RETURN_CODE_t NextDescriptorPointerGet(USB_DESCRIPTOR_TYPE_t descriptorType, USB_DESCRIPTOR_HEADER_t **descriptorHeaderPtr);
+
+#endif
+=== ./usb/usb_common/usb_core_events.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_core.h>
+#include <usb_core_events.h>
+#include <usb_peripheral.h>
+#include <usb_protocol_headers.h>
+
+USB_EVENT_HANDLERS_t event;
+
+RETURN_CODE_t USB_EventHandler(void)
+{
+    RETURN_CODE_t status = SUCCESS;
+
+    if (USB_EventSOFIsReceived() == true)
+    {
+        USB_EventSOFClear();
+        if (NULL != event.SOFCallback)
+        {
+            event.SOFCallback();
+        }
+    }
+    if (USB_EventResetIsReceived() == true)
+    {
+        USB_EventResetClear();
+        if (NULL != event.ResetCallback)
+        {
+            event.ResetCallback();
+        }
+        USB_PIPE_t pipe = { .address = 0 };
+        while (pipe.address < USB_EP_NUM)
+        {
+            pipe.direction = USB_EP_DIR_IN;
+            if (SUCCESS == status)
+            {
+                status = USB_TransferAbort(pipe);
+            }
+            pipe.direction = USB_EP_DIR_OUT;
+            if (SUCCESS == status)
+            {
+                status = USB_TransferAbort(pipe);
+            }
+            pipe.address++;
+        }
+        status = USB_Reset();
+    }
+    uint8_t eventOverUnderflow = USB_EventOverUnderflowIsReceived();
+    if (0u < eventOverUnderflow)
+    {
+        USB_EventOverUnderflowClear();
+        uint8_t controlOverUnderflow = USB_ControlOverUnderflowIsReceived();
+        if (0u < controlOverUnderflow)
+        {
+            status = USB_ControlProcessOverUnderflow(controlOverUnderflow);
+        }
+        else
+        {
+
+            status = SUCCESS;
+        }
+    }
+    if (USB_EventSuspendIsReceived() == true)
+    {
+        USB_EventSuspendClear();
+        if (NULL != event.SuspendCallback)
+        {
+            event.SuspendCallback();
+        }
+    }
+    if (USB_EventResumeIsReceived() == true)
+    {
+        USB_EventResumeClear();
+        if (NULL != event.ResumeCallback)
+        {
+            event.ResumeCallback();
+        }
+    }
+    if (USB_EventStalledIsReceived() == true)
+    {
+        USB_EventStalledClear();
+        USB_PIPE_t pipe = { .address = 0x00, .direction = USB_EP_DIR_OUT };
+        status = USB_HandleEventStalled(pipe);
+    }
+    return status;
+}
+
+void USB_SetConfigurationCallbackRegister(USB_SETUP_EVENT_CALLBACK_t callback)
+{
+    event.SetConfiguration = callback;
+}
+
+void USB_SetInterfaceCallbackRegister(USB_SETUP_EVENT_CALLBACK_t callback)
+{
+    event.SetInterface = callback;
+}
+
+void USB_InterfaceDisabledCallbackRegister(USB_EVENT_CALLBACK_t callback)
+{
+    event.InterfaceDisabled = callback;
+}
+
+void USB_VendorRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback)
+{
+    event.VendorRequest = callback;
+}
+
+void USB_ClassRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback)
+{
+    event.ClassRequest = callback;
+}
+
+void USB_OtherRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback)
+{
+    event.OtherRequest = callback;
+}
+
+void USB_SOFCallbackRegister(USB_EVENT_CALLBACK_t callback)
+{
+    event.SOFCallback = callback;
+}
+
+void USB_ResetCallbackRegister(USB_EVENT_CALLBACK_t callback)
+{
+    event.ResetCallback = callback;
+}
+
+void USB_SuspendCallbackRegister(USB_EVENT_CALLBACK_t callback)
+{
+    event.SuspendCallback = callback;
+}
+
+void USB_ResumeCallbackRegister(USB_EVENT_CALLBACK_t callback)
+{
+    event.ResumeCallback = callback;
+}
+
+=== ./usb/usb_common/usb_core_events.h ===
+
+
+
+
+#ifndef USB_CORE_EVENTS_H
+
+#define USB_CORE_EVENTS_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <usb_common_elements.h>
+
+#include <usb_core_descriptors.h>
+#include <usb_core_requests.h>
+#include <usb_core_transfer.h>
+#include <usb_peripheral.h>
+#include <usb_protocol_headers.h>
+
+
+typedef struct USB_EVENT_HANDLERS_struct
+{
+    USB_SETUP_EVENT_CALLBACK_t SetConfiguration;
+    USB_SETUP_EVENT_CALLBACK_t SetInterface;
+    USB_EVENT_CALLBACK_t InterfaceDisabled;
+    USB_SETUP_PROCESS_CALLBACK_t VendorRequest;
+    USB_SETUP_PROCESS_CALLBACK_t ClassRequest;
+    USB_SETUP_PROCESS_CALLBACK_t OtherRequest;
+    USB_EVENT_CALLBACK_t SOFCallback;
+    USB_EVENT_CALLBACK_t ResetCallback;
+    USB_EVENT_CALLBACK_t SuspendCallback;
+    USB_EVENT_CALLBACK_t ResumeCallback;
+} USB_EVENT_HANDLERS_t;
+
+extern USB_EVENT_HANDLERS_t event;
+
+
+
+RETURN_CODE_t USB_EventHandler(void);
+
+
+void USB_SetConfigurationCallbackRegister(USB_SETUP_EVENT_CALLBACK_t callback);
+
+
+void USB_SetInterfaceCallbackRegister(USB_SETUP_EVENT_CALLBACK_t callback);
+
+
+void USB_InterfaceDisabledCallbackRegister(USB_EVENT_CALLBACK_t callback);
+
+
+void USB_VendorRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback);
+
+
+void USB_ClassRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback);
+
+
+void USB_OtherRequestCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback);
+
+
+void USB_SOFCallbackRegister(USB_EVENT_CALLBACK_t callback);
+
+
+void USB_ResetCallbackRegister(USB_EVENT_CALLBACK_t callback);
+
+
+void USB_SuspendCallbackRegister(USB_EVENT_CALLBACK_t callback);
+
+
+void USB_ResumeCallbackRegister(USB_EVENT_CALLBACK_t callback);
+
+#endif
+
+=== ./usb/usb_common/usb_core.h ===
+
+
+
+
+#ifndef USB_CORE_H
+
+#define USB_CORE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <usb_common_elements.h>
+#include <usb_core_events.h>
+#include <usb_core_transfer.h>
+#include <usb_protocol_headers.h>
+
+
+RETURN_CODE_t USB_SetupProcess(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t USB_Start(void);
+
+
+RETURN_CODE_t USB_Stop(void);
+
+
+RETURN_CODE_t USB_Reset(void);
+
+#endif
+
+=== ./usb/usb_common/usb_core_requests.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+
+#include <usb_core_requests.h>
+#include <usb_common_elements.h>
+#include <usb_protocol_headers.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+#include <usb_core.h>
+
+RETURN_CODE_t USB_SetupProcessDeviceRequest(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    switch (setupRequestPtr->bRequest)
+    {
+    case USB_REQUEST_GET_STATUS:
+    {
+        status = SetupDeviceRequestGetStatus();
+        break;
+    }
+    case USB_REQUEST_CLEAR_FEATURE:
+    {
+        status = SetupDeviceRequestClearFeature(setupRequestPtr);
+        break;
+    }
+    case USB_REQUEST_SET_FEATURE:
+    {
+        status = SetupDeviceRequestSetFeature(setupRequestPtr);
+        break;
+    }
+    case USB_REQUEST_SET_ADDRESS:
+    {
+        status = SetupDeviceRequestSetAddress((uint8_t)setupRequestPtr->wValue & 0xffu);
+        break;
+    }
+    case USB_REQUEST_GET_DESCRIPTOR:
+    {
+        status = SetupDeviceRequestGetDescriptor(setupRequestPtr);
+        break;
+    }
+    case USB_REQUEST_SET_DESCRIPTOR:
+    {
+
+        status = UNSUPPORTED;
+        break;
+    }
+    case USB_REQUEST_GET_CONFIGURATION:
+    {
+        status = SetupDeviceRequestGetConfiguration();
+        break;
+    }
+    case USB_REQUEST_SET_CONFIGURATION:
+    {
+        status = SetupDeviceRequestSetConfiguration((uint8_t)(setupRequestPtr->wValue & 0xffu));
+        break;
+    }
+    default:
+
+        status = UNSUPPORTED;
+        break;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_SetupProcessEndpointRequest(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    USB_PIPE_t endpoint = EndpointFromRequestGet(setupRequestPtr->wIndex);
+
+
+    if (endpoint.address >= (uint8_t)USB_EP_NUM)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+
+        switch (setupRequestPtr->bRequest)
+        {
+        case USB_REQUEST_GET_STATUS:
+        {
+            status = SetupEndpointRequestGetStatus(setupRequestPtr);
+            break;
+        }
+        case USB_REQUEST_CLEAR_FEATURE:
+        {
+            status = SetupEndpointRequestClearFeature(setupRequestPtr);
+            break;
+        }
+        case USB_REQUEST_SET_FEATURE:
+        {
+            status = SetupEndpointRequestSetFeature(setupRequestPtr);
+            break;
+        }
+        case USB_REQUEST_SYNCH_FRAME:
+        {
+            status = SetupEndpointRequestSynchFrame();
+            break;
+        }
+        default:
+
+            status = UNSUPPORTED;
+            break;
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_SetupProcessInterfaceRequest(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+
+    switch (setupRequestPtr->bRequest)
+    {
+    case USB_REQUEST_GET_STATUS:
+    {
+        status = USB_SetupInterfaceRequestGetStatus();
+        break;
+    }
+    case USB_REQUEST_CLEAR_FEATURE:
+    {
+
+        status = UNSUPPORTED;
+        break;
+    }
+    case USB_REQUEST_SET_FEATURE:
+    {
+
+        status = UNSUPPORTED;
+        break;
+    }
+    case USB_REQUEST_GET_INTERFACE:
+    {
+        status = USB_SetupInterfaceRequestGetInterface(setupRequestPtr);
+        break;
+    }
+    case USB_REQUEST_SET_INTERFACE:
+    {
+        status = USB_SetupInterfaceRequestSetInterface(setupRequestPtr);
+        break;
+    }
+    case USB_REQUEST_GET_DESCRIPTOR:
+    {
+        status = USB_SetupInterfaceRequestGetDescriptor(setupRequestPtr);
+        break;
+    }
+    default:
+
+        status = UNSUPPORTED;
+        break;
+    }
+
+    return status;
+}
+
+=== ./usb/usb_common/usb_core_requests_device.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+
+#include <usb_core_requests_device.h>
+#include <usb_common_elements.h>
+#include <usb_protocol_headers.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+#include <usb_core.h>
+#include <usb_core_descriptors.h>
+
+STATIC uint8_t deviceAddress = 0;
+
+RETURN_CODE_t SetupDeviceRequestGetStatus(void)
+{
+
+    uint8_t data[] = {0, 0};
+
+   if (USB_DescriptorActiveConfigurationSelfPoweredGet())
+   {
+       data[0] |= USB_REQUEST_DEVICE_SELF_POWERED;
+   }
+   if (USB_DescriptorActiveConfigurationRemoteWakeupGet())
+   {
+       data[0] |= USB_REQUEST_DEVICE_REMOTE_WAKEUP;
+   }
+
+    return USB_ControlTransferDataWriteBuffer(data, sizeof(data));
+}
+
+RETURN_CODE_t SetupDeviceRequestClearFeature(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    (void)setupRequestPtr;
+
+    return status;
+}
+
+RETURN_CODE_t SetupDeviceRequestSetFeature(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    (void)setupRequestPtr;
+
+    return status;
+}
+
+RETURN_CODE_t SetupDeviceRequestSetAddress(uint8_t address)
+{
+
+    deviceAddress = address;
+    USB_ControlEndOfRequestCallbackRegister(&SetupDeviceAddressCallback);
+
+    return SUCCESS;
+}
+
+void SetupDeviceAddressCallback(void)
+{
+    USB_DeviceAddressConfigure(deviceAddress);
+    USB_ControlEndOfRequestCallbackRegister(NULL);
+}
+
+RETURN_CODE_t SetupDeviceRequestGetDescriptor(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    uint8_t descriptorType = (uint8_t)(setupRequestPtr->wValue >> 8u);
+    uint8_t descriptorIndex = (uint8_t)(setupRequestPtr->wValue & 0xffu);
+
+    if (USB_DESCRIPTOR_TYPE_VENDOR <= (USB_DESCRIPTOR_TYPE_t)descriptorType)
+    {
+
+       if (NULL != event.VendorRequest)
+       {
+           status = event.VendorRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else if (USB_DESCRIPTOR_TYPE_CLASS <= (USB_DESCRIPTOR_TYPE_t)descriptorType)
+    {
+
+        if (NULL != event.ClassRequest)
+        {
+            status = event.ClassRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else
+    {
+        uint8_t *descriptorPtr = NULL;
+        uint16_t descriptorLength = 0;
+
+        if (USB_DESCRIPTOR_TYPE_STRING == (USB_DESCRIPTOR_TYPE_t)descriptorType)
+        {
+            status = USB_DescriptorStringPointerGet(descriptorIndex, setupRequestPtr->wIndex, &descriptorPtr, &descriptorLength);
+        }
+        else
+        {
+
+            status = USB_DescriptorPointerGet(descriptorType, descriptorIndex, &descriptorPtr, &descriptorLength);
+        }
+
+        if (SUCCESS == status)
+        {
+            if (descriptorLength > setupRequestPtr->wLength)
+            {
+                descriptorLength = setupRequestPtr->wLength;
+            }
+
+            status = USB_ControlTransferDataSet(descriptorPtr, descriptorLength);
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t SetupDeviceRequestGetConfiguration(void)
+{
+    uint8_t configurationValue = USB_DescriptorActiveConfigurationValueGet();
+
+    return USB_ControlTransferDataWriteBuffer(&configurationValue, sizeof(configurationValue));
+}
+
+RETURN_CODE_t SetupDeviceRequestSetConfiguration(uint8_t configurationValue)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((deviceAddress == 0u))
+    {
+        status = USB_CONNECTION_ERROR;
+    }
+    else
+    {
+
+        status = USB_DescriptorConfigurationEnable(configurationValue);
+    }
+
+    return status;
+}
+
+=== ./usb/usb_common/usb_core_requests_device.h ===
+
+
+
+
+#ifndef USB_CORE_REQUESTS_DEVICE_H
+
+#define	USB_CORE_REQUESTS_DEVICE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "usb_protocol_headers.h"
+#include "usb_common_elements.h"
+
+
+RETURN_CODE_t SetupDeviceRequestGetStatus(void);
+
+
+RETURN_CODE_t SetupDeviceRequestClearFeature(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupDeviceRequestSetFeature(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupDeviceRequestSetAddress(uint8_t address);
+
+
+void SetupDeviceAddressCallback(void);
+
+
+RETURN_CODE_t SetupDeviceRequestGetDescriptor(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupDeviceRequestGetConfiguration(void);
+
+
+RETURN_CODE_t SetupDeviceRequestSetConfiguration(uint8_t configurationValue);
+
+#endif
+
+
+=== ./usb/usb_common/usb_core_requests_endpoint.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+
+#include <usb_core_requests.h>
+#include <usb_common_elements.h>
+#include <usb_protocol_headers.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+#include <usb_core.h>
+#include <usb_core_transfer.h>
+
+
+#define GET_STATUS_ENDPOINT_STALLED (1u << 0u)
+
+
+#define ENDPOINT_ADDRESS_MASK (0x7fu)
+
+
+#define ENDPOINT_DIRECTION_BITPOSITION (7u)
+
+USB_PIPE_t EndpointFromRequestGet(uint16_t wIndex)
+{
+    USB_PIPE_t endpoint;
+    endpoint.address = (uint8_t)wIndex & ENDPOINT_ADDRESS_MASK;
+    endpoint.direction = (uint8_t)wIndex >> ENDPOINT_DIRECTION_BITPOSITION;
+
+    return endpoint;
+}
+
+RETURN_CODE_t SetupEndpointRequestGetStatus(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+
+    USB_PIPE_t endpoint = EndpointFromRequestGet(setupRequestPtr->wIndex);
+
+    uint8_t data[] = {0, 0};
+    if (USB_EndpointIsStalled(endpoint) == true)
+    {
+
+        data[0] |= GET_STATUS_ENDPOINT_STALLED;
+    }
+
+    return USB_ControlTransferDataWriteBuffer(data, sizeof (data));
+}
+
+RETURN_CODE_t SetupEndpointRequestClearFeature(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    if (setupRequestPtr->wValue == USB_ENDPOINT_FEATURE_HALT)
+    {
+        USB_PIPE_t endpoint = EndpointFromRequestGet(setupRequestPtr->wIndex);
+
+        status = USB_EndpointStallClear(endpoint);
+    }
+    else
+    {
+        status = UNSUPPORTED;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t SetupEndpointRequestSetFeature(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    if (setupRequestPtr->wValue == USB_ENDPOINT_FEATURE_HALT)
+    {
+        USB_PIPE_t endpoint = EndpointFromRequestGet(setupRequestPtr->wIndex);
+
+        status = USB_TransferAbort(endpoint);
+        if (SUCCESS == status)
+        {
+            status = USB_EndpointStall(endpoint);
+        }
+    }
+    else
+    {
+        status = UNSUPPORTED;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t SetupEndpointRequestSynchFrame(void)
+{
+    uint16_t framenum = USB_FrameNumberGet();
+
+    return USB_ControlTransferDataWriteBuffer((uint8_t*) & framenum, sizeof (framenum));
+}
+
+=== ./usb/usb_common/usb_core_requests_endpoint.h ===
+
+
+
+
+
+#ifndef USB_CORE_REQUESTS_ENDPOINT_H
+
+#define	USB_CORE_REQUESTS_ENDPOINT_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "usb_protocol_headers.h"
+#include "usb_common_elements.h"
+
+
+USB_PIPE_t EndpointFromRequestGet(uint16_t wIndex);
+
+
+RETURN_CODE_t SetupEndpointRequestGetStatus(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupEndpointRequestClearFeature(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupEndpointRequestSetFeature(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t SetupEndpointRequestSynchFrame(void);
+
+#endif
+
+
+=== ./usb/usb_common/usb_core_requests.h ===
+
+
+
+
+
+#ifndef USB_CORE_REQUESTS_H
+
+#define	USB_CORE_REQUESTS_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <usb_core_requests_device.h>
+#include <usb_core_requests_interface.h>
+#include <usb_core_requests_endpoint.h>
+#include <usb_protocol_headers.h>
+#include <usb_common_elements.h>
+
+
+RETURN_CODE_t USB_SetupProcessDeviceRequest(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t USB_SetupProcessEndpointRequest(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t USB_SetupProcessInterfaceRequest(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+#endif
+
+
+=== ./usb/usb_common/usb_core_requests_interface.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+
+#include <usb_core_requests_interface.h>
+#include <usb_common_elements.h>
+#include <usb_protocol_headers.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+#include <usb_core.h>
+#include <usb_core_events.h>
+
+
+#define GET_INTERFACE_REQUEST_NUMBER_MASK (0xffu)
+
+
+#define GET_INTERFACE_REQUEST_WVALUE 0u
+
+
+#define GET_INTERFACE_RESPONSE_SIZE 1u
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetStatus(void)
+{
+    uint8_t data[] = {0, 0};
+
+    return USB_ControlTransferDataWriteBuffer(data, sizeof (data));
+}
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetInterface(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((GET_INTERFACE_REQUEST_WVALUE == setupRequestPtr->wValue) && (GET_INTERFACE_RESPONSE_SIZE == setupRequestPtr->wLength))
+    {
+        uint8_t alternateSetting;
+        status = ActiveAlternateSettingGet((GET_INTERFACE_REQUEST_NUMBER_MASK & setupRequestPtr->wIndex), &alternateSetting);
+        if (SUCCESS == status)
+        {
+            status = USB_ControlTransferDataWriteBuffer(&alternateSetting, sizeof(alternateSetting));
+        }
+    }
+    else
+    {
+        status = INTERFACE_GET_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_SetupInterfaceRequestSetInterface(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = USB_DescriptorInterfaceConfigure(setupRequestPtr->wIndex, setupRequestPtr->wValue, true);
+    if (SUCCESS == status)
+    {
+        if (NULL != event.SetInterface)
+        {
+            event.SetInterface(setupRequestPtr);
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetDescriptor(USB_SETUP_REQUEST_t *setupRequestPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    uint8_t descriptorType = (uint8_t)(setupRequestPtr->wValue >> 8u);
+
+    if (USB_DESCRIPTOR_TYPE_VENDOR <= (USB_DESCRIPTOR_TYPE_t)descriptorType)
+    {
+
+        if (NULL != event.VendorRequest)
+        {
+            status = event.VendorRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else if (USB_DESCRIPTOR_TYPE_CLASS <= (USB_DESCRIPTOR_TYPE_t)descriptorType)
+    {
+
+        if (NULL != event.ClassRequest)
+        {
+            status = event.ClassRequest(setupRequestPtr);
+        }
+        else
+        {
+            status = UNSUPPORTED;
+        }
+    }
+    else
+    {
+
+        status = UNSUPPORTED;
+    }
+
+    return status;
+}
+=== ./usb/usb_common/usb_core_requests_interface.h ===
+
+
+
+
+
+#ifndef USB_CORE_REQUESTS_INTERFACE_H
+
+#define	USB_CORE_REQUESTS_INTERFACE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "usb_protocol_headers.h"
+#include "usb_common_elements.h"
+
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetStatus(void);
+
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetInterface(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t USB_SetupInterfaceRequestSetInterface(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+RETURN_CODE_t USB_SetupInterfaceRequestGetDescriptor(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+#endif
+
+
+=== ./usb/usb_common/usb_core_transfer.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+
+#include <usb_core.h>
+#include <usb_protocol_headers.h>
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+
+RETURN_CODE_t USB_TransferWriteStart(USB_PIPE_t pipe, uint8_t *dataPtr, uint16_t dataSize, bool useZLP, USB_TRANSFER_END_CALLBACK_t callback)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_PipeStatusIsBusy(pipe) == true)
+    {
+        status = PIPE_BUSY_ERROR;
+    }
+    else
+    {
+        status = USB_PipeReset(pipe);
+    }
+
+    if (status == SUCCESS)
+    {
+        USB_PipeDataPtrSet(pipe, dataPtr);
+        USB_PipeDataToTransferSizeSet(pipe, dataSize);
+        USB_PipeDataTransferredSizeReset(pipe);
+        if (true == useZLP)
+        {
+            USB_PipeTransferZLP_Enable(pipe);
+        }
+        USB_PipeTransferEndCallbackRegister(pipe, callback);
+        status = USB_InTransactionRun(pipe);
+    }
+    return status;
+}
+
+RETURN_CODE_t USB_TransferReadStart(USB_PIPE_t pipe, uint8_t *dataPtr, uint16_t dataSize, bool useZLP, USB_TRANSFER_END_CALLBACK_t callback)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_PipeStatusIsBusy(pipe) == true)
+    {
+        status = PIPE_BUSY_ERROR;
+    }
+    else
+    {
+        status = USB_PipeReset(pipe);
+    }
+
+    if (status == SUCCESS)
+    {
+        USB_PipeDataPtrSet(pipe, dataPtr);
+        USB_PipeDataToTransferSizeSet(pipe, dataSize);
+        USB_PipeDataTransferredSizeReset(pipe);
+        if (true == useZLP)
+        {
+            USB_PipeTransferZLP_Enable(pipe);
+        }
+        USB_PipeTransferEndCallbackRegister(pipe, callback);
+        status = USB_OutTransactionRun(pipe);
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_TransferControlDataSet(uint8_t *dataPtr, uint16_t dataSize, USB_SETUP_ENDOFREQUEST_CALLBACK_t callback)
+{
+    USB_ControlEndOfRequestCallbackRegister(callback);
+    return USB_ControlTransferDataSet(dataPtr, dataSize);
+}
+
+RETURN_CODE_t USB_TransferAbort(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    if (USB_PipeStatusIsBusy(pipe) == true)
+    {
+
+        status = USB_TransactionAbort(pipe);
+
+        if (status == SUCCESS)
+        {
+
+            USB_PipeTransferEndCallback(pipe);
+        }
+    }
+    else
+    {
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_TransferHandler(void)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+
+    if (USB_SetupIsReceived() == true)
+    {
+        status = USB_ControlSetupReceived();
+    }
+
+    else if (USB_TransactionIsCompleted() == true)
+    {
+
+        USB_PIPE_t pipe;
+
+        status = USB_TransactionCompletedPipeGet(&pipe);
+
+        if (status == SUCCESS)
+        {
+
+            status = USB_TransactionCompleteAck(pipe);
+        }
+
+        if (status == SUCCESS)
+        {
+
+            if (pipe.address == 0U)
+            {
+                status = USB_ControlTransactionComplete(pipe);
+            }
+            else
+            {
+
+                status = USB_PipeTransactionComplete(pipe);
+            }
+        }
+    }
+    else
+    {
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+=== ./usb/usb_common/usb_core_transfer.h ===
+
+
+
+
+
+#ifndef USB_CORE_TRANSFER_H
+
+#define	USB_CORE_TRANSFER_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <usb_protocol_headers.h>
+#include <usb_common_elements.h>
+
+#include <usb_core_transfer.h>
+#include <usb_core_requests.h>
+#include <usb_core_descriptors.h>
+#include <usb_peripheral.h>
+
+
+RETURN_CODE_t USB_TransferWriteStart(USB_PIPE_t pipe, uint8_t *dataPtr, uint16_t dataSize, bool useZLP, USB_TRANSFER_END_CALLBACK_t callback);
+
+
+RETURN_CODE_t USB_TransferReadStart(USB_PIPE_t pipe, uint8_t *dataPtr, uint16_t dataSize, bool useZLP, USB_TRANSFER_END_CALLBACK_t callback);
+
+
+RETURN_CODE_t USB_TransferControlDataSet(uint8_t *dataPtr, uint16_t dataSize, USB_SETUP_ENDOFREQUEST_CALLBACK_t callback);
+
+
+RETURN_CODE_t USB_TransferAbort(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_TransferHandler(void);
+
+#endif
+
+
+=== ./usb/usb_common/usb_protocol_headers.h ===
+
+
+
+
+#ifndef USB_PROTOCOL_HEADERS_H
+
+#define	USB_PROTOCOL_HEADERS_H
+
+#include "usb_common_elements.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <usb_config.h>
+
+
+
+
+#define USB_EP_DIR_IN 0x01u
+
+
+#define USB_EP_DIR_OUT 0x00u
+
+
+#define OVERFLOW_EVENT 1u
+
+
+#define UNDERFLOW_EVENT 2u
+
+
+typedef enum USB_ENDPOINT_enum
+{
+    CONTROL = 0,
+    ISOCHRONOUS = 1,
+    BULK = 2,
+    INTERRUPT = 3,
+    DISABLED = 0xff,
+} USB_ENDPOINT_t;
+
+
+typedef struct USB_PIPE_struct
+{
+    uint8_t address : 7;
+    uint8_t direction : 1;
+} USB_PIPE_t;
+
+
+
+
+typedef enum USB_TRANSFER_STATUS_enum
+{
+    USB_PIPE_TRANSFER_OK = 0,
+    USB_PIPE_TRANSFER_BUSY = 1,
+    USB_PIPE_TRANSFER_ABORTED = 2,
+    USB_PIPE_TRANSFER_ERROR = 3,
+} USB_TRANSFER_STATUS_t;
+
+
+typedef enum USB_CONTROL_STATUS_enum
+{
+    USB_CONTROL_SETUP = 0,
+    USB_CONTROL_DATA_OUT = 1,
+    USB_CONTROL_DATA_IN = 2,
+    USB_CONTROL_ZLP = 3,
+    USB_CONTROL_STALL_REQ = 4,
+} USB_CONTROL_STATUS_t;
+
+
+#define USB_V2_0 0x0200
+
+
+#define USB_V2_1 0x0201
+
+
+#define NO_SUBCLASS 0x00
+
+
+#define NO_PROTOCOL 0x00
+
+
+#define CLASS_IAD 0xEF
+
+
+#define SUB_CLASS_IAD 0x02
+
+
+#define PROTOCOL_IAD 0x01
+
+
+#define USB_ENDPOINT_FEATURE_HALT 0x00u
+
+
+#define DESCRIPTOR_STRING_LENGTH(wstring) (sizeof(wstring) / sizeof(wchar_t) - 1)
+
+
+typedef enum USB_DEVICE_CLASS_enum
+{
+    USB_NO_DEVICE_CLASS = 0x00,
+    USB_AUDIO_DEVICE_CLASS = 0x01,
+    USB_CDC_DEVICE_CLASS = 0x02,
+    USB_HID_DEVICE_CLASS = 0x03,
+    USB_PHYSICAL_DEVICE_CLASS = 0x05,
+    USB_IMAGE_DEVICE_CLASS = 0x06,
+    USB_PRINTER_DEVICE_CLASS = 0x07,
+    USB_MASS_STORAGE_DEVICE_CLASS = 0x08,
+    USB_HUB_DEVICE_CLASS = 0x09,
+    USB_CDC_DATA_DEVICE_CLASS = 0x0A,
+    USB_SMART_CARD_DEVICE_CLASS = 0x0B,
+    USB_CONTENT_SECURITY_DEVICE_CLASS = 0x0D,
+    USB_VIDEO_DEVICE_CLASS = 0x0E,
+    USB_PERSONAL_HEALTHCARE_DEVICE_CLASS = 0x0F,
+    USB_AUDIO_VIDEO_DEVICE_CLASS = 0x10,
+    USB_BILLBOARD_DEVICE_CLASS = 0x11,
+    USB_TYPE_C_BRIDGE_DEVICE_CLASS = 0x12,
+    USB_BULK_DISPLAY_PROTOCOL_DEVICE_CLASS = 0x13,
+    USB_MCTP_DEVICE_CLASS = 0x14,
+    USB_I3C_DEVICE_CLASS = 0x3C,
+    USB_DIAGNOSTIC_DEVICE_CLASS = 0xDC,
+    USB_WIRELESS_DEVICE_CLASS = 0xE0,
+    USB_MISC_DEVICE_CLASS = 0xEF,
+    USB_APPLICATION_DEVICE_CLASS = 0xFE,
+    USB_VENDOR_DEVICE_CLASS = 0xFF,
+
+} USB_DEVICE_CLASS_t;
+
+
+typedef enum USB_REQUEST_DIR_enum
+{
+    USB_REQUEST_DIR_OUT = 0,
+    USB_REQUEST_DIR_IN = 1,
+} USB_REQUEST_DIR_t;
+
+
+typedef enum USB_REQUEST_TYPE_enum
+{
+    USB_REQUEST_TYPE_STANDARD = 0,
+    USB_REQUEST_TYPE_CLASS = 1,
+    USB_REQUEST_TYPE_VENDOR = 2,
+} USB_REQUEST_TYPE_t;
+
+
+typedef enum USB_REQUEST_RECIPIENT_enum
+{
+    USB_REQUEST_RECIPIENT_DEVICE = 0,
+    USB_REQUEST_RECIPIENT_INTERFACE = 1,
+    USB_REQUEST_RECIPIENT_ENDPOINT = 2,
+    USB_REQUEST_RECIPIENT_OTHER = 3,
+} USB_REQUEST_RECIPIENT_t;
+
+
+typedef enum USB_REQUEST_ID_enum
+{
+    USB_REQUEST_GET_STATUS = 0,
+    USB_REQUEST_CLEAR_FEATURE = 1,
+    USB_REQUEST_SET_FEATURE = 3,
+    USB_REQUEST_SET_ADDRESS = 5,
+    USB_REQUEST_GET_DESCRIPTOR = 6,
+    USB_REQUEST_SET_DESCRIPTOR = 7,
+    USB_REQUEST_GET_CONFIGURATION = 8,
+    USB_REQUEST_SET_CONFIGURATION = 9,
+    USB_REQUEST_GET_INTERFACE = 10,
+    USB_REQUEST_SET_INTERFACE = 11,
+    USB_REQUEST_SYNCH_FRAME = 12,
+} USB_REQUEST_ID_t;
+
+
+typedef enum USB_DESCRIPTOR_TYPE_enum
+{
+    USB_DESCRIPTOR_TYPE_DEVICE = 1,
+    USB_DESCRIPTOR_TYPE_CONFIGURATION = 2,
+    USB_DESCRIPTOR_TYPE_STRING = 3,
+    USB_DESCRIPTOR_TYPE_INTERFACE = 4,
+    USB_DESCRIPTOR_TYPE_ENDPOINT = 5,
+    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 6,
+    USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION = 7,
+    USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 8,
+    USB_DESCRIPTOR_TYPE_IAD = 11,
+    USB_DESCRIPTOR_TYPE_BOS = 15,
+    USB_DESCRIPTOR_TYPE_DEVICE_CAPABILITY = 16,
+    USB_DESCRIPTOR_TYPE_CLASS = 0x20,
+    USB_DESCRIPTOR_TYPE_VENDOR = 0x40,
+} USB_DESCRIPTOR_TYPE_t;
+
+
+typedef struct USB_SETUP_REQUEST_struct
+{
+
+    struct
+    {
+        uint8_t recipient                  : 5;
+        uint8_t type                       : 2;
+        uint8_t dataPhaseTransferDirection : 1;
+    } bmRequestType;
+    uint8_t bRequest;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+} USB_SETUP_REQUEST_t;
+
+
+typedef struct USB_DESCRIPTOR_HEADER_struct
+{
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+} USB_DESCRIPTOR_HEADER_t;
+
+
+typedef struct USB_DEVICE_DESCRIPTOR_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint16_t idVendor;
+    uint16_t idProduct;
+    uint16_t bcdDevice;
+    uint8_t iManufacturer;
+    uint8_t iProduct;
+    uint8_t iSerialNumber;
+    uint8_t bNumConfigurations;
+} USB_DEVICE_DESCRIPTOR_t;
+
+
+typedef struct USB_DEV_QUAL_DESC_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint16_t bcdUSB;
+    uint8_t bDeviceClass;
+    uint8_t bDeviceSubClass;
+    uint8_t bDeviceProtocol;
+    uint8_t bMaxPacketSize0;
+    uint8_t bNumConfigurations;
+    uint8_t bReserved;
+} USB_DEV_QUAL_DESC_t;
+
+
+typedef struct USB_DEV_BOS_DESC_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint16_t wTotalLength;
+    uint8_t bNumDeviceCaps;
+} USB_DEV_BOS_DESC_t;
+
+
+typedef struct USB_DEV_CAPA_EXT_DESC_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint8_t bDevCapabilityType;
+    uint32_t bmAttributes;
+} USB_DEV_CAPA_EXT_DESC_t;
+
+
+typedef struct USB_DEV_LPM_DESC_struct
+{
+    USB_DEV_BOS_DESC_t bos;
+    USB_DEV_CAPA_EXT_DESC_t capa_ext;
+} USB_DEV_LPM_DESC_t;
+
+
+typedef struct USB_ASSOCIATION_DESC_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint8_t bFirstInterface;
+    uint8_t bInterfaceCount;
+    uint8_t bFunctionClass;
+    uint8_t bFunctionSubClass;
+    uint8_t bFunctionProtocol;
+    uint8_t iFunction;
+} USB_ASSOCIATION_DESC_t;
+
+
+typedef struct USB_CONFIGURATION_DESCRIPTOR_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint16_t wTotalLength;
+    uint8_t bNumInterfaces;
+    uint8_t bConfigurationValue;
+    uint8_t iConfiguration;
+    uint8_t bmAttributes;
+    uint8_t bMaxPower;
+} USB_CONFIGURATION_DESCRIPTOR_t;
+
+
+#define USB_CONFIG_ATTR_MUST_SET (1u << 7u)
+
+
+#define USB_CONFIG_ATTR_BUS_POWERED (0u << 6u)
+
+
+#define USB_CONFIG_ATTR_SELF_POWERED (1u << 6u)
+
+
+#define USB_CONFIG_ATTR_REMOTE_WAKEUP (1u << 5u)
+
+
+#define USB_CONFIG_MAX_POWER(ma) (((ma) + 1u) / 2u)
+
+
+#define USB_REQUEST_DEVICE_SELF_POWERED (1u << 0u)
+
+
+#define USB_REQUEST_DEVICE_REMOTE_WAKEUP (1u << 1u)
+
+
+#define USB_REQUEST_DEVICE_DISABLE_CONFIGURATION (0u)
+
+
+typedef struct USB_IAD_DESC_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint8_t bFirstInterface;
+    uint8_t bInterfaceCount;
+    uint8_t bFunctionClass;
+    uint8_t bFunctionSubClass;
+    uint8_t bFunctionProtocol;
+    uint8_t iFunction;
+} USB_IAD_DESC_t;
+
+
+typedef struct USB_INTERFACE_DESCRIPTOR_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint8_t bInterfaceNumber;
+    uint8_t bAlternateSetting;
+    uint8_t bNumEndpoints;
+    uint8_t bInterfaceClass;
+    uint8_t bInterfaceSubClass;
+    uint8_t bInterfaceProtocol;
+    uint8_t iInterface;
+} USB_INTERFACE_DESCRIPTOR_t;
+
+
+typedef struct USB_ENDPOINT_DESCRIPTOR_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    USB_PIPE_t bEndpointAddress;
+    struct
+    {
+        uint8_t type : 2;
+        uint8_t synchronisation : 2;
+        uint8_t usage : 2;
+        uint8_t reserved : 2;
+    } bmAttributes;
+    uint16_t wMaxPacketSize;
+    uint8_t bInterval;
+} USB_ENDPOINT_DESCRIPTOR_t;
+
+
+typedef struct USB_STRING_LANG_ID_DESCRIPTOR_struct
+{
+    USB_DESCRIPTOR_HEADER_t header;
+    uint16_t id_array[LANG_ID_NUM];
+} USB_STRING_LANG_ID_DESCRIPTOR_t;
+
+
+typedef struct USB_DESCRIPTOR_POINTERS_struct
+{
+    USB_DEVICE_DESCRIPTOR_t *devicePtr;
+    USB_CONFIGURATION_DESCRIPTOR_t *configurationsPtr;
+    USB_DEV_BOS_DESC_t *deviceBOSptr;
+    USB_STRING_LANG_ID_DESCRIPTOR_t *langIDptr;
+    USB_DESCRIPTOR_HEADER_t *stringPtrs[LANG_ID_NUM];
+} USB_DESCRIPTOR_POINTERS_t;
+
+
+typedef void (*USB_TRANSFER_END_CALLBACK_t)(USB_PIPE_t pipe, USB_TRANSFER_STATUS_t status, uint16_t bytesTransferred);
+
+
+typedef RETURN_CODE_t (*USB_SETUP_PROCESS_CALLBACK_t)(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+typedef RETURN_CODE_t (*USB_SETUP_STRING_CALLBACK_t)(uint8_t stringIndex, uint16_t langID, uint8_t **descriptorAddressPtr, uint16_t *descriptorLength);
+
+
+typedef void (*USB_SETUP_EVENT_CALLBACK_t)(USB_SETUP_REQUEST_t *setupRequestPtr);
+
+
+typedef RETURN_CODE_t (*USB_SETUP_OVERUNDERRUN_CALLBACK_t)(void);
+
+
+typedef void (*USB_SETUP_ENDOFREQUEST_CALLBACK_t)(void);
+
+
+typedef void (*USB_EVENT_CALLBACK_t)(void);
+
+#endif
+=== ./usb/usb_config.h ===
+
+
+
+#ifndef USB_CONFIG_H
+#define USB_CONFIG_H
+
+#include <stdint.h>
+#include <usb_common_elements.h>
+
+
+#define USB_EP_NUM 2U
+
+
+#define USB_EP0_SIZE 64U
+
+
+#define LANG_ID_NUM 1U
+
+
+
+#define INTERFACE0ALTERNATE0_INTERRUPT_EP1_IN 1U
+#define INTERFACE0ALTERNATE0_INTERRUPT_EP1_OUT 1U
+
+
+
+
+#define INTERFACE0ALTERNATE0_INTERRUPT_EP1_IN_SIZE 8U
+#define INTERFACE0ALTERNATE0_INTERRUPT_EP1_OUT_SIZE 8U
+
+
+
+#define USB_HID_INTERRUPT_EP INTERFACE0ALTERNATE0_INTERRUPT_EP1_IN
+
+
+#define USB_HID_REPORT_DESCRIPTOR_SIZE 59U
+
+
+#define USB_INTERFACE_NUM 1U
+
+
+typedef struct USB_EP_STATIC_CONFIG_BITS_struct
+{
+    uint8_t InMultipktEnable : 1;
+    uint8_t InAzlpEnable : 1;
+    uint8_t InTrncInterruptEnable : 1;
+    uint8_t OutMultipktEnable : 1;
+    uint8_t OutAzlpEnable : 1;
+    uint8_t OutTrncInterruptEnable : 1;
+    uint8_t reserved : 2;
+} USB_EP_STATIC_CONFIG_BITS_t;
+
+
+static const USB_EP_STATIC_CONFIG_BITS_t endpointStaticConfig [USB_EP_NUM] = {
+    [0] = {.InTrncInterruptEnable = 1, .OutTrncInterruptEnable = 1, .InMultipktEnable = 1, .InAzlpEnable = 0, .OutMultipktEnable = 1, .OutAzlpEnable = 0},
+    [1] = {.InTrncInterruptEnable = 1, .OutTrncInterruptEnable = 1, .InMultipktEnable = 0, .InAzlpEnable = 0, .OutMultipktEnable = 0, .OutAzlpEnable = 0},
+};
+
+#endif
+
+
+=== ./usb/usb_descriptors.c ===
+
+
+
+#include <string.h>
+#include "usb_descriptors.h"
+#include <usb_protocol_headers.h>
+
+
+USB_HID_REPORT_DESCRIPTOR_t USB_HIDKeyboardReportDescriptor = {
+    {
+        0x05, 0x01,
+        0x09, 0x06,
+        0xA1, 0x01,
+        0x05, 0x07,
+        0x19, 0xE0,
+        0x29, 0xE7,
+        0x15, 0x00,
+        0x25, 0x01,
+        0x75, 0x01,
+        0x95, 0x08,
+        0x81, 0x02,
+        0x81, 0x01,
+        0x19, 0x00,
+        0x29, 0X69,
+        0x15, 0x00,
+        0x25, 0X69,
+        0x75, 0x08,
+        0x95, 0x06,
+        0x81, 0x00,
+        0x05, 0x08,
+        0x19, 0x01,
+        0x29, 0x05,
+        0x15, 0x00,
+        0x25, 0x01,
+        0x75, 0x01,
+        0x95, 0x05,
+        0x91, 0x02,
+        0x95, 0x03,
+        0x91, 0x01,
+        0xC0
+    },
+};
+
+static USB_DEVICE_DESCRIPTOR_t deviceDescriptor = {
+    .header = {
+        .bLength = sizeof(USB_DEVICE_DESCRIPTOR_t),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_DEVICE,
+    },
+    .bcdUSB = 0x200,
+    .bDeviceClass = USB_NO_DEVICE_CLASS,
+    .bDeviceSubClass = 0x00,
+    .bDeviceProtocol = 0x00,
+    .bMaxPacketSize0 = USB_EP0_SIZE,
+    .idVendor = 0x04D8,
+    .idProduct = 0x0B12,
+    .bcdDevice = 0x0110,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01
+};
+
+static USB_APPLICATION_CONFIGURATION_t configurationDescriptor = {
+    .Config1 =
+    {
+        .Configuration =
+        {
+            .header =
+            {
+                .bLength = sizeof (USB_CONFIGURATION_DESCRIPTOR_t),
+                .bDescriptorType = (uint8_t)USB_DESCRIPTOR_TYPE_CONFIGURATION,
+            },
+            .wTotalLength = sizeof (USB_APPLICATION_CONFIGURATION1_t),
+            .bNumInterfaces = USB_INTERFACE_NUM,
+            .bConfigurationValue = 1u,
+            .iConfiguration = 0u,
+            .bmAttributes = USB_CONFIG_ATTR_MUST_SET | USB_CONFIG_ATTR_BUS_POWERED,
+            .bMaxPower = USB_CONFIG_MAX_POWER(2),
+        },
+        .Interface0Alternate0 =
+        {
+            .header =
+            {
+                .bLength = sizeof (USB_INTERFACE_DESCRIPTOR_t),
+                .bDescriptorType = USB_DESCRIPTOR_TYPE_INTERFACE,
+            },
+            .bInterfaceNumber = 0U,
+            .bAlternateSetting = 0U,
+            .bNumEndpoints = 2U,
+            .bInterfaceClass = USB_HID_DEVICE_CLASS,
+            .bInterfaceSubClass = HID_SUB_CLASS_NOBOOT,
+            .bInterfaceProtocol = HID_PROTOCOL_KEYBOARD,
+            .iInterface = 0U,
+        },
+        .HID_Descriptor0 =
+        {
+            .header =
+            {
+                .bLength = sizeof (USB_HID_DESCRIPTOR_t),
+                .bDescriptorType = USB_DT_HID,
+            },
+            .bcdHID = 0x111,
+            .bCountryCode = USB_HID_NO_COUNTRY_CODE,
+            .bNumDescriptors = USB_HID_NUM_DESC,
+            .bRDescriptorType = USB_DT_HID_REPORT,
+            .wDescriptorLength = USB_HID_REPORT_DESCRIPTOR_SIZE,
+        },
+        .Interface0Alternate0_Endpoint1IN =
+        {
+            .header =
+            {
+                .bLength = sizeof (USB_ENDPOINT_DESCRIPTOR_t),
+                .bDescriptorType = USB_DESCRIPTOR_TYPE_ENDPOINT,
+            },
+            .bEndpointAddress =
+            {
+                .direction = USB_EP_DIR_IN,
+                .address = INTERFACE0ALTERNATE0_INTERRUPT_EP1_IN,
+            },
+            .bmAttributes =
+            {
+                .type = INTERRUPT,
+                .synchronisation = 0U,
+                .usage = 0U,
+            },
+            .wMaxPacketSize = INTERFACE0ALTERNATE0_INTERRUPT_EP1_IN_SIZE,
+            .bInterval = 1U,
+        },
+        .Interface0Alternate0_Endpoint1OUT =
+        {
+            .header =
+            {
+                .bLength = sizeof (USB_ENDPOINT_DESCRIPTOR_t),
+                .bDescriptorType = USB_DESCRIPTOR_TYPE_ENDPOINT,
+            },
+            .bEndpointAddress =
+            {
+                .direction = USB_EP_DIR_OUT,
+                .address = INTERFACE0ALTERNATE0_INTERRUPT_EP1_OUT,
+            },
+            .bmAttributes =
+            {
+                .type = INTERRUPT,
+                .synchronisation = 0U,
+                .usage = 0U,
+            },
+            .wMaxPacketSize = INTERFACE0ALTERNATE0_INTERRUPT_EP1_OUT_SIZE,
+            .bInterval = 1U,
+        },
+    },
+};
+
+static USB_STRING_LANG_ID_DESCRIPTOR_t langIDDescriptor  = {
+    .header =
+    {
+        .bLength = sizeof (USB_STRING_LANG_ID_DESCRIPTOR_t),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_STRING,
+    },
+    .id_array =
+    {LANG_EN_US},
+};
+
+static USB_APPLICATION_STRING_DESCRIPTORS_t stringDescriptors = {
+    .manufacturer_header =
+    {
+        .bLength = sizeof (stringDescriptors.manufacturer) + sizeof (USB_DESCRIPTOR_HEADER_t),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_STRING,
+    },
+    .manufacturer = STRING_MANUFACTURER,
+    .product_header =
+    {
+        .bLength = sizeof (stringDescriptors.product) + sizeof (USB_DESCRIPTOR_HEADER_t),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_STRING,
+    },
+    .product = STRING_PRODUCT,
+    .serial_header =
+    {
+        .bLength = sizeof (stringDescriptors.serial) + sizeof (USB_DESCRIPTOR_HEADER_t),
+        .bDescriptorType = USB_DESCRIPTOR_TYPE_STRING,
+    },
+    .serial = STRING_SERIAL,
+};
+
+USB_DESCRIPTOR_POINTERS_t descriptorPointers = {
+    .devicePtr = (USB_DEVICE_DESCRIPTOR_t *) & deviceDescriptor,
+    .configurationsPtr = (USB_CONFIGURATION_DESCRIPTOR_t *) & configurationDescriptor,
+    .deviceBOSptr = NULL,
+    .langIDptr = &langIDDescriptor,
+    .stringPtrs =
+    {
+        &stringDescriptors.manufacturer_header,
+    },
+};
+
+
+
+=== ./usb/usb_descriptors.h ===
+
+
+
+#ifndef USB_DESCRIPTORS_H
+#define USB_DESCRIPTORS_H
+
+#include <stddef.h>
+#include <usb_protocol_headers.h>
+#include "usb_config.h"
+
+
+#include <usb_protocol_hid.h>
+
+#define LANG_EN_US 0x0409U
+
+
+#define STRING_MANUFACTURER L"Microchip Technology Inc."
+
+
+#define STRING_PRODUCT      L"HID Class Demo"
+
+
+#define STRING_SERIAL       L"1"
+
+
+typedef struct USB_APPLICATION_CONFIGURATION1_struct
+{
+    USB_CONFIGURATION_DESCRIPTOR_t Configuration;
+    USB_INTERFACE_DESCRIPTOR_t Interface0Alternate0;
+    USB_HID_DESCRIPTOR_t HID_Descriptor0;
+    USB_ENDPOINT_DESCRIPTOR_t Interface0Alternate0_Endpoint1IN;
+    USB_ENDPOINT_DESCRIPTOR_t Interface0Alternate0_Endpoint1OUT;
+} USB_APPLICATION_CONFIGURATION1_t;
+
+
+typedef struct USB_APPLICATION_CONFIGURATION_struct
+{
+    USB_APPLICATION_CONFIGURATION1_t Config1;
+} USB_APPLICATION_CONFIGURATION_t;
+
+
+typedef struct USB_APPLICATION_STRING_DESCRIPTORS_struct
+{
+    USB_DESCRIPTOR_HEADER_t manufacturer_header;
+    wchar_t manufacturer[DESCRIPTOR_STRING_LENGTH(STRING_MANUFACTURER)];
+    USB_DESCRIPTOR_HEADER_t product_header;
+    wchar_t product[DESCRIPTOR_STRING_LENGTH(STRING_PRODUCT)];
+    USB_DESCRIPTOR_HEADER_t serial_header;
+    wchar_t serial[DESCRIPTOR_STRING_LENGTH(STRING_SERIAL)];
+} USB_APPLICATION_STRING_DESCRIPTORS_t;
+
+
+extern USB_DESCRIPTOR_POINTERS_t descriptorPointers;
+
+extern USB_HID_REPORT_DESCRIPTOR_t USB_HIDKeyboardReportDescriptor;
+
+#endif
+
+
+=== ./usb/usb_device.c ===
+
+#include "usb_device.h"
+#include "usb0.h"
+
+static RETURN_CODE_t usbStatus;
+static void USBDevice_TransferHandler(void);
+static void USBDevice_EventHandler(void);
+
+void USBDevice_Initialize(void)
+{
+    USB_DescriptorPointersSet(&descriptorPointers);
+
+    USB_HIDKeyboardInitialize(&USB_HIDKeyboardReportDescriptor, HID_SetReport_cb);
+
+    USB0_TrnComplCallbackRegister(USBDevice_TransferHandler);
+    USB0_BusEventCallbackRegister(USBDevice_EventHandler);
+
+    usbStatus = USB_Start();
+}
+
+RETURN_CODE_t USBDevice_Handle(void)
+{
+    if (usbStatus == SUCCESS)
+    {
+        usbStatus = USB_TransferHandler();
+    }
+    if (usbStatus == SUCCESS)
+    {
+        usbStatus = USB_EventHandler();
+    }
+    return usbStatus;
+}
+
+RETURN_CODE_t USBDevice_StatusGet(void)
+{
+    return usbStatus;
+}
+
+static void USBDevice_TransferHandler(void)
+{
+    usbStatus = USB_TransferHandler();
+}
+
+static void USBDevice_EventHandler(void)
+{
+    usbStatus = USB_EventHandler();
+}
+
+void HID_SetReportCallbackRegister(USB_HID_REPORT_CALLBACK_t cb)
+{
+    USB_HIDReportUpdatedCallbackRegister(cb);
+    HID_SetReport_cb = cb;
+}
+
+=== ./usb/usb_device.h ===
+
+
+
+#ifndef USB_DEVICE_H
+#define USB_DEVICE_H
+
+#include <usb_core.h>
+#include <usb_hid.h>
+#include <usb_hid_keyboard.h>
+#include <usb_hid_keycodes.h>
+#include "usb_descriptors.h"
+
+
+void USBDevice_Initialize(void);
+
+
+RETURN_CODE_t USBDevice_Handle(void);
+
+
+RETURN_CODE_t USBDevice_StatusGet(void);
+
+
+void HID_SetReportCallbackRegister(USB_HID_REPORT_CALLBACK_t cb);
+
+#endif
+
+=== ./usb/usb_peripheral/usb_peripheral_avr_du.h ===
+
+#ifndef USB_PERIPHERAL_AVR_DU_H
+
+#define USB_PERIPHERAL_AVR_DU_H
+
+#include <avr/io.h>
+
+#include <usb_config.h>
+#include <usb_protocol_headers.h>
+
+
+#define ALWAYS_INLINE __attribute__((always_inline)) inline
+
+
+typedef struct USB_ENDPOINT_TABLE_struct
+{
+    register8_t FIFO[USB_EP_NUM * 2u];
+    USB_EP_PAIR_t EP[USB_EP_NUM];
+    register16_t FRAMENUM;
+} USB_ENDPOINT_TABLE_t;
+
+extern USB_ENDPOINT_TABLE_t endpointTable;
+
+
+typedef struct USB_PIPE_TRANSFER_struct
+{
+    USB_TRANSFER_STATUS_t status;
+    uint8_t ZLPEnable : 1;
+    uint8_t reserved  : 7;
+    uint8_t *transferDataPtr;
+    uint16_t transferDataSize;
+    uint16_t bytesTransferred;
+    USB_TRANSFER_END_CALLBACK_t transferEndCallback;
+} USB_PIPE_TRANSFER_t;
+
+
+static ALWAYS_INLINE void WaitUntilRMWDone(void)
+{
+    while ((USB0.INTFLAGSB & USB_RMWBUSY_bm) != 0u)
+    {
+        ;
+    }
+}
+
+
+static ALWAYS_INLINE void USB_EndPointOutDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL &= (~USB_TYPE_gm));
+}
+
+
+static ALWAYS_INLINE void USB_EndPointInDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL &= (~USB_TYPE_gm));
+}
+
+
+static ALWAYS_INLINE bool USB_EndPointOutIsEnabled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.CTRL & USB_TYPE_gm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndPointInIsEnabled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.CTRL & USB_TYPE_gm) != 0u);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndPointOutTypeConfigGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].OUT.CTRL & USB_TYPE_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndPointInTypeConfigGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].IN.CTRL & USB_TYPE_gm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutControlSet(uint8_t endpointAddress, uint8_t value)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL = (value));
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInControlSet(uint8_t endpointAddress, uint8_t value)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL = (value));
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutStatusClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = ~USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInStatusClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = ~USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutDefaultSizeSet(uint8_t endpointAddress, uint8_t endpointSizeConfig)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL = (endpointTable.EP[endpointAddress].OUT.CTRL & (~USB_BUFSIZE_DEFAULT_gm)) | ((endpointSizeConfig)&USB_BUFSIZE_DEFAULT_gm));
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInDefaultSizeSet(uint8_t endpointAddress, uint8_t endpointSizeConfig)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL = (endpointTable.EP[endpointAddress].IN.CTRL & (~USB_BUFSIZE_DEFAULT_gm)) | ((endpointSizeConfig)&USB_BUFSIZE_DEFAULT_gm));
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutIsoSizeSet(uint8_t endpointAddress, uint8_t endpointSizeConfig)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL = (endpointTable.EP[endpointAddress].OUT.CTRL & (~USB_BUFSIZE_ISO_gm)) | ((endpointSizeConfig)&USB_BUFSIZE_ISO_gm));
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInIsoSizeSet(uint8_t endpointAddress, uint8_t endpointSizeConfig)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL = (endpointTable.EP[endpointAddress].IN.CTRL & (~USB_BUFSIZE_ISO_gm)) | ((endpointSizeConfig)&USB_BUFSIZE_ISO_gm));
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndpointOutDefaultSizeGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].OUT.CTRL & USB_BUFSIZE_DEFAULT_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndpointInDefaultSizeGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].IN.CTRL & USB_BUFSIZE_DEFAULT_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndpointOutIsoSizeGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].OUT.CTRL & USB_BUFSIZE_ISO_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_EndpointInIsoSizeGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].IN.CTRL & USB_BUFSIZE_ISO_gm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutTransactionCompleteInterruptEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL &= ~USB_TCDSBL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInTransactionCompleteInterruptEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL &= ~USB_TCDSBL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutTransactionCompleteInterruptDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL |= USB_TCDSBL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInTransactionCompleteDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL |= USB_TCDSBL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutMultipktEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL |= USB_MULTIPKT_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInMultipktEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL |= USB_MULTIPKT_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutMultipktDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL &= ~USB_MULTIPKT_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInMultipktDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL &= ~USB_MULTIPKT_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutMultipktIsEnabled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.CTRL & USB_MULTIPKT_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInMultipktIsEnabled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.CTRL & USB_MULTIPKT_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutAzlpEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL |= USB_AZLP_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInAlzpEnable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL |= USB_AZLP_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutAzlpDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL &= ~USB_AZLP_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInAzlpDisable(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL &= ~USB_AZLP_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutStall(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL |= USB_DOSTALL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInStall(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL |= USB_DOSTALL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutStallClear(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CTRL &= ~USB_DOSTALL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInStallClear(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.CTRL &= ~USB_DOSTALL_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutIsStalled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.CTRL & USB_DOSTALL_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInIsStalled(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.CTRL & USB_DOSTALL_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutStallAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_STALLED_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInStallAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_STALLED_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutNAKSet(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTSET = USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInNAKSet(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INSET = USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutNAKClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInNAKClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_BUSNAK_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutNAKIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_BUSNAK_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInNAKIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_BUSNAK_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutTransactionCompleteAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_TRNCOMPL_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInTransactionCompleteAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_TRNCOMPL_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutTransactionIsComplete(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_TRNCOMPL_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInTransactionIsComplete(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_TRNCOMPL_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutSetupReceivedAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_EPSETUP_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInSetupCompleteAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_EPSETUP_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutSetupIsReceived(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_EPSETUP_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInSetupIsReceived(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_EPSETUP_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutDataToggleSet(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTSET = USB_TOGGLE_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInDataToggleSet(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INSET = USB_TOGGLE_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutDataToggleClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_TOGGLE_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInDataToggleClear(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_TOGGLE_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutDataToggleIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_TOGGLE_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInDataToggleIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_TOGGLE_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutBufferSet(uint8_t endpointAddress, uint8_t *bufAddress)
+{
+
+    endpointTable.EP[endpointAddress].OUT.DATAPTR = (uint16_t)bufAddress;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInBufferSet(uint8_t endpointAddress, uint8_t *bufAddress)
+{
+
+    endpointTable.EP[endpointAddress].IN.DATAPTR = (uint16_t)bufAddress;
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesToSendSet(uint8_t endpointAddress, uint16_t numberBytes)
+{
+    (endpointTable.EP[endpointAddress].IN.CNT = (numberBytes));
+}
+
+
+static ALWAYS_INLINE uint16_t USB_NumberBytesToSendGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].IN.CNT);
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesToSendReset(uint8_t endpointAddress)
+{
+    USB_NumberBytesToSendSet(endpointAddress, 0x0000);
+}
+
+
+static ALWAYS_INLINE uint16_t USB_NumberBytesSentGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].IN.MCNT);
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesSentReset(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].IN.MCNT = (0x0000));
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesToReceiveSet(uint8_t endpointAddress, uint16_t numberBytes)
+{
+    (endpointTable.EP[(endpointAddress)].OUT.MCNT = (numberBytes));
+}
+
+
+static ALWAYS_INLINE uint16_t USB_NumberBytesToReceiveGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].OUT.MCNT);
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesToReceiveReset(uint8_t endpointAddress)
+{
+    USB_NumberBytesToReceiveSet(endpointAddress, 0x0000);
+}
+
+
+static ALWAYS_INLINE uint16_t USB_NumberBytesReceivedGet(uint8_t endpointAddress)
+{
+    return (endpointTable.EP[endpointAddress].OUT.CNT);
+}
+
+
+static ALWAYS_INLINE void USB_NumberBytesReceivedReset(uint8_t endpointAddress)
+{
+    (endpointTable.EP[endpointAddress].OUT.CNT = (0x0000));
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutOverUnderflowIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_UNFOVF_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInOverUnderflowIsSet(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_UNFOVF_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutOverUnderflowAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_UNFOVF_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInOverUnderflowAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_UNFOVF_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointOutCRCHasFailed(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].OUT.STATUS & USB_CRC_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_EndpointInCRCHasFailed(uint8_t endpointAddress)
+{
+    return ((endpointTable.EP[endpointAddress].IN.STATUS & USB_CRC_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointOutCRCAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].OUTCLR = USB_CRC_bm;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointInCRCAck(uint8_t endpointAddress)
+{
+    WaitUntilRMWDone();
+    USB0.STATUS[endpointAddress].INCLR = USB_CRC_bm;
+}
+
+
+static ALWAYS_INLINE void USB_GlobalNAKEnable(void)
+{
+    USB0.CTRLB |= USB_GNAK_bm;
+}
+
+
+static ALWAYS_INLINE void USB_GlobalNAKDisable(void)
+{
+    USB0.CTRLB &= ~(USB_GNAK_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_GlobalNAKIsEnable(void)
+{
+    return ((USB0.CTRLB & USB_GNAK_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_ConnectionAttach(void)
+{
+    USB0.CTRLB |= USB_ATTACH_bm;
+}
+
+
+static ALWAYS_INLINE void USB_ConnectionDetach(void)
+{
+    USB0.CTRLB &= ~(USB_ATTACH_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_ConnectionIsAttach(void)
+{
+    return ((USB0.CTRLB & USB_ATTACH_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_Enable(void)
+{
+    USB0.CTRLA |= USB_ENABLE_bm;
+}
+
+
+static ALWAYS_INLINE void USB_Disable(void)
+{
+    USB0.CTRLA &= ~(USB_ENABLE_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_IsEnable(void)
+{
+    return ((USB0.CTRLA & USB_ENABLE_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_FifoEnable(void)
+{
+    USB0.CTRLA |= USB_FIFOEN_bm;
+}
+
+
+static ALWAYS_INLINE void USB_FifoDisable(void)
+{
+    USB0.CTRLA &= ~(USB_FIFOEN_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_FifoIsEnable(void)
+{
+    return ((USB0.CTRLA & USB_FIFOEN_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_AutomaticGlobalNAKEnable(void)
+{
+    USB0.CTRLB |= USB_GNAUTO_bm;
+}
+
+
+static ALWAYS_INLINE void USB_AutomaticGlobalNAKDisable(void)
+{
+    USB0.CTRLB &= ~(USB_GNAUTO_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_AutomaticGlobalNAKIsEnable(void)
+{
+    return ((USB0.CTRLB & USB_GNAUTO_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_FrameNumEnable(void)
+{
+    USB0.CTRLA |= USB_STFRNUM_bm;
+}
+
+
+static ALWAYS_INLINE void USB_FrameNumDisable(void)
+{
+    USB0.CTRLA &= ~(USB_STFRNUM_bm);
+}
+
+
+static ALWAYS_INLINE bool USB_FrameNumIsEnable(void)
+{
+    return ((USB0.CTRLA & USB_STFRNUM_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE uint16_t USB_FrameNumGet(void)
+{
+    return (endpointTable.FRAMENUM & USB_FRAMENUM_gm);
+}
+
+
+static ALWAYS_INLINE void USB_MaxEndpointsSet(uint8_t maxEndpoint)
+{
+    USB0.CTRLA = ((USB0.CTRLA & ~USB_MAXEP_gm) | (((maxEndpoint) << USB_MAXEP_gp) & USB_MAXEP_gm));
+}
+
+
+static ALWAYS_INLINE void USB_MaxEndpointsReset(void)
+{
+    USB0.CTRLA &= ~(USB_MAXEP_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_MaxEndpointsGet(void)
+{
+    return ((USB0.CTRLA & USB_MAXEP_gm) >> USB_MAXEP_gp);
+}
+
+
+static ALWAYS_INLINE void USB_EndpointTableAddressSet(USB_EP_PAIR_t *endpointTableAddress)
+{
+    USB0.EPPTR = (uint16_t)endpointTableAddress;
+}
+
+
+static ALWAYS_INLINE void USB_EndpointTableAddressReset(void)
+{
+    USB0.EPPTR = 0x0000;
+}
+
+
+static ALWAYS_INLINE uint16_t USB_EndpointTableAddressGet(void)
+{
+    return (USB0.EPPTR);
+}
+
+
+static ALWAYS_INLINE void USB_FifoReadPointerReset(void)
+{
+    USB0.FIFORP |= (USB_FIFORP_gm);
+}
+
+
+static ALWAYS_INLINE int8_t USB_FifoReadPointerGet(void)
+{
+    return (int8_t)(USB0.FIFORP);
+}
+
+
+static ALWAYS_INLINE void USB_FifoWritePointerReset(void)
+{
+    USB0.FIFOWP |= (USB_FIFOWP_gm);
+}
+
+
+static ALWAYS_INLINE int8_t USB_FifoWritePointerGet(void)
+{
+    return (int8_t)(USB0.FIFOWP);
+}
+
+
+static ALWAYS_INLINE void USB_DeviceAddressSet(uint8_t usbAddress)
+{
+    USB0.ADDR = ((USB0.ADDR & ~USB_ADDR_gm) | (((usbAddress) << USB_ADDR_gp) & USB_ADDR_gm));
+}
+
+
+static ALWAYS_INLINE void USB_DeviceAddressReset(void)
+{
+    USB0.ADDR &= ~(USB_ADDR_gm);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_DeviceAddressGet(void)
+{
+    return ((USB0.ADDR & USB_ADDR_gm) >> USB_ADDR_gp);
+}
+
+
+static ALWAYS_INLINE void USB_UpstreamResumeEnable(void)
+{
+    USB0.CTRLB |= USB_URESUME_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_UpstreamResumeIsEnable(void)
+{
+    return ((USB0.CTRLB & USB_URESUME_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE uint8_t USB_BusStateGet(void)
+{
+    return (USB0.BUSSTATE);
+}
+
+
+static ALWAYS_INLINE bool USB_BusStateIs(uint8_t bus_state_bm)
+{
+    return ((USB0.BUSSTATE & (bus_state_bm)) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_SOFInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_SOF_bm;
+}
+
+
+static ALWAYS_INLINE void USB_SOFInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_SOF_bm);
+}
+
+
+static ALWAYS_INLINE void USB_SOFInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_SOF_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_SOFInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_SOF_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_SuspendInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_SUSPEND_bm;
+}
+
+
+static ALWAYS_INLINE void USB_SuspendInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_SUSPEND_bm);
+}
+
+
+static ALWAYS_INLINE void USB_SuspendInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_SUSPEND_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_SuspendInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_SUSPEND_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_ResumeInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_RESUME_bm;
+}
+
+
+static ALWAYS_INLINE void USB_ResumeInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_RESUME_bm);
+}
+
+
+static ALWAYS_INLINE void USB_ResumeInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_RESUME_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_ResumeInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_RESUME_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_ResetInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_RESET_bm;
+}
+
+
+static ALWAYS_INLINE void USB_ResetInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_RESET_bm);
+}
+
+
+static ALWAYS_INLINE void USB_ResetInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_RESET_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_ResetInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_RESET_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_StalledInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_STALLED_bm;
+}
+
+
+static ALWAYS_INLINE void USB_StalledInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_STALLED_bm);
+}
+
+
+static ALWAYS_INLINE void USB_StalledInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_STALLED_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_StalledInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_STALLED_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_UnderflowInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_UNF_bm;
+}
+
+
+static ALWAYS_INLINE void USB_UnderflowInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_UNF_bm);
+}
+
+
+static ALWAYS_INLINE void USB_UnderflowInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_UNF_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_UnderflowInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_UNF_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_OverflowInterruptEnable(void)
+{
+    USB0.INTCTRLA |= USB_OVF_bm;
+}
+
+
+static ALWAYS_INLINE void USB_OverflowInterruptDisable(void)
+{
+    USB0.INTCTRLA &= ~(USB_OVF_bm);
+}
+
+
+static ALWAYS_INLINE void USB_OverflowInterruptClear(void)
+{
+    USB0.INTFLAGSA = USB_OVF_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_OverflowInterruptIs(void)
+{
+    return ((USB0.INTFLAGSA & USB_OVF_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_TransactionCompleteInterruptEnable(void)
+{
+    USB0.INTCTRLB |= USB_TRNCOMPL_bm;
+}
+
+
+static ALWAYS_INLINE void USB_TransactionCompleteInterruptDisable(void)
+{
+    USB0.INTCTRLB &= ~(USB_TRNCOMPL_bm);
+}
+
+
+static ALWAYS_INLINE void USB_TransactionCompleteInterruptAck(void)
+{
+    USB0.INTFLAGSB = USB_TRNCOMPL_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_TransactionCompleteInterruptIs(void)
+{
+    return ((USB0.INTFLAGSB & USB_TRNCOMPL_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE bool USB_ReadModifyWriteInterruptIs(void)
+{
+    return ((USB0.INTFLAGSB & USB_RMWBUSY_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_GlobalNAKDoneInterruptEnable(void)
+{
+    USB0.INTCTRLB |= USB_GNDONE_bm;
+}
+
+
+static ALWAYS_INLINE void USB_GlobalNAKDoneInterruptDisable(void)
+{
+    USB0.INTCTRLB &= ~(USB_GNDONE_bm);
+}
+
+
+static ALWAYS_INLINE void USB_GlobalNAKDoneInterruptAck(void)
+{
+    USB0.INTFLAGSB = USB_GNDONE_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_GlobalNAKDoneInterruptIs(void)
+{
+    return ((USB0.INTFLAGSB & USB_GNDONE_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_SetupInterruptEnable(void)
+{
+    USB0.INTCTRLB |= USB_SETUP_bm;
+}
+
+
+static ALWAYS_INLINE void USB_SetupInterruptDisable(void)
+{
+    USB0.INTCTRLB &= ~(USB_SETUP_bm);
+}
+
+
+static ALWAYS_INLINE void USB_SetupInterruptClear(void)
+{
+    USB0.INTFLAGSB = USB_SETUP_bm;
+}
+
+
+static ALWAYS_INLINE bool USB_SetupInterruptIs(void)
+{
+    return ((USB0.INTFLAGSB & USB_SETUP_bm) != 0u);
+}
+
+
+static ALWAYS_INLINE void USB_InterruptFlagsClear(void)
+{
+    USB0.INTFLAGSA = 0xff;
+    USB0.INTFLAGSB = 0xff;
+}
+
+#endif
+
+=== ./usb/usb_peripheral/usb_peripheral.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_peripheral.h>
+#include <usb_peripheral_avr_du.h>
+#include <usb_protocol_headers.h>
+
+STATIC USB_CONTROL_TRANSFER_t controlTransfer __attribute__((aligned(2))) = { .transferDataPtr = controlTransfer.buffer };
+
+bool USB_SetupIsReceived(void)
+{
+    return USB_SetupInterruptIs();
+}
+
+bool USB_EventSOFIsReceived(void)
+{
+    return USB_SOFInterruptIs();
+}
+
+void USB_EventSOFClear(void)
+{
+    USB_SOFInterruptClear();
+}
+
+bool USB_EventResetIsReceived(void)
+{
+    return USB_ResetInterruptIs();
+}
+
+void USB_EventResetClear(void)
+{
+    USB_ResetInterruptClear();
+}
+
+uint8_t USB_EventOverUnderflowIsReceived(void)
+{
+    uint8_t eventOverUnderflow = 0;
+    if (USB_OverflowInterruptIs() == true)
+    {
+        eventOverUnderflow |= (uint8_t)OVERFLOW_EVENT;
+    }
+    if (USB_UnderflowInterruptIs() == true)
+    {
+        eventOverUnderflow |= (uint8_t)UNDERFLOW_EVENT;
+    }
+    return eventOverUnderflow;
+}
+
+uint8_t USB_ControlOverUnderflowIsReceived(void)
+{
+    uint8_t eventOverUnderflow = 0;
+    if (USB_EndpointOutOverUnderflowIsSet(0) == true)
+    {
+        eventOverUnderflow |= (uint8_t)OVERFLOW_EVENT;
+        USB_EndpointOutOverUnderflowAck(0);
+    }
+    if (USB_EndpointInOverUnderflowIsSet(0) == true)
+    {
+        eventOverUnderflow |= (uint8_t)UNDERFLOW_EVENT;
+        USB_EndpointInOverUnderflowAck(0);
+    }
+    return eventOverUnderflow;
+}
+
+void USB_EventOverUnderflowClear(void)
+{
+    USB_OverflowInterruptClear();
+    USB_UnderflowInterruptClear();
+}
+
+bool USB_EventSuspendIsReceived(void)
+{
+    return USB_SuspendInterruptIs();
+}
+
+void USB_EventSuspendClear(void)
+{
+    USB_SuspendInterruptClear();
+}
+
+bool USB_EventResumeIsReceived(void)
+{
+    return USB_ResumeInterruptIs();
+}
+
+void USB_EventResumeClear(void)
+{
+    USB_ResumeInterruptClear();
+}
+
+bool USB_EventStalledIsReceived(void)
+{
+    return USB_StalledInterruptIs();
+}
+
+void USB_EventStalledClear(void)
+{
+    USB_StalledInterruptClear();
+}
+
+void USB_BusAttach(void)
+{
+    USB_ConnectionAttach();
+}
+
+void USB_BusDetach(void)
+{
+    USB_ConnectionDetach();
+}
+
+bool USB_IsBusAttached(void)
+{
+    return USB_ConnectionIsAttach();
+}
+
+void USB_DeviceAddressConfigure(uint8_t deviceAddress)
+{
+    USB_DeviceAddressSet(deviceAddress);
+}
+
+uint16_t USB_FrameNumberGet(void)
+{
+    return (USB_FrameNumGet());
+}
+
+RETURN_CODE_t USB_ControlEndpointsInit(void)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    USB_PIPE_t controlPipeOut = { .address = 0, .direction = USB_EP_DIR_OUT };
+    USB_PIPE_t controlPipeIn = { .address = 0, .direction = USB_EP_DIR_IN };
+
+    status = USB_EndpointConfigure(controlPipeOut, USB_EP0_SIZE, CONTROL);
+    if (SUCCESS == status)
+    {
+        status = USB_EndpointConfigure(controlPipeIn, USB_EP0_SIZE, CONTROL);
+    }
+
+    if (SUCCESS == status)
+    {
+        status = EndpointBufferSet(controlPipeOut, controlTransfer.buffer);
+        if (SUCCESS == status)
+        {
+            status = EndpointBufferSet(controlPipeIn, controlTransfer.buffer);
+        }
+    }
+
+    if (SUCCESS == status)
+    {
+        status = USB_DataToggleClear(controlPipeOut);
+        if (SUCCESS == status)
+        {
+            status = USB_DataToggleSet(controlPipeIn);
+        }
+    }
+
+    if (SUCCESS == status)
+    {
+        controlTransfer.status = USB_CONTROL_SETUP;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlSetupReceived(void)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    USB_SetupInterruptClear();
+
+    if (USB_CONTROL_STALL_REQ == controlTransfer.status)
+    {
+
+        status = SUCCESS;
+    }
+    else
+    {
+
+        USB_EndpointOutSetupReceivedAck(0u);
+        USB_EndpointInSetupCompleteAck(0u);
+
+
+        USB_NumberBytesToSendReset(0u);
+        USB_NumberBytesSentReset(0u);
+        USB_NumberBytesToReceiveReset(0u);
+        USB_NumberBytesReceivedReset(0u);
+
+
+        (void)memcpy((uint8_t *)(&controlTransfer.setupRequest), controlTransfer.buffer, sizeof(USB_SETUP_REQUEST_t));
+
+
+        if (controlTransfer.processSetupCallback != NULL)
+        {
+            RETURN_CODE_t setup_status = controlTransfer.processSetupCallback(&controlTransfer.setupRequest);
+
+            if (UNSUPPORTED == setup_status)
+            {
+
+                controlTransfer.status = USB_CONTROL_STALL_REQ;
+                USB_EndpointInStall(0u);
+                USB_EndpointOutStall(0u);
+
+                status = SUCCESS;
+            }
+            else if (SUCCESS == setup_status)
+            {
+                if (0u == controlTransfer.transferDataSize)
+                {
+
+                    status = USB_ControlTransferZLP(USB_EP_DIR_IN);
+                }
+                else
+                {
+
+                    controlTransfer.totalBytesTransferred = 0;
+                    USB_PIPE_t controlPipe = { .address = 0u, .direction = USB_EP_DIR_IN };
+                    if ((controlTransfer.setupRequest.bmRequestType.dataPhaseTransferDirection) == USB_REQUEST_DIR_IN)
+                    {
+                        controlTransfer.status = USB_CONTROL_DATA_IN;
+                    }
+                    else
+                    {
+
+                        status = EndpointBufferSet(controlPipe, controlTransfer.transferDataPtr);
+
+                        controlPipe.direction = USB_EP_DIR_OUT;
+                        controlTransfer.status = USB_CONTROL_DATA_OUT;
+                    }
+
+
+                    USB_PipeDataTransferredSizeReset(controlPipe);
+                    USB_PipeDataPtrSet(controlPipe, controlTransfer.transferDataPtr);
+                    USB_PipeDataToTransferSizeSet(controlPipe, controlTransfer.transferDataSize);
+
+
+                    status = USB_ControlTransactionComplete(controlPipe);
+                }
+            }
+            else
+            {
+
+                status = setup_status;
+            }
+        }
+        else
+        {
+
+            status = CONTROL_SETUP_CALLBACK_ERROR;
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlTransactionComplete(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (pipe.address != 0)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+
+        status = USB_DataToggleSet(pipe);
+    }
+
+    if (SUCCESS == status)
+    {
+        switch (controlTransfer.status)
+        {
+        case USB_CONTROL_DATA_IN:
+        {
+            pipe.direction = USB_EP_DIR_IN;
+
+
+            uint16_t bytesSent = USB_PipeDataTransferredSizeGet(pipe);
+            bytesSent += USB_NumberBytesSentGet(pipe.address);
+            USB_PipeDataTransferredSizeSet(pipe, bytesSent);
+            uint16_t transferDataSize = USB_PipeDataToTransferSizeGet(pipe);
+
+
+            if (0U == (transferDataSize - bytesSent))
+            {
+                controlTransfer.totalBytesTransferred += bytesSent;
+                if (controlTransfer.transferDataSize == controlTransfer.totalBytesTransferred)
+                {
+
+
+                    status = USB_ControlTransferZLP(USB_REQUEST_DIR_OUT);
+                }
+                else
+                {
+
+                    if ((controlTransfer.overUnderRunCallback != NULL) && (SUCCESS == controlTransfer.overUnderRunCallback()))
+                    {
+                        USB_PipeDataTransferredSizeReset(pipe);
+                        USB_PipeDataToTransferSizeSet(pipe, controlTransfer.transferDataSize);
+                    }
+
+
+                    status = USB_InTransactionRun(pipe);
+                }
+            }
+            else
+            {
+
+                status = USB_InTransactionRun(pipe);
+            }
+
+            USB_EndpointInOverUnderflowAck(0);
+
+            break;
+        }
+        case USB_CONTROL_DATA_OUT:
+        {
+            pipe.direction = USB_EP_DIR_OUT;
+
+
+            uint16_t bytesReceived = USB_PipeDataTransferredSizeGet(pipe);
+            bytesReceived += USB_NumberBytesReceivedGet(pipe.address);
+            USB_PipeDataTransferredSizeSet(pipe, bytesReceived);
+            uint16_t transferDataSize = USB_PipeDataToTransferSizeGet(pipe);
+
+            if (0U == (transferDataSize - bytesReceived))
+            {
+                controlTransfer.totalBytesTransferred += bytesReceived;
+                if (controlTransfer.transferDataSize == controlTransfer.totalBytesTransferred)
+                {
+
+
+                    status = USB_ControlTransferZLP(USB_REQUEST_DIR_IN);
+                }
+                else
+                {
+
+                    if ((controlTransfer.overUnderRunCallback != NULL) && (SUCCESS == controlTransfer.overUnderRunCallback()))
+                    {
+                        USB_PipeDataTransferredSizeReset(pipe);
+                        USB_PipeDataToTransferSizeSet(pipe, controlTransfer.transferDataSize);
+                        status = USB_InTransactionRun(pipe);
+                    }
+                    else
+                    {
+
+                        controlTransfer.status = USB_CONTROL_STALL_REQ;
+                        USB_EndpointInStall(0);
+                        USB_EndpointOutStall(0);
+
+                        status = SUCCESS;
+                    }
+                }
+            }
+            else
+            {
+
+                status = USB_OutTransactionRun(pipe);
+            }
+
+            USB_EndpointOutOverUnderflowAck(0);
+            break;
+        }
+        case USB_CONTROL_ZLP:
+        {
+
+            if (controlTransfer.endOfRequestCallback != NULL)
+            {
+                controlTransfer.endOfRequestCallback();
+            }
+
+
+            status = USB_ControlTransferReset();
+            break;
+        }
+        case USB_CONTROL_SETUP:
+        {
+            status = USB_ControlTransferReset();
+            break;
+        }
+        default:
+        {
+            status = CONTROL_TRANSACTION_STATUS_ERROR;
+            break;
+        }
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlTransferZLP(uint8_t direction)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    USB_NumberBytesToSendReset(0);
+    USB_NumberBytesSentReset(0);
+    USB_NumberBytesToReceiveReset(0u);
+    USB_NumberBytesReceivedReset(0u);
+
+
+    USB_PipeDataPtrSet((USB_PIPE_t){ .address = 0, .direction = USB_REQUEST_DIR_OUT }, controlTransfer.buffer);
+    status = EndpointBufferSet((USB_PIPE_t){ .address = 0, .direction = USB_REQUEST_DIR_OUT }, controlTransfer.buffer);
+
+    if (SUCCESS == status)
+    {
+        controlTransfer.status = USB_CONTROL_ZLP;
+
+
+        if (direction == USB_REQUEST_DIR_IN)
+        {
+            USB_EndpointInNAKClear(0);
+            USB_EndpointInOverUnderflowAck(0);
+        }
+        else
+        {
+            USB_EndpointOutNAKClear(0);
+            USB_EndpointOutOverUnderflowAck(0);
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlTransferReset(void)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+    USB_PIPE_t controlPipeOut = { .address = 0u, .direction = USB_EP_DIR_OUT };
+
+
+    status = USB_TransactionAbort(controlPipeOut);
+    if (SUCCESS == status)
+    {
+        USB_PIPE_t controlPipeIn = { .address = 0u, .direction = USB_EP_DIR_IN };
+        status = USB_TransactionAbort(controlPipeIn);
+    }
+
+    if (SUCCESS == status)
+    {
+        USB_EndpointOutStatusClear(0u);
+        USB_EndpointInStatusClear(0u);
+
+
+        USB_PipeDataPtrSet(controlPipeOut, controlTransfer.buffer);
+        USB_PipeDataToTransferSizeSet(controlPipeOut, sizeof(USB_SETUP_REQUEST_t));
+        USB_PipeDataTransferredSizeReset(controlPipeOut);
+        USB_PipeTransferEndCallbackRegister(controlPipeOut, NULL);
+
+
+        USB_NumberBytesToSendReset(0u);
+        USB_NumberBytesSentReset(0u);
+        USB_NumberBytesToReceiveReset(0u);
+        USB_NumberBytesReceivedReset(0u);
+
+
+        controlTransfer.endOfRequestCallback = NULL;
+        controlTransfer.overUnderRunCallback = NULL;
+        controlTransfer.transferDataSize = 0u;
+        controlTransfer.status = USB_CONTROL_SETUP;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlTransferDataSet(uint8_t *dataPtr, uint16_t dataSize)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (dataPtr == NULL)
+    {
+        controlTransfer.transferDataPtr = controlTransfer.buffer;
+        if (0u != dataSize)
+        {
+            status = CONTROL_SIZE_ERROR;
+        }
+        else
+        {
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+        controlTransfer.transferDataPtr = dataPtr;
+        status = SUCCESS;
+    }
+    controlTransfer.transferDataSize = dataSize;
+
+    return status;
+}
+
+RETURN_CODE_t USB_ControlTransferDataWriteBuffer(uint8_t *dataPtr, uint8_t dataSize)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_EP0_SIZE < dataSize)
+    {
+        status = CONTROL_SIZE_ERROR;
+    }
+    else
+    {
+        (void)memcpy(controlTransfer.buffer, dataPtr, dataSize);
+        controlTransfer.transferDataPtr = controlTransfer.buffer;
+        controlTransfer.transferDataSize = dataSize;
+
+        status = SUCCESS;
+    }
+    return status;
+}
+
+void USB_ControlEndOfRequestCallbackRegister(USB_SETUP_ENDOFREQUEST_CALLBACK_t callback)
+{
+    controlTransfer.endOfRequestCallback = callback;
+}
+
+void USB_ControlProcessSetupCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback)
+{
+    controlTransfer.processSetupCallback = callback;
+}
+
+void USB_ControlOverUnderRunCallbackRegister(USB_SETUP_OVERUNDERRUN_CALLBACK_t callback)
+{
+    controlTransfer.overUnderRunCallback = callback;
+}
+
+RETURN_CODE_t USB_ControlProcessOverUnderflow(uint8_t overunderflow)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_CONTROL_DATA_IN == controlTransfer.status)
+    {
+        if (OVERFLOW_EVENT == overunderflow)
+        {
+
+            status = USB_ControlTransferZLP(USB_REQUEST_DIR_OUT);
+        }
+        else
+        {
+
+            status = SUCCESS;
+        }
+    }
+    else if (USB_CONTROL_DATA_OUT == controlTransfer.status)
+    {
+        if (UNDERFLOW_EVENT == overunderflow)
+        {
+
+            status = USB_ControlTransferZLP(USB_REQUEST_DIR_IN);
+        }
+        else
+        {
+
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_HandleEventStalled(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    USB_EndpointInStallAck(pipe.address);
+    USB_EndpointOutStallAck(pipe.address);
+
+    USB_EndpointInStallClear(pipe.address);
+    USB_EndpointOutStallClear(pipe.address);
+
+    if (0u == pipe.address)
+    {
+
+        status = USB_ControlTransferReset();
+    }
+    else
+    {
+        status = USB_TransactionAbort(pipe);
+    }
+
+    return status;
+}
+
+void USB_PeripheralInitialize(void)
+{
+    USB_Enable();
+    USB_FrameNumEnable();
+    USB_FifoEnable();
+    USB_FifoReadPointerReset();
+    USB_FifoWritePointerReset();
+    USB_EndpointTableAddressSet(endpointTable.EP);
+    USB_MaxEndpointsSet(USB_EP_NUM - 1u);
+    USB_InterruptFlagsClear();
+
+    for (uint8_t endpoint = 0; endpoint < (uint8_t)USB_EP_NUM; endpoint++)
+    {
+        endpointTable.EP[endpoint].OUT.CTRL = 0;
+        endpointTable.EP[endpoint].OUT.STATUS = 0;
+        endpointTable.EP[endpoint].IN.CTRL = 0;
+        endpointTable.EP[endpoint].IN.STATUS = 0;
+    }
+}
+
+void USB_PeripheralDisable(void)
+{
+    USB_Disable();
+    USB_DeviceAddressReset();
+}
+
+=== ./usb/usb_peripheral/usb_peripheral_endpoint.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_peripheral_avr_du.h>
+#include <usb_peripheral_endpoint.h>
+#include <usb_protocol_headers.h>
+
+#if defined(USB_EP_NUM) && defined(USB_MAX_ENDPOINTS)
+    #if USB_EP_NUM > USB_MAX_ENDPOINTS
+        #error "USB_EP_NUM is too large, max is USB_MAX_ENDPOINTS"
+    #endif
+#else
+    #error "USB_EP_NUM not configured"
+#endif
+
+
+#define IsPowerOfTwo(number) ((0u != (number)) && (((number) & ((number)-1u)) == 0u))
+
+
+USB_ENDPOINT_TABLE_t endpointTable __attribute__((aligned(2)));
+
+RETURN_CODE_t USB_EndpointConfigure(USB_PIPE_t pipe, uint16_t endpointSize, USB_ENDPOINT_t endpointType)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    uint8_t endpointConfiguration = 0;
+    if (SUCCESS != ConvertEndpointSizeToMask(endpointSize, endpointType, &endpointConfiguration))
+    {
+        status = ENDPOINT_SIZE_ERROR;
+    }
+    else if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else if (INTERRUPT < endpointType)
+    {
+        status = ENDPOINT_TYPE_ERROR;
+    }
+    else
+    {
+        switch (endpointType)
+        {
+        case CONTROL:
+            endpointConfiguration |= USB_TYPE_CONTROL_gc;
+            break;
+        case ISOCHRONOUS:
+            endpointConfiguration |= USB_TYPE_ISO_gc;
+            break;
+        case BULK:
+        case INTERRUPT:
+            endpointConfiguration |= USB_TYPE_BULKINT_gc;
+            break;
+        default:
+            endpointConfiguration |= USB_TYPE_DISABLE_gc;
+            break;
+        }
+
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutNAKSet(pipe.address);
+            USB_EndpointOutStatusClear(pipe.address);
+            USB_NumberBytesReceivedReset(pipe.address);
+            USB_EndpointOutControlSet(pipe.address, endpointConfiguration);
+
+
+            if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].OutMultipktEnable)
+            {
+                USB_EndpointOutMultipktEnable(pipe.address);
+
+                if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].OutAzlpEnable)
+                {
+                    USB_EndpointOutAzlpEnable(pipe.address);
+                }
+
+                status = SUCCESS;
+            }
+            else if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].OutAzlpEnable)
+            {
+
+                status = ENDPOINT_AZLP_ERROR;
+            }
+            else
+            {
+                status = SUCCESS;
+            }
+
+            if ((uint8_t)0x01 != endpointStaticConfig[pipe.address].OutTrncInterruptEnable)
+            {
+                USB_EndpointOutTransactionCompleteInterruptDisable(pipe.address);
+            }
+        }
+        else
+        {
+            USB_EndpointInNAKSet(pipe.address);
+            USB_EndpointInStatusClear(pipe.address);
+            USB_NumberBytesToSendReset(pipe.address);
+            USB_EndpointInControlSet(pipe.address, endpointConfiguration);
+
+
+            if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].InMultipktEnable)
+            {
+                USB_EndpointInMultipktEnable(pipe.address);
+
+                if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].InAzlpEnable)
+                {
+                    USB_EndpointInAlzpEnable(pipe.address);
+                }
+
+                status = SUCCESS;
+            }
+            else if ((uint8_t)0x01 == endpointStaticConfig[pipe.address].InAzlpEnable)
+            {
+
+                status = ENDPOINT_AZLP_ERROR;
+            }
+            else
+            {
+                status = SUCCESS;
+            }
+
+            if ((uint8_t)0x01 != endpointStaticConfig[pipe.address].InTrncInterruptEnable)
+            {
+                USB_EndpointInTransactionCompleteDisable(pipe.address);
+            }
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_EndpointDisable(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndPointOutDisable(pipe.address);
+        }
+        else
+        {
+            USB_EndPointInDisable(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+uint16_t USB_EndpointSizeGet(USB_PIPE_t pipe)
+{
+    uint8_t endpointType = 0;
+    uint8_t endpointSizeConfig = 0;
+    int16_t endpointSize = 0;
+    if (USB_EP_DIR_OUT == pipe.direction)
+    {
+        endpointType = USB_EndPointOutTypeConfigGet(pipe.address);
+        endpointSizeConfig = (USB_TYPE_ISO_gc == endpointType) ? USB_EndpointOutIsoSizeGet(pipe.address) : USB_EndpointOutDefaultSizeGet(pipe.address);
+    }
+    else
+    {
+        endpointType = USB_EndPointInTypeConfigGet(pipe.address);
+        endpointSizeConfig = (USB_TYPE_ISO_gc == endpointType) ? USB_EndpointInIsoSizeGet(pipe.address) : USB_EndpointInDefaultSizeGet(pipe.address);
+    }
+    if (USB_BUFSIZE_ISO_BUF1023_gc == endpointSizeConfig)
+    {
+        endpointSize = MAX_ENDPOINT_SIZE_ISO;
+    }
+    else
+    {
+        endpointSize = 8U << (uint16_t)endpointSizeConfig;
+    }
+    return endpointSize;
+}
+
+USB_ENDPOINT_t USB_EndpointTypeGet(USB_PIPE_t pipe)
+{
+    USB_TYPE_t endpointConfigType;
+    if (USB_EP_DIR_OUT == pipe.direction)
+    {
+        endpointConfigType = USB_EndPointOutTypeConfigGet(pipe.address);
+    }
+    else
+    {
+        endpointConfigType = USB_EndPointInTypeConfigGet(pipe.address);
+    }
+
+    USB_ENDPOINT_t endpointType = DISABLED;
+    switch (endpointConfigType)
+    {
+    case USB_TYPE_CONTROL_gc:
+        endpointType = CONTROL;
+        break;
+    case USB_TYPE_BULKINT_gc:
+
+        endpointType = BULK;
+        break;
+    case USB_TYPE_ISO_gc:
+        endpointType = ISOCHRONOUS;
+        break;
+    default:
+
+        break;
+    }
+
+    return endpointType;
+}
+
+RETURN_CODE_t USB_EndpointStall(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutStall(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInStall(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_EndpointStallClear(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutStallClear(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInStallClear(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+bool USB_EndpointIsStalled(USB_PIPE_t pipe)
+{
+
+    bool isStalled = false;
+
+    if ((uint8_t)USB_EP_NUM > pipe.address)
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            isStalled = USB_EndpointOutIsStalled(pipe.address);
+        }
+        else
+        {
+            isStalled = USB_EndpointInIsStalled(pipe.address);
+        }
+    }
+
+    return isStalled;
+}
+
+RETURN_CODE_t USB_EndpointStalledConditionAck(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutStallAck(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInStallAck(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DataToggleSet(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutDataToggleSet(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInDataToggleSet(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DataToggleClear(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutDataToggleClear(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInDataToggleClear(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_DataToggle(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            (USB_EndpointOutDataToggleIsSet(pipe.address)) ? USB_DataToggleClear(pipe) : USB_DataToggleSet(pipe);
+        }
+        else
+        {
+            (USB_EndpointInDataToggleIsSet(pipe.address)) ? USB_DataToggleClear(pipe) : USB_DataToggleSet(pipe);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t ConvertEndpointSizeToMask(uint16_t endpointSize, USB_ENDPOINT_t endpointType, uint8_t *endpointMaskPtr)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (ISOCHRONOUS == endpointType)
+    {
+        if (((uint16_t)MAX_ENDPOINT_SIZE_ISO < endpointSize) || ((endpointSize < (uint16_t)MAX_ENDPOINT_SIZE_ISO) && !(IsPowerOfTwo(endpointSize))))
+        {
+            status = ENDPOINT_SIZE_ERROR;
+        }
+    }
+    else
+    {
+        if (((uint16_t)MAX_ENDPOINT_SIZE_DEFAULT < endpointSize) || !(IsPowerOfTwo(endpointSize)))
+        {
+            status = ENDPOINT_SIZE_ERROR;
+        }
+    }
+
+    if (UNINITIALIZED == status)
+    {
+        if ((uint16_t)MAX_ENDPOINT_SIZE_ISO == endpointSize)
+        {
+            *endpointMaskPtr = USB_BUFSIZE_ISO_BUF1023_gc;
+        }
+        else
+        {
+            uint8_t mask = 0;
+            uint16_t baseSize = 8;
+
+            while (baseSize < endpointSize)
+            {
+
+                mask++;
+                baseSize <<= 1;
+            }
+
+            *endpointMaskPtr = mask << USB_BUFSIZE_DEFAULT_gp;
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t EndpointBufferSet(USB_PIPE_t pipe, uint8_t *bufAddress)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+
+            if ((1u == endpointStaticConfig[pipe.address].OutMultipktEnable) && (((uint16_t)bufAddress & 0x0001) != 0u))
+            {
+                status = ENDPOINT_ALIGN_ERROR;
+            }
+            else
+            {
+                USB_EndpointOutBufferSet(pipe.address, bufAddress);
+                status = SUCCESS;
+            }
+        }
+        else
+        {
+            USB_EndpointInBufferSet(pipe.address, bufAddress);
+            status = SUCCESS;
+        }
+    }
+
+    return status;
+}
+
+=== ./usb/usb_peripheral/usb_peripheral_endpoint.h ===
+
+
+
+
+#ifndef USB_PERIPHERAL_ENDPOINT_H
+
+#define USB_PERIPHERAL_ENDPOINT_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "usb_common_elements.h"
+#include "usb_protocol_headers.h"
+
+
+RETURN_CODE_t USB_EndpointConfigure(USB_PIPE_t pipe, uint16_t endpointSize, USB_ENDPOINT_t endpointType);
+
+
+RETURN_CODE_t USB_EndpointDisable(USB_PIPE_t pipe);
+
+
+uint16_t USB_EndpointSizeGet(USB_PIPE_t pipe);
+
+
+USB_ENDPOINT_t USB_EndpointTypeGet(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_EndpointStall(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_EndpointStallClear(USB_PIPE_t pipe);
+
+
+bool USB_EndpointIsStalled(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_EndpointStalledConditionAck(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_DataToggleSet(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_DataToggleClear(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_DataToggle(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t ConvertEndpointSizeToMask(uint16_t endpointSize, USB_ENDPOINT_t endpointType, uint8_t *endpointMaskPtr);
+
+
+RETURN_CODE_t EndpointBufferSet(USB_PIPE_t pipe, uint8_t *bufAddress);
+
+#endif
+
+=== ./usb/usb_peripheral/usb_peripheral.h ===
+
+
+
+
+#ifndef USB_PERIPHERAL_H
+
+#define USB_PERIPHERAL_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <usb_common_elements.h>
+#include <usb_peripheral_endpoint.h>
+#include <usb_peripheral_read_write.h>
+#include <usb_protocol_headers.h>
+
+
+typedef struct USB_CONTROL_TRANSFER_struct
+{
+    uint8_t buffer[64];
+    volatile USB_CONTROL_STATUS_t status;
+    uint8_t *transferDataPtr;
+    uint16_t transferDataSize;
+    uint16_t totalBytesTransferred;
+    USB_SETUP_PROCESS_CALLBACK_t processSetupCallback;
+    USB_SETUP_OVERUNDERRUN_CALLBACK_t overUnderRunCallback;
+    USB_SETUP_ENDOFREQUEST_CALLBACK_t endOfRequestCallback;
+    USB_SETUP_REQUEST_t setupRequest;
+} USB_CONTROL_TRANSFER_t;
+
+
+bool USB_SetupIsReceived(void);
+
+
+bool USB_EventSOFIsReceived(void);
+
+
+void USB_EventSOFClear(void);
+
+
+bool USB_EventResetIsReceived(void);
+
+
+void USB_EventResetClear(void);
+
+
+uint8_t USB_EventOverUnderflowIsReceived(void);
+
+
+uint8_t USB_ControlOverUnderflowIsReceived(void);
+
+
+void USB_EventOverUnderflowClear(void);
+
+
+bool USB_EventSuspendIsReceived(void);
+
+
+void USB_EventSuspendClear(void);
+
+
+bool USB_EventResumeIsReceived(void);
+
+
+void USB_EventResumeClear(void);
+
+
+bool USB_EventStalledIsReceived(void);
+
+
+void USB_EventStalledClear(void);
+
+
+void USB_BusAttach(void);
+
+
+void USB_BusDetach(void);
+
+
+bool USB_IsBusAttached(void);
+
+
+void USB_DeviceAddressConfigure(uint8_t deviceAddress);
+
+
+uint16_t USB_FrameNumberGet(void);
+
+
+RETURN_CODE_t USB_ControlEndpointsInit(void);
+
+
+RETURN_CODE_t USB_ControlSetupReceived(void);
+
+
+RETURN_CODE_t USB_ControlTransactionComplete(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_ControlTransferZLP(uint8_t direction);
+
+
+RETURN_CODE_t USB_ControlTransferReset(void);
+
+
+RETURN_CODE_t USB_ControlTransferDataSet(uint8_t *dataPtr, uint16_t dataSize);
+
+
+RETURN_CODE_t USB_ControlTransferDataWriteBuffer(uint8_t *dataPtr, uint8_t dataSize);
+
+
+void USB_ControlEndOfRequestCallbackRegister(USB_SETUP_ENDOFREQUEST_CALLBACK_t callback);
+
+
+void USB_ControlProcessSetupCallbackRegister(USB_SETUP_PROCESS_CALLBACK_t callback);
+
+
+void USB_ControlOverUnderRunCallbackRegister(USB_SETUP_OVERUNDERRUN_CALLBACK_t callback);
+
+
+RETURN_CODE_t USB_ControlProcessOverUnderflow(uint8_t overunderflow);
+
+
+RETURN_CODE_t USB_HandleEventStalled(USB_PIPE_t pipe);
+
+
+void USB_PeripheralInitialize(void);
+
+
+void USB_PeripheralDisable(void);
+
+#endif
+
+=== ./usb/usb_peripheral/usb_peripheral_read_write.c ===
+
+
+
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <usb_common_elements.h>
+#include <usb_config.h>
+#include <usb_peripheral_avr_du.h>
+#include <usb_peripheral_endpoint.h>
+#include <usb_peripheral_read_write.h>
+#include <usb_protocol_headers.h>
+
+
+#define PipeTransferIndexGet(pipe) (((pipe).address * 2) + (pipe).direction)
+
+STATIC USB_PIPE_TRANSFER_t pipeTransfer[USB_EP_NUM * 2];
+
+RETURN_CODE_t USB_TransactionStart(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutNAKClear(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInNAKClear(pipe.address);
+        }
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_TransactionAbort(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutNAKSet(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInNAKSet(pipe.address);
+        }
+
+        pipeTransfer[PipeTransferIndexGet(pipe)].status = USB_PIPE_TRANSFER_ABORTED;
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_TransactionCompleteAck(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        if (USB_EP_DIR_OUT == pipe.direction)
+        {
+            USB_EndpointOutTransactionCompleteAck(pipe.address);
+        }
+        else
+        {
+            USB_EndpointInTransactionCompleteAck(pipe.address);
+        }
+        pipeTransfer[PipeTransferIndexGet(pipe)].status = USB_PIPE_TRANSFER_OK;
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+bool USB_TransactionIsCompleted(void)
+{
+    return USB_TransactionCompleteInterruptIs();
+}
+
+RETURN_CODE_t USB_TransactionCompletedPipeGet(USB_PIPE_t *pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_TransactionIsCompleted())
+    {
+
+
+
+
+        uint8_t fifoEntry = endpointTable.FIFO[(USB_EP_NUM * 2u) + USB_FifoReadPointerGet()];
+
+
+        USB_PIPE_t returnPipe = { .direction = (fifoEntry & USB_DIR_bm) >> USB_DIR_bp, .address = (fifoEntry & USB_EPNUM_gm) >> USB_EPNUM_gp };
+
+        if ((uint8_t)USB_EP_NUM <= returnPipe.address)
+        {
+            status = ENDPOINT_ADDRESS_ERROR;
+        }
+        else
+        {
+            pipe->address = returnPipe.address;
+            pipe->direction = returnPipe.direction;
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+
+        status = PIPE_TRANSFER_ERROR;
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_PipeReset(USB_PIPE_t pipe)
+{
+    RETURN_CODE_t status = UNINITIALIZED;
+    USB_PIPE_TRANSFER_t *pipeTransferPtr = &pipeTransfer[PipeTransferIndexGet(pipe)];
+
+    if ((uint8_t)USB_EP_NUM <= pipe.address)
+    {
+        status = ENDPOINT_ADDRESS_ERROR;
+    }
+    else
+    {
+        pipeTransferPtr->status = USB_PIPE_TRANSFER_OK;
+        pipeTransferPtr->transferDataPtr = NULL;
+        pipeTransferPtr->transferDataSize = 0;
+        pipeTransferPtr->bytesTransferred = 0;
+        pipeTransferPtr->transferEndCallback = NULL;
+        pipeTransferPtr->ZLPEnable = false;
+
+        status = SUCCESS;
+    }
+
+    return status;
+}
+
+USB_TRANSFER_STATUS_t USB_PipeStatusGet(USB_PIPE_t pipe)
+{
+
+    return pipeTransfer[PipeTransferIndexGet(pipe)].status;
+}
+
+bool USB_PipeStatusIsBusy(USB_PIPE_t pipe)
+{
+
+    return (pipeTransfer[PipeTransferIndexGet(pipe)].status == USB_PIPE_TRANSFER_BUSY);
+}
+
+void USB_PipeDataPtrSet(USB_PIPE_t pipe, uint8_t *dataPtr)
+{
+
+    pipeTransfer[PipeTransferIndexGet(pipe)].transferDataPtr = dataPtr;
+}
+
+uint8_t *USB_PipeDataPtrGet(USB_PIPE_t pipe)
+{
+
+    return pipeTransfer[PipeTransferIndexGet(pipe)].transferDataPtr;
+}
+
+void USB_PipeDataToTransferSizeSet(USB_PIPE_t pipe, uint16_t dataSize)
+{
+
+    pipeTransfer[PipeTransferIndexGet(pipe)].transferDataSize = dataSize;
+}
+
+uint16_t USB_PipeDataToTransferSizeGet(USB_PIPE_t pipe)
+{
+
+    return pipeTransfer[PipeTransferIndexGet(pipe)].transferDataSize;
+}
+
+uint16_t USB_PipeDataTransferredSizeGet(USB_PIPE_t pipe)
+{
+
+    return pipeTransfer[PipeTransferIndexGet(pipe)].bytesTransferred;
+}
+
+void USB_PipeDataTransferredSizeSet(USB_PIPE_t pipe, uint16_t dataSize)
+{
+
+    pipeTransfer[PipeTransferIndexGet(pipe)].bytesTransferred = dataSize;
+}
+
+void USB_PipeDataTransferredSizeReset(USB_PIPE_t pipe)
+{
+
+    pipeTransfer[PipeTransferIndexGet(pipe)].bytesTransferred = 0;
+}
+
+void USB_PipeTransferZLP_Enable(USB_PIPE_t pipe)
+{
+
+    if (((USB_EP_DIR_IN == pipe.direction) && (0u == endpointStaticConfig[pipe.address].InAzlpEnable))
+        || ((USB_EP_DIR_OUT == pipe.direction) && (0u == endpointStaticConfig[pipe.address].OutAzlpEnable)))
+    {
+        pipeTransfer[PipeTransferIndexGet(pipe)].ZLPEnable = true;
+    }
+}
+
+void USB_PipeTransferEndCallbackRegister(USB_PIPE_t pipe, USB_TRANSFER_END_CALLBACK_t callback)
+{
+    pipeTransfer[PipeTransferIndexGet(pipe)].transferEndCallback = callback;
+}
+
+void USB_PipeTransferEndCallback(USB_PIPE_t pipe)
+{
+    USB_PIPE_TRANSFER_t *pipeTransferPtr = &pipeTransfer[PipeTransferIndexGet(pipe)];
+
+    if (NULL != pipeTransferPtr->transferEndCallback)
+    {
+        pipeTransferPtr->transferEndCallback(pipe, pipeTransferPtr->status, pipeTransferPtr->bytesTransferred);
+    }
+}
+
+RETURN_CODE_t USB_InTransactionRun(USB_PIPE_t pipe)
+{
+    USB_PIPE_TRANSFER_t *pipeTransferPtr = &pipeTransfer[PipeTransferIndexGet(pipe)];
+    RETURN_CODE_t status = UNINITIALIZED;
+    uint16_t nextTransactionSize;
+
+    if (USB_EP_DIR_IN != pipe.direction)
+    {
+
+        status = ENDPOINT_DIRECTION_ERROR;
+    }
+    else
+    {
+
+        pipeTransferPtr->status = USB_PIPE_TRANSFER_BUSY;
+
+
+        nextTransactionSize = pipeTransferPtr->transferDataSize - pipeTransferPtr->bytesTransferred;
+        if (0U == nextTransactionSize)
+        {
+
+            if (true == pipeTransferPtr->ZLPEnable)
+            {
+
+                USB_NumberBytesToSendSet(pipe.address, 0u);
+                USB_NumberBytesSentReset(pipe.address);
+                USB_EndpointInNAKClear(pipe.address);
+
+
+                pipeTransferPtr->ZLPEnable = false;
+            }
+            else
+            {
+
+                pipeTransferPtr->status = USB_PIPE_TRANSFER_OK;
+            }
+
+            status = SUCCESS;
+        }
+        else
+        {
+            uint16_t endpointSize = USB_EndpointSizeGet(pipe);
+            if ((0u == endpointStaticConfig[pipe.address].InMultipktEnable) && (nextTransactionSize > endpointSize))
+            {
+
+                nextTransactionSize = endpointSize;
+            }
+            else
+            {
+
+                pipeTransferPtr->ZLPEnable = (pipeTransferPtr->ZLPEnable) && (0U == (nextTransactionSize % (uint16_t)endpointSize));
+            }
+
+
+            status = EndpointBufferSet(pipe, &pipeTransferPtr->transferDataPtr[pipeTransferPtr->bytesTransferred]);
+
+
+            if (SUCCESS == status)
+            {
+                USB_NumberBytesToSendSet(pipe.address, nextTransactionSize);
+                USB_NumberBytesSentReset(pipe.address);
+                USB_EndpointInNAKClear(pipe.address);
+            }
+        }
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_OutTransactionRun(USB_PIPE_t pipe)
+{
+    USB_PIPE_TRANSFER_t *pipeTransferPtr = &pipeTransfer[PipeTransferIndexGet(pipe)];
+    RETURN_CODE_t status = UNINITIALIZED;
+
+    if (USB_EP_DIR_OUT != pipe.direction)
+    {
+
+        status = ENDPOINT_DIRECTION_ERROR;
+    }
+    else
+    {
+
+        pipeTransferPtr->status = USB_PIPE_TRANSFER_BUSY;
+
+
+        status = EndpointBufferSet(pipe, &pipeTransferPtr->transferDataPtr[pipeTransferPtr->bytesTransferred]);
+
+
+        uint16_t endpointSize = USB_EndpointSizeGet(pipe);
+        uint16_t nextTransactionSize = pipeTransferPtr->transferDataSize - pipeTransferPtr->bytesTransferred;
+        if (0u == endpointStaticConfig[pipe.address].OutMultipktEnable)
+        {
+            if (nextTransactionSize < endpointSize)
+            {
+
+                USB_EndpointOutMultipktEnable(pipe.address);
+            }
+            else
+            {
+
+                if (nextTransactionSize > endpointSize)
+                {
+                    nextTransactionSize = endpointSize;
+                }
+
+
+                USB_EndpointOutMultipktDisable(pipe.address);
+            }
+        }
+
+        if (0u == nextTransactionSize)
+        {
+
+            pipeTransferPtr->ZLPEnable = false;
+
+
+            pipeTransferPtr->status = USB_PIPE_TRANSFER_OK;
+        }
+        else
+        {
+
+            pipeTransferPtr->ZLPEnable = pipeTransferPtr->ZLPEnable && (0u == (nextTransactionSize % endpointSize));
+        }
+
+
+        USB_NumberBytesReceivedReset(pipe.address);
+        USB_NumberBytesToReceiveSet(pipe.address, nextTransactionSize);
+        USB_EndpointOutNAKClear(pipe.address);
+    }
+
+    return status;
+}
+
+RETURN_CODE_t USB_PipeTransactionComplete(USB_PIPE_t pipe)
+{
+    USB_PIPE_TRANSFER_t *pipeTransferPtr = &pipeTransfer[PipeTransferIndexGet(pipe)];
+    RETURN_CODE_t status = UNINITIALIZED;
+    uint16_t transactionSize;
+
+    if (USB_EP_DIR_IN == pipe.direction)
+    {
+
+        if (USB_EndpointInMultipktIsEnabled(pipe.address) == true)
+        {
+
+            transactionSize = USB_NumberBytesSentGet(pipe.address);
+        }
+        else
+        {
+
+            transactionSize = USB_NumberBytesToSendGet(pipe.address);
+        }
+
+
+        pipeTransferPtr->bytesTransferred += transactionSize;
+        if ((pipeTransferPtr->bytesTransferred != pipeTransferPtr->transferDataSize) || (pipeTransferPtr->ZLPEnable))
+        {
+            status = USB_InTransactionRun(pipe);
+        }
+        else
+        {
+            pipeTransferPtr->status = USB_PIPE_TRANSFER_OK;
+            status = SUCCESS;
+        }
+    }
+    else
+    {
+
+        transactionSize = USB_NumberBytesReceivedGet(pipe.address);
+
+
+        uint16_t expectedTransferRemainingSize = pipeTransferPtr->transferDataSize - pipeTransferPtr->bytesTransferred;
+        if (expectedTransferRemainingSize < transactionSize)
+        {
+
+            if (USB_NumberBytesToReceiveGet(pipe.address) == expectedTransferRemainingSize)
+            {
+
+                transactionSize = expectedTransferRemainingSize;
+            }
+            else
+            {
+                pipeTransferPtr->status = USB_PIPE_TRANSFER_ERROR;
+                status = PIPE_TRANSFER_ERROR;
+            }
+        }
+
+        if (PIPE_TRANSFER_ERROR != status)
+        {
+
+            pipeTransferPtr->bytesTransferred += transactionSize;
+
+            if (((pipeTransferPtr->bytesTransferred < pipeTransferPtr->transferDataSize) || pipeTransferPtr->ZLPEnable) && (0u == (transactionSize % USB_EndpointSizeGet(pipe))))
+            {
+                status = USB_OutTransactionRun(pipe);
+            }
+            else
+            {
+                pipeTransferPtr->status = USB_PIPE_TRANSFER_OK;
+                status = SUCCESS;
+            }
+        }
+    }
+
+
+    if (USB_PIPE_TRANSFER_BUSY != pipeTransferPtr->status)
+    {
+        USB_PipeTransferEndCallback(pipe);
+    }
+
+    return status;
+}
+
+=== ./usb/usb_peripheral/usb_peripheral_read_write.h ===
+
+
+
+#ifndef USB_PERIPHERAL_READ_WRITE_H
+
+#define USB_PERIPHERAL_READ_WRITE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "usb_common_elements.h"
+#include "usb_protocol_headers.h"
+
+
+RETURN_CODE_t USB_TransactionStart(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_TransactionAbort(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_TransactionCompleteAck(USB_PIPE_t pipe);
+
+
+bool USB_TransactionIsCompleted(void);
+
+
+RETURN_CODE_t USB_TransactionCompletedPipeGet(USB_PIPE_t *pipe);
+
+
+RETURN_CODE_t USB_PipeReset(USB_PIPE_t pipe);
+
+
+USB_TRANSFER_STATUS_t USB_PipeStatusGet(USB_PIPE_t pipe);
+
+
+bool USB_PipeStatusIsBusy(USB_PIPE_t pipe);
+
+
+void USB_PipeDataPtrSet(USB_PIPE_t pipe, uint8_t *dataPtr);
+
+
+uint8_t *USB_PipeDataPtrGet(USB_PIPE_t pipe);
+
+
+void USB_PipeDataToTransferSizeSet(USB_PIPE_t pipe, uint16_t dataSize);
+
+
+uint16_t USB_PipeDataToTransferSizeGet(USB_PIPE_t pipe);
+
+
+uint16_t USB_PipeDataTransferredSizeGet(USB_PIPE_t pipe);
+
+
+void USB_PipeDataTransferredSizeSet(USB_PIPE_t pipe, uint16_t dataSize);
+
+
+void USB_PipeDataTransferredSizeReset(USB_PIPE_t pipe);
+
+
+void USB_PipeTransferZLP_Enable(USB_PIPE_t pipe);
+
+
+void USB_PipeTransferEndCallbackRegister(USB_PIPE_t pipe, USB_TRANSFER_END_CALLBACK_t callback);
+
+
+void USB_PipeTransferEndCallback(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_InTransactionRun(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_OutTransactionRun(USB_PIPE_t pipe);
+
+
+RETURN_CODE_t USB_PipeTransactionComplete(USB_PIPE_t pipe);
+
+#endif

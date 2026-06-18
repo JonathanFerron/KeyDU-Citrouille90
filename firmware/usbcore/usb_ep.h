@@ -194,7 +194,7 @@ void ep_complete_ctrl_status(void);
 
 /* Current USB frame number (from hardware endpoint table FrameNum field) */
 static inline uint16_t ep_get_frame_number(void)
-{ return ((ep_hw_table_t*)USB0.EPPTR)->frame_num;
+{ return ((ep_hw_table_t*)usb_ep_table)->frame_num;       /* was (ep_hw_table_t*)USB0.EPPTR */
 }
 
 /* Remote wakeup — assert URESUME bit */
