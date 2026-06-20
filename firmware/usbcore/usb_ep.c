@@ -77,10 +77,7 @@ static void ep_configure_prv(uint8_t address, uint8_t config, uint8_t size)
 
 /* Convert byte count to AVR DU BUFSIZE field value */
 static uint8_t ep_size_to_mask(uint16_t size)
-{ if(size == 1023)
-    return USB_BUFSIZE_ISO_BUF1023_gc;
-
-  uint8_t  mask  = 0;
+{ uint8_t  mask  = 0;
   uint16_t check = 8;
   while(check < size)
   { mask++;
@@ -101,9 +98,6 @@ bool ep_configure(uint8_t address, uint8_t type, uint16_t size, uint8_t banks)
   { case EP_TYPE_CONTROL:
       cfg |= USB_TYPE_CONTROL_gc;
       cfg |= USB_MULTIPKT_bm;    /* enables auto-toggle between packets */
-      break;
-    case EP_TYPE_ISOCHRONOUS:
-      cfg |= USB_TYPE_ISO_gc;
       break;
     default:
       cfg |= USB_TYPE_BULKINT_gc;

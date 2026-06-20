@@ -2,59 +2,6 @@
 #include "usb_ctrl.h"    /* usb_ctrl_ep_size, usb_ctrl_req, usb_device_state */
 #include <avr/pgmspace.h>
 
-/* --- Non-control endpoint stream helper --- */
-/*
-   All four non-control streams share the same loop structure. Rather than
-   LUFA's template-macro abuse, we write them directly. Each is short enough
-   to be readable and distinct.
-*/
-
-ep_ready_result_t ep_discard_stream(uint16_t length, uint16_t* bytes_done)
-{ uint16_t done = bytes_done ? *bytes_done : 0;
-  ep_ready_result_t err = ep_wait_ready();
-  if(err) return err;
-
-  while(done < length)
-  { if(!ep_rw_allowed())
-    { ep_clear_out();
-      if(bytes_done)
-      { *bytes_done = done;
-        return EP_READY_OK;
-      }
-      err = ep_wait_ready();
-      if(err) return err;
-    }
-    else
-    { ep_discard_u8();
-      done++;
-    }
-  }
-  return EP_READY_OK;
-}
-
-ep_ready_result_t ep_write_null_stream(uint16_t length, uint16_t* bytes_done)
-{ uint16_t done = bytes_done ? *bytes_done : 0;
-  ep_ready_result_t err = ep_wait_ready();
-  if(err) return err;
-
-  while(done < length)
-  { if(!ep_rw_allowed())
-    { ep_clear_in();
-      if(bytes_done)
-      { *bytes_done = done;
-        return EP_READY_OK;
-      }
-      err = ep_wait_ready();
-      if(err) return err;
-    }
-    else
-    { ep_write_u8(0);
-      done++;
-    }
-  }
-  return EP_READY_OK;
-}
-
 ep_ready_result_t ep_write_stream(const void* buf, uint16_t length,
                                   uint16_t* bytes_done)
 { uint16_t       done = bytes_done ? *bytes_done : 0;
@@ -74,56 +21,6 @@ ep_ready_result_t ep_write_stream(const void* buf, uint16_t length,
     }
     else
     { ep_write_u8(*p++);
-      done++;
-    }
-  }
-  return EP_READY_OK;
-}
-
-ep_ready_result_t ep_read_stream(void* buf, uint16_t length,
-                                 uint16_t* bytes_done)
-{ uint16_t  done = bytes_done ? *bytes_done : 0;
-  uint8_t*  p    = (uint8_t*)buf + done;
-  ep_ready_result_t err = ep_wait_ready();
-  if(err) return err;
-
-  while(done < length)
-  { if(!ep_rw_allowed())
-    { ep_clear_out();
-      if(bytes_done)
-      { *bytes_done = done;
-        return EP_READY_OK;
-      }
-      err = ep_wait_ready();
-      if(err) return err;
-    }
-    else
-    { *p++ = ep_read_u8();
-      done++;
-    }
-  }
-  return EP_READY_OK;
-}
-
-ep_ready_result_t ep_write_stream_P(const void* buf, uint16_t length,
-                                    uint16_t* bytes_done)
-{ uint16_t       done = bytes_done ? *bytes_done : 0;
-  const uint8_t* p    = (const uint8_t*)buf + done;
-  ep_ready_result_t err = ep_wait_ready();
-  if(err) return err;
-
-  while(done < length)
-  { if(!ep_rw_allowed())
-    { ep_clear_in();
-      if(bytes_done)
-      { *bytes_done = done;
-        return EP_READY_OK;
-      }
-      err = ep_wait_ready();
-      if(err) return err;
-    }
-    else
-    { ep_write_u8(pgm_read_byte(p++));
       done++;
     }
   }

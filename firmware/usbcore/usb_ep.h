@@ -197,11 +197,6 @@ static inline uint16_t ep_get_frame_number(void)
 { return ((ep_hw_table_t*)usb_ep_table)->frame_num;       /* was (ep_hw_table_t*)USB0.EPPTR */
 }
 
-/* Remote wakeup — assert URESUME bit */
-static inline void usb_send_remote_wakeup(void)
-{ USB0.CTRLB |= USB_URESUME_bm;
-}
-
 extern volatile uint8_t usb_ep_trncompl_in;   /* bit n = EP_n IN completed */
 extern volatile uint8_t usb_ep_trncompl_out;  /* bit n = EP_n OUT completed */
 

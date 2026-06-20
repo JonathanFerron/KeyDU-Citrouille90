@@ -32,7 +32,6 @@
 /* --- Endpoint type constants (match AVR DU USB_TYPE_* hardware encoding) --- */
 
 #define EP_TYPE_CONTROL     0x00u
-#define EP_TYPE_ISOCHRONOUS 0x01u
 #define EP_TYPE_BULK        0x02u
 #define EP_TYPE_INTERRUPT   0x03u
 
@@ -52,12 +51,6 @@
 
 /* Total endpoint slots in hardware table (EP0..EP15) */
 #define EP_TABLE_COUNT  16u
-
-// ============================================================================
-// USB Configuration
-// ============================================================================
-#define USB_ENDPOINT_SIZE   64  // Endpoint size in bytes: is this even used / needed?
-#define USB_POLLING_RATE    1   // 1ms polling rate (1000Hz): is this even used / needed ?
 
 /* --- USB device state machine states --- */
 
@@ -99,8 +92,6 @@ typedef enum
 #define REQ_SET_DESCRIPTOR    7u
 #define REQ_GET_CONFIGURATION 8u
 #define REQ_SET_CONFIGURATION 9u
-#define REQ_GET_INTERFACE     10u
-#define REQ_SET_INTERFACE     11u
 
 /* Feature selector values */
 #define FEAT_EP_HALT          0x00u
