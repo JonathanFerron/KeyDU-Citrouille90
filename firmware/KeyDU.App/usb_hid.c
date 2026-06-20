@@ -289,13 +289,8 @@ void usb_event_ctrl_request(void)
 } // usb_event_ctrl_request
 
 /* Called from USB0_BUSEVENT_vect once per 1 ms SOF when the bus is active.
-   Flushes staged keyboard and consumer reports to their IN endpoints.
-   hid_flush() is a no-op if the device is not in USB_STATE_CONFIGURED,
-   so no guard is needed here.
-
-   Note: do not gate this on tick_flag or any scan-loop state.
-   The SOF ISR and the scan loop are independent — hid_flush() reads
-   the seqlock double-buffer, so concurrent access is safe. */
+   usb_event_sof() is intentionally empty and hid_flush() lives in the main loop.
+   If you ever want the cycles back, you can drop usb_sof_enable() entirely since autotune tracks SOF in hardware, not via the interrupt.  */
 void usb_event_sof(void)
 { // hid_flush();
 }
