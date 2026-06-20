@@ -218,6 +218,8 @@ typedef struct USB_PACKED {
 } ep_hw_table_t;
 ```
 
+`EP_TABLE_COUNT` is defined per-target via `-DEP_TABLE_COUNT=N` in the makefile (not in `usb_types.h`). Current values: App = 3 (EP0, EP1 kbd, EP2 consumer), BL = 1 (EP0 only). This sizes both `ep_hw_table_t` and the software FIFO array `ep_fifo_pair_t[EP_TABLE_COUNT]`; keeping it tight recovers ~2 KB of SRAM per binary. For v2 App, change to 6.
+
 ### EP0 CONTROL completion (FIFOEN=1)
 
 With FIFOEN enabled, transaction-complete signalling for TYPE=CONTROL endpoints comes through `STATUS.TRNCOMPL` in the endpoint table, not always via `INTFLAGSB`. The ISR (`USB0_TRNCOMPL_vect`) latches completion into `usb_ep_trncompl_in` / `usb_ep_trncompl_out` bitmasks; polling code in `ep_in_ready()` / `ep_out_received()` checks both paths.
@@ -300,7 +302,7 @@ Interface map:
 - Interface 4: report mouse 5-byte + scroll (EP5 IN)
 - Interface 5: passive DFU runtime (EP0 only)
 
-`HID_IFACE_COUNT = 5` (interfaces 0–4 only; DFU excluded to prevent HID class requests falling through). `IFACE_TOTAL = 6`; `EP_TABLE_COUNT = 6` for App, as low as 2 for BL.
+`HID_IFACE_COUNT = 5` (interfaces 0–4 only; DFU excluded to prevent HID class requests falling through). `IFACE_TOTAL = 6`; set `-DEP_TABLE_COUNT=6` for App in the makefile, `-DEP_TABLE_COUNT=1` for BL (DFU is EP0-only).
 
 Bootloader will evolve to standard DFU (`dfu-util`, DFU_DNLOAD + DFU_UPLOAD), targeting ~3,800 B flash / ~942 B SRAM.
 
