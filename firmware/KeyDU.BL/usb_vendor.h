@@ -30,11 +30,13 @@
 #include <stdbool.h>
 
 /* ── USB identity ──────────────────────────────────────────────────────── */
-#define VENDOR_VID              0x03EBu   /* Microchip / Atmel VID            */
-#define VENDOR_PID              0x2FF4u   /* KeyDU.BL                         */
+#define VENDOR_VID              0x1209u          /* pid.codes open-source VID  */
+#define VENDOR_PID              0xB4B1u          /* KeyDU.BL: not yet assigned by pid.codes. Must proceed with registration over the course of the next few months. */
 
-#define VENDOR_STR_MANUFACTURER L"KeyDU project"
-#define VENDOR_STR_PRODUCT      L"KeyDU BL"
+#define VENDOR_DEVICE_VERSION      VERSION_BCD(1,0,0)  /* hw rev 1, fw 0 : use the minor byte for the hardware revision and the patch nibble for firmware revision. Bump the major when we go to a new PCB spin, minor for significant firmware changes. This doesn't affect OS behavior but makes it easier to tell from lsusb which build you're looking at without a serial read. */
+
+#define VENDOR_STR_MANUFACTURER L"KeyDU"
+#define VENDOR_STR_PRODUCT      L"Citrouille90 Bootloader"
 
 /* ── String descriptor indices ─────────────────────────────────────────── */
 #define VENDOR_STRIDX_LANG          0u

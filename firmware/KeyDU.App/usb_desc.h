@@ -9,10 +9,10 @@
 // Keyboard Information
 // ============================================================================
 #define USB_VID                 0x1209u          /* pid.codes open-source VID  */
-#define USB_PID                 0xB4B0u          /* KeyDU.App: not yet assigned by pid.codes */
-#define USB_DEVICE_VERSION      VERSION_BCD(1,0,0)
+#define USB_PID                 0xB4B0u          /* KeyDU.App: not yet assigned by pid.codes. Must proceed with registration over the course of the next few months. */
+#define USB_DEVICE_VERSION      VERSION_BCD(1,0,0)  /* hw rev 1, fw 0 : use the minor byte for the hardware revision and the patch nibble for firmware revision. Bump the major when we go to a new PCB spin, minor for significant firmware changes. This doesn't affect OS behavior but makes it easier to tell from lsusb which build you're looking at without a serial read. */
 
-#define USB_STR_MANUFACTURER    L"KeyDU project"
+#define USB_STR_MANUFACTURER    L"KeyDU"
 #define USB_STR_PRODUCT         L"Citrouille90"
 /* Serial number: auto-generated from AVR SIGROW by usb_ctrl.c              */
 

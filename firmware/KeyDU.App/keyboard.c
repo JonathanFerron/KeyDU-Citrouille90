@@ -227,7 +227,6 @@ void keyboard_init(void)
   // led_init();
   // encoder_init();
 
-  usb_init(USB_OPT_VREG_ENABLE);
 }
 
 /* ============================================================================
@@ -254,11 +253,7 @@ void keyboard_task(void)
   encoder_alt_timeout_tick();
 
   /* 5. LED layer feedback. */
-  static uint8_t last_layer = 0xFF;
-  if (current_layer != last_layer)
-  { led_update_layer(current_layer);
-    last_layer = current_layer;
-  }
+  led_update_layer(current_layer);
 }
 
 /* ============================================================================

@@ -35,28 +35,24 @@ ISR(BADISR_vect)
      avr-libc default would reset via address 0 (lands in bootloader). */
 }
 
-/* ── system_init ──────────────────────────────────────────────────────── */
-static void system_init(void)
-{ /* clock_init() MUST be first: sets MCLKTIMEBASE=24, required by USB
-     and TCA0 PWM.  TCB0 CCMP is also computed from F_CPU so the clock
-     must be stable before the timer is configured.  */
-  clock_init();
-
-  /* TCB0: periodic interrupt, 1 ms period, CLK_PER (24 MHz), no prescaler.
-     CCMP = (F_CPU / 1000) - 1 = 23999.                                 */
-  TCB0.CCMP    = (F_CPU / 1000UL) - 1;
-  TCB0.INTCTRL = TCB_CAPT_bm;
-  TCB0.CTRLA   = TCB_CLKSEL_DIV1_gc | TCB_ENABLE_bm;
-}
-
 /* ── main ─────────────────────────────────────────────────────────────── */
 int main(void)
 { wdt_disable();
 
-  system_init();
-  PORTF.DIRSET = PIN2_bm;
-  PORTF.OUTSET = PIN2_bm;
+  /* clock_init() MUST be first: sets MCLKTIMEBASE=24, required by USB
+   a nd TCA0 PWM.  TCB0 CCMP is also computed from *F_CPU so the clock
+   must be stable before the timer is configured.  */
+  clock_init();
+
+  /* TCB0: periodic interrupt, 1 ms period, CLK_PER (24 MHz), no prescaler.
+   CCMP = (F_CPU / 1000) - 1 = 23999.             *                    */
+  TCB0.CCMP    = (F_CPU / 1000UL) - 1;
+  TCB0.INTCTRL = TCB_CAPT_bm;
+  TCB0.CTRLA   = TCB_CLKSEL_DIV1_gc | TCB_ENABLE_bm;
+
   keyboard_init();
+
+  usb_init(USB_OPT_VREG_ENABLE);
 
   //set_sleep_mode(SLEEP_MODE_IDLE);
   //sleep_enable();
@@ -64,6 +60,8 @@ int main(void)
   sei(); // enable global interrupts
 
   // uint8_t i = 0;
+  //PORTF.DIRSET = PIN2_bm;  // use PF2 (LED pin) for debugging on the CNano
+  //PORTF.OUTSET = PIN2_bm;
 
   while(1)
   { usb_ctrl_poll();             // ungated — polls EP0 for SETUP packets
@@ -74,11 +72,7 @@ int main(void)
       s_tick_flag = 0;
 
       // keyboard_task();  // commented out to make usb enumeration debug work easier: TODO: uncomment
-      // i++; // for debugging only
-      // if (!i) // for debugging only
-      // {
-      //   PORTF.OUTTGL = PIN2_bm;
-      // }
+
 
     } // if(s_tick_flag)
     //sleep_cpu();    // IDLE: wakes on TCB0, USB SOF, USB bus events
