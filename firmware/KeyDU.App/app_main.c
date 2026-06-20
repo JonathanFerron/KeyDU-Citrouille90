@@ -19,6 +19,11 @@
 #include "clock.h"
 #include "keyboard.h"
 #include "usb_ctrl.h"
+#include "usb_hid.h"
+
+// for testing only, remove once keyboard input testing is completed
+#include "keycode.h"
+#include <string.h>
 
 /* ── TCB0 1 ms tick flag ──────────────────────────────────────────────── */
 static volatile uint8_t s_tick_flag;
@@ -64,14 +69,46 @@ int main(void)
   //PORTF.OUTSET = PIN2_bm;
 
   while(1)
-  { usb_ctrl_poll();             // ungated — polls EP0 for SETUP packets
+  { hid_flush();                 /* ep_in_ready() inside is the rate limiter */
+    usb_ctrl_poll();             // ungated — polls EP0 for SETUP packets
 
 
     if(s_tick_flag)
     {
       s_tick_flag = 0;
 
-      // keyboard_task();  // commented out to make usb enumeration debug work easier: TODO: uncomment
+      // commented out to make usb enumeration debug work easier: TODO: uncomment
+      // keyboard_task();
+
+      /* Level-1 one-shot keystroke test — remove once Level 2 is proven */
+      static uint16_t s_test_timer = 0;
+
+      if(usb_device_state == USB_STATE_CONFIGURED)
+      {
+        if(++s_test_timer == 5000u)   /* fire every 5 s */
+        {
+          s_test_timer = 0;          /* reset — will fire again in 5 s */
+
+          hid_kbd_report_t r;
+
+          memset(&r, 0, sizeof(r));   /* A down */
+          r.keycode[0] = KC_A;
+          hid_kbd_stage(&r);
+          kbd_stage_wait(20);
+
+          memset(&r, 0, sizeof(r));   /* A up */
+          hid_kbd_stage(&r);
+          kbd_stage_wait(20);
+
+          memset(&r, 0, sizeof(r));   /* B down */
+          r.keycode[0] = KC_B;
+          hid_kbd_stage(&r);
+          kbd_stage_wait(20);
+
+          memset(&r, 0, sizeof(r));   /* B up */
+          hid_kbd_stage(&r);
+        }
+      } // end of level-1 one-shot keystroke test
 
 
     } // if(s_tick_flag)

@@ -297,5 +297,5 @@ void usb_event_ctrl_request(void)
    The SOF ISR and the scan loop are independent — hid_flush() reads
    the seqlock double-buffer, so concurrent access is safe. */
 void usb_event_sof(void)
-{ hid_flush();
+{ // hid_flush();
 }
