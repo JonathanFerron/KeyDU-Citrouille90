@@ -49,8 +49,15 @@
   #define USB_STREAM_TIMEOUT_MS  100u
 #endif
 
-/* Total endpoint slots in hardware table (EP0..EP15) */
-#define EP_TABLE_COUNT  16u
+/* EP_TABLE_COUNT — number of endpoint slots in hardware table and software FIFOs.
+   Must be defined per-target via -DEP_TABLE_COUNT=N in the makefile.
+   App: 3 (EP0, EP1 kbd, EP2 consumer).  BL: 1 (EP0 only).
+   v2 App: 6 (EP0–EP5). */
+#ifndef EP_TABLE_COUNT
+  #error "EP_TABLE_COUNT must be defined per-target in the makefile (-DEP_TABLE_COUNT=N)"
+#endif
+_Static_assert(EP_TABLE_COUNT >= 1 && EP_TABLE_COUNT <= 16,
+               "EP_TABLE_COUNT must be 1..16");
 
 /* --- USB device state machine states --- */
 
