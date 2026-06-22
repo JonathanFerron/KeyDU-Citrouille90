@@ -23,7 +23,7 @@
 
 // for testing only, remove once keyboard input testing is completed
 #include "keycode.h"
-#include <string.h>
+//#include <string.h>
 
 /* ── TCB0 1 ms tick flag ──────────────────────────────────────────────── */
 static volatile uint8_t s_tick_flag;
@@ -89,26 +89,11 @@ int main(void)
         {
           s_test_timer = 0;          /* reset — will fire again in 5 s */
 
-          hid_kbd_report_t r;
-
-          memset(&r, 0, sizeof(r));   /* A down */
-          r.keycode[0] = KC_A;
-          hid_kbd_stage(&r);
-          kbd_stage_wait(20);
-
-          memset(&r, 0, sizeof(r));   /* A up */
-          hid_kbd_stage(&r);
-          kbd_stage_wait(20);
-
-          memset(&r, 0, sizeof(r));   /* B down */
-          r.keycode[0] = KC_B;
-          hid_kbd_stage(&r);
-          kbd_stage_wait(20);
-
-          memset(&r, 0, sizeof(r));   /* B up */
-          hid_kbd_stage(&r);
+          tap_key(KC_C);
+          tap_key(KC_D);
+          tap_key(KC_E);
         }
-      } // end of level-1 one-shot keystroke test
+      } // end of level-2 one-shot keystroke test
 
 
     } // if(s_tick_flag)
