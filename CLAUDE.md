@@ -18,7 +18,7 @@ Bare-metal AVR64DU32 USB keyboard firmware. Two build targets sharing common per
 │   ├── KeyDU.App/             ← HID keyboard application
 │   │   ├── app_main.c         ← entry point, TCB0 gate loop
 │   │   ├── keyboard.c/.h      ← main keyboard task, key processing
-│   │   ├── matrix.c/.h        ← matrix scan (register_key() callback)
+│   │   ├── matrix.c/.h        ← matrix scan (column-output-low / row-input-pullup, 4-tick debounce)
 │   │   ├── keymap.c/.h        ← PROGMEM keymap, layer lookup, encoder_step()
 │   │   ├── keycode.h          ← keycode defines, IS_* predicates (header-only)
 │   │   ├── layer.c/.h         ← layer state machine
@@ -175,7 +175,7 @@ Dispatch uses `IS_*` predicate macros (`IS_LAYER_KEY`, `IS_MACRO_KEY`, etc.) wit
 
 Entry: `app_main.c` → `clock_init()` → TCB0 (1 ms tick) → `keyboard_init()` → `usb_init()` → main loop.
 
-Main loop: `usb_ctrl_poll()` ungated every iteration, `keyboard_task()` gated on TCB0 1 ms flag. USB is fully interrupt-driven.
+Main loop: `hid_flush()` ungated every iteration → `usb_ctrl_poll()` ungated → `keyboard_task()` gated on TCB0 1 ms flag. USB is fully interrupt-driven.
 
 | Module          | Owns                                                               |
 | --------------- | ------------------------------------------------------------------ |
@@ -228,9 +228,9 @@ With FIFOEN enabled, transaction-complete signalling for TYPE=CONTROL endpoints 
 
 `USB0.INTCTRLB` (which enables `TRNCOMPL` interrupts) is cleared by the hardware bus-reset event. It **must** be re-enabled explicitly inside the bus-reset ISR after `ep_configure()` runs, and `USB0.FIFORP` must be reset to match `USB0.FIFOWP`.
 
-### SOF / EP0 race to avoid
+### SOF / EP0 race — resolved
 
-`hid_flush()` calls `ep_select()` which clobbers global EP pointers. If it runs inside the SOF ISR while a control transfer is active, the transfer corrupts. Keep `hid_flush()` in the main loop (not the SOF ISR), or bracket it with `usb_sof_disable()` / `usb_sof_enable()`.
+`hid_flush()` calls `ep_select()` which clobbers global EP pointers. Running it inside the SOF ISR while a control transfer is active corrupts the transfer. **Fixed:** `hid_flush()` is called in the main loop, ungated, before `usb_ctrl_poll()`. Do not move it back into the SOF ISR — the race is live during the HID-probe window (the enumeration window when SOF first goes live at SET_CONFIGURATION), and corrupts GET_DESCRIPTOR(REPORT) / SET_IDLE / SET_PROTOCOL, causing multi-second enumeration stalls and EP1 STALLs.
 
 ### Module responsibilities
 
@@ -251,7 +251,7 @@ GPR2 and GPR3 **do not survive a soft reset** on AVR64DU32 (confirmed on hardwar
 
 ## GPIO notes
 
-- Prefer `VPORT` registers (`VPORTA.IN`, etc.) for the hot matrix scan path — single-cycle `IN` instruction.
+- Prefer `VPORT` registers for the hot matrix scan path — single-cycle `IN` instruction. **Exception:** `PORTD.IN` (regular register) must be used for PORTD row reads in `scan_col_raw()` because PORTD doubles as a column port. Reading `VPORTD.IN` immediately after `PORTD.OUTCLR` triggers the same-port PORT→VPORT collision, returning stale data. `VPORTA.IN` is safe because PORTA is never a column.
 - Do not access a VPORT register immediately after the corresponding regular PORT register; leave at least one unrelated instruction between init writes and runtime reads (VPORT collision hazard).
 - No PORTB on AVR64DU32 (32-pin package).
 - Use `PORTA.PINCTRLUPD` (not bare `PINCTRLUPD`) to avoid ORing ISC bits accidentally.
@@ -287,8 +287,7 @@ avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
 
 1. `usb_sof_enable()` is never called after enumeration.
 2. `usb_vendor_task()` calls a non-existent `usb_task()` instead of `usb_ctrl_poll()`.
-3. `process_key_release()` calls `layer_key_released()` unconditionally — should guard with `IS_LAYER_KEY` (mirror of the press path); untrack first, then branch.
-4. EEPROM bootloader magic flag is implemented but not yet tested on hardware.
+3. EEPROM bootloader magic flag is implemented but not yet tested on hardware.
 
 ---
 
