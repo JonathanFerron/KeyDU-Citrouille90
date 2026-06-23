@@ -213,27 +213,26 @@ void kbd_consumer_clear(void)
    ========================================================================= */
 void keyboard_init(void)
 {
-  // commented the below to make usb enumeration debug work easier: TODO : uncomment
-  // s_pressed_key_count = 0;
-  // memset(s_pressed_keys, 0, sizeof(s_pressed_keys));
-  //
-  // /* Zero reports; set consumer report_id which must always be 0x01. */
-  // memset(&s_kbd_report, 0, sizeof(s_kbd_report));
-  // memset(&s_con_report, 0, sizeof(s_con_report));
-  // s_con_report.report_id = 0x01u;
-  //
-  // layer_init();
-  // matrix_init();
-  // led_init();
-  // encoder_init();
+  s_pressed_key_count = 0;
+  memset(s_pressed_keys, 0, sizeof(s_pressed_keys));
 
+  /* Zero reports; set consumer report_id which must always be 0x01. */
+  memset(&s_kbd_report, 0, sizeof(s_kbd_report));
+  memset(&s_con_report, 0, sizeof(s_con_report));
+  s_con_report.report_id = 0x01u;
+
+  layer_init();
+  matrix_init();
+  led_init();
+  encoder_init();
 }
 
 /* ============================================================================
    keyboard_task — call once per 1 kHz tick from main()
    ========================================================================= */
 void keyboard_task(void)
-{ /* 1. Scan matrix. */
+{
+  /* 1. Scan matrix. */
   matrix_scan();
 
   /* 2. Dispatch press and release events. */
@@ -341,22 +340,27 @@ static void process_key_press(uint8_t row, uint8_t col)
    process_key_release
    ========================================================================= */
 static void process_key_release(uint8_t row, uint8_t col)
-{ layer_key_released(row, col);
-
+{
+  /* Must check layer first — layer keys are not in s_pressed_keys,
+   *    so untrack_pressed_key returns KC_NO for them.
+   *    Mirrors the IS_LAYER_KEY guard in process_key_press(). */
   uint16_t keycode = KC_NO;
   untrack_pressed_key(row, col, &keycode);
 
-  if (keycode == KC_NO)
+  if(keycode == KC_NO)
+  { /* Nothing tracked — could be a layer key release */
+    layer_key_released(row, col);   /* no-op if not found */
     return;
+  }
 
-  if (IS_CONSUMER_KEY(keycode))
+  if(IS_CONSUMER_KEY(keycode))
   { kbd_consumer_clear();
     return;
   }
 
-  if (IS_BASIC_KEY(keycode))
-  { if (IS_MOD_KEY(keycode))
-      kbd_clear_mod(MOD_BIT(keycode));
+  if(IS_BASIC_KEY(keycode))
+  { if(IS_MOD_KEY(keycode))
+    kbd_clear_mod(MOD_BIT(keycode));
     else
       kbd_remove_key((uint8_t)keycode);
     kbd_stage();

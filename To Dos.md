@@ -2,14 +2,9 @@
 
 ## Next steps:
 
-**1. Prove the data path end to end — get a real keypress through.** Enumeration only exercises EP0. Re-enable a minimal `keyboard_task()` (or just hardcode staging one keycode on a timer), then confirm a press actually lands with `evtest` on the input device or by typing into a terminal. This is where you'll flush out the EP1 IN data-toggle and `ep_in_ready()` behavior on a non-control endpoint, plus the LED OUT path. Do this *before* anything else, because almost every later feature rides on this working. Tackle the SOF-ISR vs main-loop `ep_select()` contention here too, since re-enabling the scan loop is exactly what makes that race live — bracket `hid_flush()` with `usb_sof_disable()`/`usb_sof_enable()` or move it off the ISR as you'd planned.
+**1. Prove the data path end to end — get a real keypress through.** Re-enable a minimal `keyboard_task()`, then confirm a press actually lands with `evtest` on the input device or by typing into a terminal. This is where you'll flush out the EP1 IN data-toggle and `ep_in_ready()` behavior on a non-control endpoint, plus the LED OUT path.
 
 **2. Burn down the post-enumeration correctness bugs you already logged.** You have a clean list from before: `usb_sof_enable()` wiring, `usb_vendor_task()` calling the wrong function, the `process_key_release()` guard, and the EEPROM bootloader magic-flag integration. These are known, scoped, and cheap now that the stack is alive. Knocking them out while the USB layer is fresh in your head is far easier than rediscovering them in three months.
-
-**3. Lock in a regression baseline before you build features on top.** Tag this commit (something like `v0.1-enumeration`), and write down — in your `Hardware_notebook.md` or a `BUGS_FIXED.md` — the three root causes from this session, especially the `EPPTR = &endpoints[0]` offset and the FIFO-lives-before-EPPTR rule. That detail is invisible in the datasheet's prose and you will absolutely need it again for KeyDU v2's six-endpoint layout. A tagged known-good point means that if v2's endpoint expansion breaks enumeration, you can `git diff` against a state you trust instead of re-debugging from scratch.
-
-On Claude Code: it's well suited to steps 2 and 3 — multi-file edits across the `usbcore`/`usbhid`/`bootloader` modules, running your `make` build, and grepping the codebase for the logged bugs. It's less useful for step 1, where the bottleneck is hardware observation (`evtest`, `dmesg`, LED blinks, maybe Bloom/a logic analyzer) rather than code generation. If you do set it up, point it at your existing conventions — snake_case, static module state, no return codes from hardware drivers, the SRAM/flash budgets — so its edits match the codebase rather than drifting.
-
 
 
 ## To be addressed:
@@ -17,18 +12,7 @@ On Claude Code: it's well suited to steps 2 and 3 — multi-file edits across th
 ## Nice to have (style issue):
 
 - Look into fixing the following inconsistency:
-    layer_key_released() is called unconditionally on every key release in keyboard.c
-    In process_key_release(), layer_key_released(row, col) is called for every released key — including non-layer keys. 
-    layer_key_released() will simply fail to find the entry and return harmlessly, but it's a style inconsistency: 
-  
-      process_key_press() only calls layer_key_pressed() when IS_LAYER_KEY(keycode) is true. The release path should mirror this, 
-      which requires either checking the locked keycode first, or checking IS_LAYER_KEY before calling the layer function. 
-      Since layer keys are not tracked in s_pressed_keys, their keycode won't be in keycode_out after untrack_pressed_key — 
-      the current code calls layer_key_released before untracking, which is correct for layer keys, but the unconditional call 
-      is still inconsistent with the press path.
-      Beyond style, there's a subtle correctness edge case: if a layer key is released while the layer table is full 
-      (active_layer_key_count == MAX_LAYER_KEYS) and the key wasn't tracked (because it was dropped on press), layer_key_released harmlessly 
-      no-ops — but it still iterates the full array every release. Matching the press-path pattern here is the right fix.
+
 
 ## Keep for phase 2:
 

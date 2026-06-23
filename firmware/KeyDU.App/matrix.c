@@ -131,8 +131,8 @@ static uint16_t scan_col_raw(const gpio_pin_t col)
 { GPIO_LOW(col);
   __builtin_avr_nop();                         /* RC settle */
 
-  uint8_t  rows_d = ~VPORTD.IN & ROW_D_MASK;  /* single-cycle IN read */
-  uint8_t  rows_a = ~VPORTA.IN & ROW_A_MASK;  /* single-cycle IN read */
+  uint8_t  rows_d = ~PORTD.IN  & ROW_D_MASK;  /* regular read — VPORTD would collide with PORTD col drive */
+  uint8_t  rows_a = ~VPORTA.IN & ROW_A_MASK;  /* single-cycle IN — PORTA is never a column, no hazard */
 
   GPIO_HIGH(col);
 

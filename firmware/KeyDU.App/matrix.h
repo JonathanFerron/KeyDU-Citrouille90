@@ -22,7 +22,7 @@
 #define MATRIX_ROWS     10
 #define MATRIX_KEYS         (MATRIX_ROWS * MATRIX_COLS)  // 90 keys
 
-// Debounce time in milliseconds
+/* Debounce window in ticks (1 kHz scan → 1 tick = 1 ms). */
 #define DEBOUNCE_TICKS         4
 
 /* Initialise column outputs and row input pull-ups, zero all state. */

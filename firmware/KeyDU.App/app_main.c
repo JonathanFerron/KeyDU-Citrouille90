@@ -19,10 +19,10 @@
 #include "clock.h"
 #include "keyboard.h"
 #include "usb_ctrl.h"
-#include "usb_hid.h"
+//#include "usb_hid.h"
 
 // for testing only, remove once keyboard input testing is completed
-#include "keycode.h"
+//#include "keycode.h"
 //#include <string.h>
 
 /* ── TCB0 1 ms tick flag ──────────────────────────────────────────────── */
@@ -77,23 +77,22 @@ int main(void)
     {
       s_tick_flag = 0;
 
-      // commented out to make usb enumeration debug work easier: TODO: uncomment
-      // keyboard_task();
+      keyboard_task();
 
-      /* Level-1 one-shot keystroke test — remove once Level 2 is proven */
-      static uint16_t s_test_timer = 0;
-
-      if(usb_device_state == USB_STATE_CONFIGURED)
-      {
-        if(++s_test_timer == 5000u)   /* fire every 5 s */
-        {
-          s_test_timer = 0;          /* reset — will fire again in 5 s */
-
-          tap_key(KC_C);
-          tap_key(KC_D);
-          tap_key(KC_E);
-        }
-      } // end of level-2 one-shot keystroke test
+      /* Level-2 one-shot keystroke test — remove once Level 2 is proven */
+      // static uint16_t s_test_timer = 0;
+      //
+      // if(usb_device_state == USB_STATE_CONFIGURED)
+      // {
+      //   if(++s_test_timer == 5000u)   /* fire every 5 s */
+      //   {
+      //     s_test_timer = 0;          /* reset — will fire again in 5 s */
+      //
+      //     tap_key(KC_C);
+      //     tap_key(KC_D);
+      //     tap_key(KC_E);
+      //   }
+      // } // end of level-2 one-shot keystroke test
 
 
     } // if(s_tick_flag)

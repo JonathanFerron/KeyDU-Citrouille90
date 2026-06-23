@@ -16,6 +16,8 @@ Port       : usb
 
 ```bash
 # Full flash (BL + App merged) — use after any bootloader change
+drop hex file onto curiositynano drive (mass storage device)
+or
 avrdude -c pkobn_updi -p avr64du32 -P usb \
   -U flash:w:build/KeyDU.merged.hex:i
 
@@ -40,6 +42,8 @@ avrdude -c pkobn_updi -p avr64du32 -P usb \
 
 > **CRITICAL:** fuse numbering matches datasheet offset, NOT byte index in the 16-byte dump.
 > avrdude also accepts alias names (e.g. `bootsize` instead of `fuse8`).
+> 
+> Note: Fuses are successfully programmed via avrdude or mass storage device programming as the are included in a scructure in the hex file. The below information is just that, information.
 
 ```bash
 # Read all fuses (hex, one byte per line)
@@ -240,9 +244,9 @@ srec_info build/KeyDU.merged.hex -Intel
 ### dmesg — kernel messages
 
 ```bash
-dmesg -w &              # watch in background, see USB events live
-dmesg | tail -20        # last 20 lines
-dmesg | grep -i "usb\|hid\|error"
+sudo dmesg -w &              # watch in background, see USB events live
+sudo dmesg | tail -20        # last 20 lines
+sudo dmesg | grep -i "usb\|hid\|error"
 ```
 
 ### lsusb — list USB devices
@@ -251,7 +255,7 @@ dmesg | grep -i "usb\|hid\|error"
 lsusb                   # quick list
 lsusb -t                # tree view showing bus topology
 lsusb -v 2>/dev/null | grep -A 5 "idVendor"   # verbose, suppress errors
-lsusb | grep -i "1209\|03eb\|keydu\|atmel"     # filter by known VID
+lsusb | grep -i "1209\|03eb\|keydu\"     # filter by known VID
 ```
 
 ### find
