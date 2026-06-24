@@ -341,3 +341,68 @@ USB enumeration is currently working. This table is kept for regression referenc
 - Programmer: Adafruit AVR UPDI Friend (`/dev/ttyUSB0`)
 - Dev board: Microchip Curiosity Nano EV59F82A (early bring-up / register probing)
 - Build: `make` from `firmware/`; parallelised with `-j$(nproc --ignore=2)`
+
+---
+
+## Curiosity Nano test bench
+
+The CNano is mounted on a breadboard using the solderless headers that ship with it.
+Flash by dragging `firmware/build/KeyDU.merged.hex` onto the CNano mass-storage USB drive —
+never use `make flash_app` (that targets the UPDI wired programmer on `/dev/ttyUSB0`).
+
+### Breadboard pin map
+
+```
+Left side  L1–L19 (top→bottom):
+  L1  PF1      L2  PF0      L3  PF3      L4  PC3      L5  GND
+  L6  PD5      L7  PD4      L8  PD3      L9  PD2      L10 PD1
+  L11 PD0      L12 PF5      L13 PF4      L14 VTARGET  L15 GND
+  L16 DBG0     L17 DBG3     L18 VOFF     L19 VBUS
+
+Right side  R1–R19 (top→bottom):
+  R1  PF2      R2  PF6      R3  PD7      R4  PD6      R5  GND
+  R6  PA7      R7  PA6      R8  PA5      R9  PA4      R10 PA3
+  R11 PA2      R12 PA1      R13 PA0      R14 DBG2     R15 DBG1
+  R16 CDC TX   R17 CDC RX   R18 ID       R19 NC
+```
+
+### CNano pin restrictions
+
+Three MCU pins are not freely usable on this board:
+
+| Pin | Breadboard | Reason | Impact |
+|-----|------------|--------|--------|
+| PF0 | L2 | 32.768 kHz crystal (XTAL32K1) — edge connector disconnected | Col 0 unreachable |
+| PF1 | L1 | 32.768 kHz crystal (XTAL32K2) — edge connector disconnected | Col 1 unreachable |
+| PC3 | L4 | USB detect (VBUS target sense) | ENC_B unreachable — encoder untestable on CNano |
+
+PF2 (R1) is the CNano's on-board LED. It is usable as col 2 but pulses faintly during
+matrix scan (~0.04 % duty cycle when col 2 is driven low). This is harmless.
+
+### Matrix column accessibility on CNano
+
+| Col | MCU pin | Breadboard | Status |
+|-----|---------|------------|--------|
+| 0   | PF0     | L2  | ❌ crystal — edge disconnected |
+| 1   | PF1     | L1  | ❌ crystal — edge disconnected |
+| 2   | PF2     | R1  | ⚠ CNano LED (works, faint glow during scan) |
+| 3   | PF3     | L3  | ✓ |
+| 4   | PF4     | L13 | ✓ verified |
+| 5   | PF5     | L12 | ✓ verified |
+| 6   | PD5     | L6  | ✓ |
+| 7   | PD6     | R4  | ✓ verified |
+| 8   | PD7     | R3  | ✓ |
+
+All row pins (PD0–4, PA0–3, PA6) are freely accessible. Keys whose keycode maps to
+col 0 or col 1 cannot be tested on the CNano — test those on the real PCB.
+
+### How to find breadboard pins for a key
+
+1. Find the keycode in `keymap.c` layer 0 — note its physical (row, col) label (e.g. k29).
+2. Look up the physical label in the KEYMAP macro to get the electrical (row, col).
+3. Map electrical col → MCU pin: cols 0–5 = PF0–PF5; cols 6–8 = PD5–PD7.
+4. Map electrical row → MCU pin: rows 0–4 = PD0–PD4; row 5 = PA3; row 6 = PA6;
+   row 7 = PA2; row 8 = PA1; row 9 = PA0.
+5. Look up both pins in the breadboard map above.
+6. Short the column pin to the row pin with a seated jumper wire (hold ≥ 4 ms for
+   DEBOUNCE_TICKS=4 to commit).
