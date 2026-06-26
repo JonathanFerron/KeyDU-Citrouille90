@@ -7,6 +7,7 @@
    vendor descriptors + EP0-only setup on the already-proven usbcore. No host tooling
    needed. Canary for step 2.
    
+```
    In bl_main.c, could use the following bit of code to help test the above:
    
       bool soft = (rstfr & RSTCTRL_SWRF_bm) != 0u;
@@ -21,6 +22,7 @@
       usb_vendor_init();   /* clock, USB hardware, state init, sei() */
       usb_vendor_task();   /* bare loop — never returns */
       }
+```
 
 2. Test the EEPROM bootloader magic-flag integration on hardware. Code is implemented
    in keyboard.c (SYS_BOOT handler writes the magic) and bl_main.c (reads RSTFR for
