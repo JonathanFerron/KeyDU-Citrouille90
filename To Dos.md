@@ -2,16 +2,10 @@
 
 ## Next steps:
 
-1. Test the EEPROM bootloader magic-flag integration on hardware. Code is implemented
-   in keyboard.c (SYS_BOOT handler writes the magic) and bl_main.c (reads RSTFR for
-   SWRF + checks the EEPROM byte), but the full app→reset→bootloader-entry path has not
-   yet been exercised on the CNano. Confirms the GPR2/GPR3 → EEPROM migration actually
-   lands you in the BL.
-
-2. Test LED out. Note: the CNano's on-board LED is on PF2, which is a matrix column — not
+1. Test LED out. Note: the CNano's on-board LED is on PF2, which is a matrix column — not
    suitable for this test. Do on the real Citrouille90 PCB.
 
-3. Phase 2: program fuses via the CNano drag-drop path. The merged hex (srec_cat of
+2. Phase 2: program fuses via the CNano drag-drop path. The merged hex (srec_cat of
    BL.hex + App.hex) contains no fuse records, so dragging KeyDU.merged.hex onto the
    CNano MSD drive programs flash only — fuses (incl. BOOTSIZE=0x10) persist from the
    last UPDI `make flash_merged`. Works today only because the fuses were set previously.

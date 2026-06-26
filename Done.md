@@ -97,3 +97,21 @@ in effect. Removed the now-redundant (clobbered) IVSEL write from bl_main.c. Thi
 real bug in the production boot path, not just the test harness — exposed by the first
 isolated BL enumeration test (forced entry). Verified: clean enumeration, device #19,
 1209:b4b1 "Citrouille90 Bootloader", lsusb -v descriptors all correct, no dmesg errors.
+
+## 7. EEPROM bootloader magic-flag — app→reset→BL entry verified on hardware
+
+The GPR2/GPR3 → EEPROM migration for the cross-reset bootloader flag was implemented
+(keyboard.c SYS_BOOT handler writes BOOT_MAGIC then triggers RSTCTRL.SWRR; bl_main.c
+checks RSTFR.SWRF + the EEPROM byte) but had never been exercised end-to-end on hardware.
+
+Tested on the CNano. SYS_BOOT lives on layer 2 (k00), but both momentary-layer keys
+needed to reach layer 2 — LY_MO1 (k48, elec col 1 = PF1) and LY_MO2 (k49, elec col 0 =
+PF0) — sit on the disconnected crystal columns, so the real layer-stack keystroke is not
+reachable on the CNano (only on the real PCB). Worked around by temporarily remapping
+layer-0 k00 (ESC position, elec row0/col8 = PD0/PD7 = breadboard L11/R3) to SYS_BOOT,
+which exercises the same handler through real key dispatch. Remap reverted after the test.
+
+Result: shorting L11×R3 fired SYS_BOOT → App wrote the magic and issued SWRR → BL detected
+SWRF + magic and re-enumerated as 1209:b4b1 "Citrouille90 Bootloader" (clean, no errors).
+A subsequent reset-button reset (EXTRF, not SWRF) correctly returned to the App, confirming
+the BL clears the magic on entry and that only a software reset + valid magic enters the BL.

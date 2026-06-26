@@ -288,7 +288,6 @@ avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
 ## Known bugs (tracked — do not fix silently without discussion)
 
 1. `usb_sof_enable()` is never called after enumeration.
-2. EEPROM bootloader magic flag is implemented but not yet tested on hardware.
 
 ---
 
