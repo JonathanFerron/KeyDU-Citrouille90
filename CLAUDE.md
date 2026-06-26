@@ -124,12 +124,12 @@ Keymaps, macro sequences, USB descriptors, and CC usage table stored in flash. O
 
 | Resource    | Budget       | Notes                                                       |
 | ----------- | ------------ | ----------------------------------------------------------- |
-| Flash (App) | 56 KB        | App starts at `0x2000`; BL occupies `0x0000–0x1FFF`        |
-| Flash (BL)  | 8 KB         | Must fit in first 8 KB of flash                            |
-| SRAM        | 8 KB total   | Shared: USB ep table, FIFOs, stack                         |
+| Flash (App) | 56 KB        | App starts at `0x2000`; BL occupies `0x0000–0x1FFF`. Current: ~7.6 KB used (~13%), ~48.6 KB free |
+| Flash (BL)  | 8 KB         | Must fit in first 8 KB of flash. Current: ~4.5 KB used (~55%), ~3.6 KB free — the tightest budget; planned DFU BL (~3.8 KB) still fits |
+| SRAM        | 8 KB total   | Shared: USB ep table, FIFOs, stack. Current high-water: App ~1.4 KB (~17%); BL ~0.75 KB. App and BL never run at once |
 | Scan loop   | 1 kHz (1 ms) | TCB0 gate; **nothing in the scan loop may block**          |
 
-Flag any suggestion that could block in the 1 kHz scan loop context.
+Flag any suggestion that could block in the 1 kHz scan loop context. Run `make size` for current figures.
 
 ---
 
@@ -144,6 +144,8 @@ Flag any suggestion that could block in the 1 kHz scan loop context.
 ```
 
 `APP_START` in `usb_vendor.h` is the single runtime constant for the partition boundary. The linker scripts (`-Wl,--section-start=.text=0x2000` for App) and the `BOOTSIZE` fuse must be kept in sync with it manually — there is no mechanism that enforces agreement between them.
+
+**Rebalancing the 8 KB / 56 KB split:** the boundary is not fixed at 8 KB — it is just the current `BOOTSIZE` value. The BL is the tighter budget (~55% full); if a future BL (e.g. the DFU migration plus extras) ever outgrew 8 KB, the boot section can be enlarged to the next 512 B multiple by bumping `BOOTSIZE` and moving `APP_START` down in lockstep. The App has ~48 KB free, so it can cede flash cheaply. All four must change together: `BOOTSIZE`/`CODESIZE` in `avrducore/fuses.c`, `APP_START` in `usb_vendor.h`, the App linker `--section-start=.text=`, and the BL linker flash `LENGTH` (see the header comment in `fuses.c`). Nothing enforces agreement — a mismatch silently breaks the jump or the vector relocation.
 
 ---
 
