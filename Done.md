@@ -74,3 +74,26 @@ window.
 The companion To Do item "usb_vendor_task() calling the wrong function" was found already
 resolved — usb_vendor.c calls usb_ctrl_poll() correctly and no usb_task() reference exists
 in the tree. Both items removed from To Dos.md "Next steps".
+
+## 6. KeyDU.BL USB enumeration — IVSEL cleared by clock_init()
+
+The bootloader's USB never enumerated: host saw "device descriptor read/64, error -110"
+(EP0 silent, NAKing every IN). Root cause: a vector-table relocation ordering bug.
+
+The BL runs from the boot section, so it must set CPUINT.CTRLA.IVSEL=1 to point the
+interrupt vectors at its own table at 0x0000. bl_main.c set IVSEL *before* calling
+usb_vendor_init(), but usb_vendor_init()'s first action is clock_init() — whose last
+line writes `CPUINT.CTRLA = 0`, clearing IVSEL back to 0. With IVSEL=0 and BOOTSIZE=0x10,
+USB bus-event interrupts dispatched to the *application's* vector table at 0x2000 (present
+in the merged image), so the BL's USB0_BUSEVENT_vect never ran, usb_device_state stayed
+UNATTACHED, usb_ctrl_poll() returned early every iteration, and EP0 NAKed forever.
+
+The App is unaffected: it *wants* IVSEL=0 (its table is at 0x2000) and never sets IVSEL,
+so clock_init()'s write is the correct end state there.
+
+Fixed: moved the IVSEL set into usb_vendor_init(), immediately after clock_init() and
+before usb_init()/sei(), so it can't be clobbered and no interrupt can fire before it is
+in effect. Removed the now-redundant (clobbered) IVSEL write from bl_main.c. This was a
+real bug in the production boot path, not just the test harness — exposed by the first
+isolated BL enumeration test (forced entry). Verified: clean enumeration, device #19,
+1209:b4b1 "Citrouille90 Bootloader", lsusb -v descriptors all correct, no dmesg errors.

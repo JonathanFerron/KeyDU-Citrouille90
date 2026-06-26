@@ -88,8 +88,10 @@ int main(void)
   bool magic_valid = (magic == BOOT_MAGIC);
 
   if(soft && magic_valid)
-  { ccp_write_ioreg((void*)&CPUINT.CTRLA, CPUINT_IVSEL_bm);  // sets interrupt vector to bootcode
-    usb_vendor_init();   /* clock, USB hardware, state init, sei() */
+  { /* IVSEL (relocate vectors to boot section) is set inside usb_vendor_init(),
+       after clock_init() — clock_init() writes CPUINT.CTRLA=0 and would clear
+       IVSEL if it were set here. Do not set IVSEL before usb_vendor_init(). */
+    usb_vendor_init();   /* clock, IVSEL, USB hardware, state init, sei() */
     usb_vendor_task();   /* bare loop — never returns */
   }
 

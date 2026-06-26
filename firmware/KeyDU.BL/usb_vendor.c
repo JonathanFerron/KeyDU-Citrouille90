@@ -226,6 +226,15 @@ void usb_vendor_init(void)
 
   clock_init();   /* 24 MHz OSCHF, TIMEBASE=24 — required before USB */
 
+  /* Relocate interrupt vectors to the boot section (IVSEL=1) so USB
+     interrupts dispatch to this bootloader's vector table at 0x0000.
+     MUST come after clock_init(): clock_init() writes CPUINT.CTRLA=0,
+     which clears IVSEL. If IVSEL is left at 0, USB bus-event interrupts
+     vector into the application's table at 0x2000 instead, the BL's
+     bus-reset ISR never runs, usb_device_state stays UNATTACHED, and
+     EP0 NAKs forever (host: "device descriptor read, error -110"). */
+  ccp_write_ioreg((void*)&CPUINT.CTRLA, CPUINT_IVSEL_bm);
+
   /* USB_OPT_VREG_ENABLE: internal 3.3V VUSB regulator is used on this board. */
   usb_init(USB_OPT_VREG_ENABLE);
 

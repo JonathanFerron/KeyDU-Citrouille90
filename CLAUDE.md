@@ -195,6 +195,8 @@ Main loop: `hid_flush()` ungated every iteration → `usb_ctrl_poll()` ungated �
 
 Entry: `bl_main.c` reads `RSTFR` and EEPROM magic. Enters bootloader only if SWRF (software reset) **and** EEPROM magic match. Otherwise jumps immediately to `0x2000`. Sets `CPUINT.IVSEL` so interrupt vectors stay in BOOT section.
 
+**IVSEL ordering (load-bearing):** `clock_init()`'s last line writes `CPUINT.CTRLA = 0`, which *clears* `IVSEL`. The BL therefore sets `IVSEL=1` inside `usb_vendor_init()` **after** `clock_init()` (not before, in `bl_main.c`). If `IVSEL` is left at 0, USB bus-event interrupts dispatch to the App's vector table at `0x2000` instead of the BL's at `0x0000`; the BL's bus-reset ISR never runs, `usb_device_state` stays `UNATTACHED`, and EP0 NAKs forever (`dmesg`: `device descriptor read/64, error -110`). The App is unaffected — it wants `IVSEL=0`. Any future boot-section code (e.g. DFU migration) must set `IVSEL` after `clock_init()`. See `Done.md` #6.
+
 Bootloader entry from app: `keyboard.c` `SYS_BOOT` handler writes `BOOT_MAGIC` to EEPROM byte `0x00`, then triggers `RSTCTRL.SWRR`. The BL clears the magic on entry before deciding which path to take.
 
 ### Shared libraries
@@ -286,8 +288,7 @@ avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
 ## Known bugs (tracked — do not fix silently without discussion)
 
 1. `usb_sof_enable()` is never called after enumeration.
-2. `usb_vendor_task()` calls a non-existent `usb_task()` instead of `usb_ctrl_poll()`.
-3. EEPROM bootloader magic flag is implemented but not yet tested on hardware.
+2. EEPROM bootloader magic flag is implemented but not yet tested on hardware.
 
 ---
 
