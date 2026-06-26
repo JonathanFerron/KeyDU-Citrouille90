@@ -104,7 +104,7 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] =
     /* row 1 */ KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    XXXXXXX, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_DEL,  KC_END,  KC_PGDN, KC_PSLS,
     /* row 2 */ KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_ENT,  XXXXXXX, XXXXXXX, KC_PAST, KC_PMNS, KC_PPLS, KC_P4,
     /* row 3 */ KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT, XXXXXXX, XXXXXXX, KC_UP,   XXXXXXX, KC_P1,   KC_P2,   KC_P3,
-    /* row 4 */ KC_LCTL, KC_LGUI, KC_LALT, KC_SPC,  XXXXXXX, XXXXXXX, XXXXXXX, KC_RALT, LY_MO1,  KC_RCTL, XXXXXXX, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, KC_RGHT, KC_P0,   KC_PDOT, KC_PENT
+    /* row 4 */ KC_LCTL, KC_LGUI, KC_LALT, KC_SPC,  XXXXXXX, XXXXXXX, XXXXXXX, KC_RALT, LY_MO1,  KC_RCTL, XXXXXXX, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, XXXXXXX, KC_P0,   KC_PDOT, KC_PENT
   ),
 
   /* ------------------------------------------------------------------
@@ -118,7 +118,7 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] =
     /* row 1 */ ______,  MC_COPY, MC_PSTE, MC_CUT,  CC_VOLU, CC_VOLD, XXXXXXX, CC_MUTE, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,
     /* row 2 */ ______,  MC_SALL, MC_SAVE, MC_FIND, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  ______,  ______,  ______,
     /* row 3 */ ______,  MC_UNDO, MC_REDO, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, CC_MPLY, XXXXXXX, ______,  ______,  ______,
-    /* row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  LY_MO2,  XXXXXXX, XXXXXXX, XXXXXXX, CC_MPRV, CC_MSTP, CC_MNXT, ______,  ______,  ______
+    /* row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  LY_MO2,  XXXXXXX, XXXXXXX, XXXXXXX, CC_MPRV, CC_MSTP, XXXXXXX, ______,  ______,  ______
   ),
 
   /* ------------------------------------------------------------------
@@ -129,7 +129,7 @@ const uint16_t PROGMEM keymaps[NUM_LAYERS][MATRIX_ROWS][MATRIX_COLS] =
     /* row 1 */ ______,  ______,  ______,  ______,  LD_BRIU, LD_BRID, XXXXXXX, ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,
     /* row 2 */ ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  ______,  ______,  ______,
     /* row 3 */ ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, ______,  XXXXXXX, ______,  ______,  ______,
-    /* row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,  KC_F10,  KC_F11,  KC_F12
+    /* row 4 */ ______,  ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  ______,  XXXXXXX, XXXXXXX, XXXXXXX, ______,  ______,  XXXXXXX, KC_F10,  KC_F11,  KC_F12
   ),
 };
 

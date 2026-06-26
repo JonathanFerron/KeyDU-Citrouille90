@@ -53,3 +53,24 @@ cleanly with no misses or doubles. Commit: 7ca8281.
 keyboard_init() and keyboard_task() were commented out during USB enumeration debugging.
 Re-enabled the full scan path; confirmed the EP1 IN data-toggle, ep_in_ready() behavior,
 and the HID report seqlock queue all work correctly under real keystroke traffic.
+
+## 5. usb_sof_enable() wiring — keep enabled for planned phase-lock
+
+usb_sof_enable() is called in usb_event_config_changed() (usb_hid.c), so the SOF
+interrupt fires every 1 ms once configured — but usb_event_sof() is now empty
+(hid_flush() lives in the main loop after the EP0-race fix, see Done #1). This left
+an open question: remove the enable as a dead-handler cleanup, or keep it.
+
+Resolved: keep usb_sof_enable() enabled. usb_event_sof() is the intended integration
+point for the planned TCB0/SOF phase-lock (snapshot TCB0.CNT across several frames,
+nudge TCB0 to fire ~200 us before the next SOF). The empty handler is expected, not
+leftover. Two guard rails documented in the usb_event_sof() comment: (a) do NOT remove
+usb_sof_enable() as a cleanup — it is load-bearing for the future feature; (b) do NOT
+move hid_flush() back into this ISR — ep_select() here clobbers the EP0 control-transfer
+globals mid-flight, which was the enumeration race fixed in Done #1. Future-caveat noted:
+if USB_OPT_BUS_INT_HIGH is ever set, the TCB0 ISR can be masked during the CNT read
+window.
+
+The companion To Do item "usb_vendor_task() calling the wrong function" was found already
+resolved — usb_vendor.c calls usb_ctrl_poll() correctly and no usb_task() reference exists
+in the tree. Both items removed from To Dos.md "Next steps".

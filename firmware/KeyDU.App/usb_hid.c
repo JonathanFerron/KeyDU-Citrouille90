@@ -200,7 +200,8 @@ hid_led_report_t hid_get_led_report(void)
 void usb_event_config_changed(void)
 { hid_configure();
   clock_autotune_enable();
-  usb_sof_enable();
+  usb_sof_enable();        /* keep live — SOF ISR is the hook for the planned
+  TCB0/SOF phase-lock; see usb_event_sof() note */
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -289,8 +290,21 @@ void usb_event_ctrl_request(void)
 } // usb_event_ctrl_request
 
 /* Called from USB0_BUSEVENT_vect once per 1 ms SOF when the bus is active.
-   usb_event_sof() is intentionally empty and hid_flush() lives in the main loop.
-   If you ever want the cycles back, you can drop usb_sof_enable() entirely since autotune tracks SOF in hardware, not via the interrupt.  */
+ I ntentionally EMPTY for now — but the SOF interrupt is de*liberately left
+ ENABLED (usb_sof_enable() in usb_event_config_changed()). This handler is the
+ planned integration point for the TCB0/SOF phase-lock: snapshot TCB0.CNT here
+ across several frames and nudge TCB0 to fire ~200 us before the next SOF.
+
+ Do NOT remove usb_sof_enable() as a dead-handler cleanup — the empty body is
+ expected, not leftover.
+
+ Do NOT move hid_flush() back into this ISR: ep_select() here clobbers the EP0
+ control-transfer globals mid-flight (the enumeration race fixed by moving
+ hid_flush() to the main loop). Anything added here must stay off the EP0 path.
+
+ Caveat for the future phase-lock code: if USB_OPT_BUS_INT_HIGH is ever set,
+ this vector runs at LVL1 and the TCB0 ISR can be masked during the CNT read
+ window — account for that when sampling TCB0.CNT here. */
 void usb_event_sof(void)
-{ // hid_flush();
+{ /* phase-lock hook goes here later */
 }
