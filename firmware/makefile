@@ -76,9 +76,6 @@ COMMON_LDFLAGS  = -mmcu=$(MCU)
 COMMON_LDFLAGS += -Wl,--gc-sections
 COMMON_LDFLAGS += -Wl,--relax
 COMMON_LDFLAGS += -mrodata-in-ram
-#COMMON_LDFLAGS += -Wl,--exclude-libs,libavr64du32.a
-#COMMON_LDFLAGS += -Wl,--defsym=__flmap_init_label=0
-# Useful during development: -Wl,--print-gc-sections
 
 # =============================================================================
 # KeyDU.App — HID keyboard application
@@ -89,7 +86,6 @@ APP_OUT  = $(BUILD)/app
 APP_NAME = KeyDU.App
 APP_ELF  = $(APP_OUT)/$(APP_NAME).elf
 APP_HEX  = $(APP_OUT)/$(APP_NAME).hex
-APP_LD   = $(APP_DIR)/KeyDU.App.ld
 
 APP_INC  = -I$(APP_DIR) -Iusbcore -I$(APP_DIR)/usbhid -Iavrducore
 
@@ -115,7 +111,6 @@ APP_S_SRC = \
 
 APP_CFLAGS  = $(COMMON_CFLAGS) $(APP_INC) -DEP_TABLE_COUNT=3   # EP0 + EP1 kbd + EP2 consumer; update to 6 for v2
 APP_ASFLAGS = $(COMMON_ASFLAGS) $(APP_INC)
-#APP_LDFLAGS = $(COMMON_LDFLAGS) -T$(APP_LD)
 APP_LDFLAGS = $(COMMON_LDFLAGS) -Wl,--section-start=.text=0x2000
 
 APP_C_OBJ = $(patsubst %.c,  $(APP_OUT)/%.o, $(APP_C_SRC))
@@ -131,7 +126,6 @@ BL_OUT  = $(BUILD)/bl
 BL_NAME = KeyDU.BL
 BL_ELF  = $(BL_OUT)/$(BL_NAME).elf
 BL_HEX  = $(BL_OUT)/$(BL_NAME).hex
-BL_LD   = $(BL_DIR)/KeyDU.BL.ld
 
 BL_INC  = -I$(BL_DIR) -Iusbcore -I$(BL_DIR)/usbvendor -Iavrducore
 
@@ -151,7 +145,6 @@ BL_S_SRC = \
 
 BL_CFLAGS  = $(COMMON_CFLAGS) $(BL_INC) -DEP_TABLE_COUNT=1   # EP0 only; DFU BL will also need only 1
 BL_ASFLAGS = $(COMMON_ASFLAGS) $(BL_INC)
-#BL_LDFLAGS = $(COMMON_LDFLAGS) -T$(BL_LD)
 BL_LDFLAGS = $(COMMON_LDFLAGS)
 
 BL_C_OBJ = $(patsubst %.c,  $(BL_OUT)/%.o, $(BL_C_SRC))
@@ -159,12 +152,6 @@ BL_S_OBJ = $(patsubst %.S,  $(BL_OUT)/%.o, $(BL_S_SRC))
 BL_OBJ   = $(BL_C_OBJ) $(BL_S_OBJ)
 
 MERGED_HEX = $(BUILD)/KeyDU.merged.hex
-
-#CRT_OBJ = /usr/lib/avr/lib/avrxmega2/crtavr64du32.o
-#CRT_LIB = /usr/lib/avr/lib/avrxmega2/libavr64du32.a
-
-#BL_LDFLAGS  = $(COMMON_LDFLAGS) -T$(BL_LD)  $(CRT_OBJ) $(CRT_LIB)
-#APP_LDFLAGS = $(COMMON_LDFLAGS) -T$(APP_LD) $(CRT_OBJ) $(CRT_LIB)
 
 # =============================================================================
 # Top-level targets
@@ -257,8 +244,6 @@ $(BL_OUT)/%.o: %.S
 # Merged hex (BL + App combined for full UPDI flash)
 # =============================================================================
 
-
-
 $(MERGED_HEX): $(BL_HEX) $(APP_HEX)
 	@mkdir -p $(BUILD)
 	@echo "[MERGE] $@"
@@ -280,6 +265,8 @@ $(FLASHER_BIN): $(FLASHER_SRC)
 # =============================================================================
 # Flash targets
 # =============================================================================
+
+# TODO: need to supplement the suite of flash targets below with a new flash_fuses target to flash the fuses (which are also present in the Merged Hex file)
 
 # Full UPDI flash — merged BL + App in one shot.
 # Use this for initial bring-up and any time the bootloader changes.
@@ -315,17 +302,17 @@ flash_usb: $(APP_HEX) $(FLASHER_BIN)
 # bear intercepts compiler calls during a full rebuild — run make clean first
 # or use: bear -- $(MAKE) -B all
 # =============================================================================
- 
+
 bear:
 	bear -- $(MAKE) all
- 
+
 # =============================================================================
 # Source formatting (astyle)
 # Explicit per-directory wildcards keep build/ and any future vendored
 # subdirectories out of scope. --project reads .astylerc at the project
 # root automatically. --suffix=none suppresses .orig backup files.
 # =============================================================================
- 
+
 FORMAT_SRC = \
     $(wildcard $(APP_DIR)/*.c)  \
     $(wildcard $(APP_DIR)/*.h)  \
@@ -338,11 +325,11 @@ FORMAT_SRC = \
  
 format:
 	astyle --project --suffix=none $(FORMAT_SRC)
- 
+
 # =============================================================================
 # Help
 # =============================================================================
- 
+
 help:
 	@echo "KeyDU-Citrouille90 — AVR64DU32 keyboard firmware"
 	@echo ""

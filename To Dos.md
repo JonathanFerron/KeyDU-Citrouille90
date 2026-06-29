@@ -1,19 +1,25 @@
 # Citrouille90 To Dos
 
+## To be addressed urgently:
+- Nothing for the moment
+
 ## Next steps:
 
-1. Test LED out. Note: the CNano's on-board LED is on PF2, which is a matrix column — not
+1. Enhanced Documentation
+   A documentation pass to bring Firmware reference.md current — particularly sections
+   11 (USB stack remarks, currently sparse), 12 (updated with any DFU changes), and 18
+   (open items, now mostly closed) — and to add inline /* rationale */ comments to any
+   modules that changed significantly in rev 2. Also worth adding a CHANGELOG.md at this
+   stage to capture what changed between rev 1 and rev 2 for your own future reference.
+ 
+2. Implement a flash_fuses target in the makefile so that fuses get programmed by avrdude once we start using it on the real Citrouille90 board. Fuses are present in the merged hex file, and programming the avr64du32 via the cnano programmer / debugger via the mass-storage device approach programs both the flash (BL and App) and the fuses. Avrdude with only the 'flash' command will skip the fuses: we need to also use the fuses command / option / section.
+
+3. Test LED out. Note: the CNano's on-board LED is on PF2, which is a matrix column — not
    suitable for this test. Do on the real Citrouille90 PCB.
 
-2. Phase 2: program fuses via the CNano drag-drop path. The merged hex (srec_cat of
-   BL.hex + App.hex) contains no fuse records, so dragging KeyDU.merged.hex onto the
-   CNano MSD drive programs flash only — fuses (incl. BOOTSIZE=0x10) persist from the
-   last UPDI `make flash_merged`. Works today only because the fuses were set previously.
-   Decide whether to include fuses in the CNano image or document the UPDI-first dependency.
-
-## To be addressed:
 
 ## Nice to have:
+- Nothing for the moment
 
 ## Keep for phase 2:
 
@@ -26,16 +32,9 @@
    arrives. This is a small, targeted fix but depends on the SOF race being resolved first,
    so it naturally slots in second.
 
-2. Enhanced Documentation
-   A documentation pass to bring Firmware reference.md current — particularly sections
-   11 (USB stack remarks, currently sparse), 12 (updated with any DFU changes), and 18
-   (open items, now mostly closed) — and to add inline /* rationale */ comments to any
-   modules that changed significantly in rev 2. Also worth adding a CHANGELOG.md at this
-   stage to capture what changed between rev 1 and rev 2 for your own future reference.
+2. Time TCB0_INT_vect to 200us prior to expected SOF arrival (800 us after prior SOF arrival)
 
-3. Time TCB0_INT_vect to 200us prior to expected SOF arrival (800 us after prior SOF arrival)
-
-4. DFU Bootloader Migration
+3. DFU Bootloader Migration
    The current vendor-class bootloader is functional but requires a custom host-side flashing
    tool. Migrating to DFU (Device Firmware Upgrade, USB class 0xFE) would allow flashing
    with standard tools (dfu-util, Microchip's FLIP, or avrdude's DFU backend), which
