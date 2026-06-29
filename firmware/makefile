@@ -8,8 +8,9 @@
 #   make app       — build KeyDU.App only
 #   make bl        — build KeyDU.BL only
 #   make merged    - build the merged KeyDU.BL+KeyDU.App Hex file
-#   make flash_app — program KeyDU.App via UPDI
-#   make flash_bl  — program KeyDU.BL via UPDI
+#   make flash_app    — program KeyDU.App via UPDI
+#   make flash_bl     — program KeyDU.BL via UPDI
+#   make flash_fuses  — program fuse row via UPDI (from BL hex)
 #   make flash_merged  — program merged KeyDU.BL+App via UPDI (full reflash)
 #   make flash_usb  — program KeyDU.App via USB vendor protocol
 #   make clean     — remove all build artefacts
@@ -40,7 +41,7 @@ F_CPU = 24000000UL
 # Programmer (Adafruit UPDI Friend at 5V)
 # -----------------------------------------------------------------------------
 PROG_ID   = serialupdi
-PROG_PORT = /dev/ttyUSB0   # adjust for your system
+PROG_PORT = /dev/ttyUSB0   # CH340 (ch341 driver) — confirmed ttyUSB0 when it is the only USB-UART device; check dmesg | tail on plug-in if others are attached
 
 # -----------------------------------------------------------------------------
 # Build output directory
@@ -157,7 +158,7 @@ MERGED_HEX = $(BUILD)/KeyDU.merged.hex
 # Top-level targets
 # =============================================================================
 
-.PHONY: all app bl clean size flash_merged flash_app flash_bl flash_usb flasher bear format help merged
+.PHONY: all app bl clean size flash_merged flash_app flash_bl flash_fuses flash_usb flasher bear format help merged
 
 all: app bl
 
@@ -266,8 +267,6 @@ $(FLASHER_BIN): $(FLASHER_SRC)
 # Flash targets
 # =============================================================================
 
-# TODO: need to supplement the suite of flash targets below with a new flash_fuses target to flash the fuses (which are also present in the Merged Hex file)
-
 # Full UPDI flash — merged BL + App in one shot.
 # Use this for initial bring-up and any time the bootloader changes.
 flash_merged: $(MERGED_HEX)
@@ -287,6 +286,15 @@ flash_app: $(APP_HEX)
 flash_bl: $(BL_HEX)
 	@echo "Flashing KeyDU.BL only via UPDI (no erase)..."
 	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -D -U flash:w:$<:i
+
+# UPDI fuses-only — program the fuse row from the BL hex. fuses.c emits the
+# FUSES struct to the .fuse section at 0x820000 in KeyDU.BL.elf; avrdude 8.x
+# recognises the multi-memory hex and writes only the fuse segment. Run once
+# at bring-up and after any fuses.c change. No -D needed: a fuses-only write
+# performs no flash erase. (Requires avrdude >= 8.0 for multi-memory hex.)
+flash_fuses: $(BL_HEX)
+	@echo "Flashing fuse row via UPDI..."
+	$(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -U fuses:w:$<:i
 
 # USB flash — send app image to running bootloader via vendor protocol.
 # Device must already be in bootloader mode (SYS_BOOT key).
@@ -344,6 +352,7 @@ help:
 	@echo "  flash_merged Program merged BL+App image via UPDI (full reflash)"
 	@echo "  flash_app    Program KeyDU.App only via UPDI (no erase)"
 	@echo "  flash_bl     Program KeyDU.BL only via UPDI (no erase)"
+	@echo "  flash_fuses  Program fuse row only via UPDI (from BL hex)"
 	@echo "  flash_usb    Program KeyDU.App via USB vendor protocol"
 	@echo ""
 	@echo "Dev targets:"
