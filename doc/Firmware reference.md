@@ -110,8 +110,15 @@ Is_compose...
 | `keyboard.c/.h` | Main keyboard logic, `keyboard_task()`, key processing loop                |
 | `main.c`        | Entry point, system init, TCB0 gate loop                                   |
 | `usb_hid.c/.h`  | Non-blocking report buffering, HID report structs, EP management           |
-| `usb_core.c/.h` | USB device state machine, enumeration                                      |
 | `usb_desc.c/.h` | All USB descriptor tables                                                  |
+
+USB stack shared library (`firmware/usbcore/` — compiled into both App and BL):
+
+| File                  | Owns                                                      |
+| --------------------- | --------------------------------------------------------- |
+| `usb_ctrl.c/.h`       | USB device state machine, EP0 control transfers           |
+| `usb_ep.c/.h`         | Hardware endpoint table, FIFO pairs, primitive read/write |
+| `usb_ep_stream.c/.h`  | Stream helpers (ep_read_*, ep_write_*)                    |
 
 ### 4.2 Bootloader (`firmware/KeyDU.BL/`)
 
@@ -484,7 +491,7 @@ Consumer codes to support: Volume Up/Down/Mute, Play/Pause, Stop, Next/Prev Trac
 
 `USB_SOF_vect` fires every 1 ms when host is connected and not suspended.
 
-- **Primary role:** flush queued report to host (report was prepared by prior scan): more precisely, this happens automatically on the usb hardware side when the host sends a report in request, as long as the firmware placed a report in the usb buffer
+- **Primary role:** signals the host that a new report is ready (hid_flush() is called from the main loop before usb_ctrl_poll(); the SOF interrupt itself is kept enabled as a future phase-lock hook)
 - **Secondary role (future):** snapshot `TCB0.CNT` for phase measurement
 - **Not** the scan trigger — scan is triggered by TCB0
 
@@ -612,7 +619,7 @@ The main loop is gated on a TCB0 1 ms tick flag — not a busy-poll, not a `dela
 The three ISR responsibilities are:
 
 - `TCB0_INT_vect`: set `tick_flag`
-- `USB_SOF_vect`: flush queued report to endpoint buffer
+- `USB_SOF_vect`: currently empty — reserved for future TCB0/SOF phase-lock
 - `USB_BUSEVNT_vect`: handle reset → re-enumerate, suspend → optionally drop to a deeper sleep mode later, resume → restore
 - `USB_TRNCOMPL_vect`: handle control EP0 transfers (GET_DESCRIPTOR, SET_REPORT for LED output, SET_IDLE, etc.)
 

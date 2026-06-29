@@ -22,11 +22,11 @@ static uint8_t s_idle_rate[HID_IFACE_COUNT];
 /* LED output report: last value received from host via SET_REPORT or EP OUT */
 static volatile hid_led_report_t s_led_report;
 
-/* ── Keyboard report queue (Phase 2) ────────────────────────────────────
+/* ── Keyboard report queue ───────────────────────────────────────────────
 
-   Replaces the seqlock double-buffer for keyboard reports.
-   SPSC lockless ring buffer — head touched only by hid_flush() (SOF ISR),
-   tail touched only by kbd_stage() (main context).
+   SPSC lockless ring buffer for keyboard reports.
+   head: read only by hid_flush() (main loop).
+   tail: written only by kbd_stage() (main context).
    uint8_t indices are written atomically on AVR — no lock needed.
 
    Consumer report retains its seqlock — it is staged infrequently and
@@ -36,7 +36,7 @@ kbd_queue_entry_t  kbd_queue[KBD_QUEUE_DEPTH];
 volatile uint8_t   kbd_queue_head = 0;
 volatile uint8_t   kbd_queue_tail = 0;
 
-/* Consumer report retains seqlock from phase 1 */
+/* Consumer report retains seqlock — staged infrequently, no queue needed */
 static volatile uint8_t       s_con_seq;
 static hid_consumer_report_t  s_con_buf;
 
@@ -62,7 +62,6 @@ void hid_configure(void)
 /* ════════════════════════════════════════════════════════════════════════
     kbd_stage — enqueue one keyboard report (main-loop context)
 
-    Replaces the seqlock write from phase 1.
     Full queue: silently drop — see usb_hid.h for sizing guidance.
     Entry is written before tail is advanced so hid_flush() never sees
     a partially-written slot.
@@ -85,7 +84,7 @@ void hid_kbd_stage(const hid_kbd_report_t* r)
 }
 
 /* kbd_stage_wait — enqueue a wait sentinel (N SOF ticks of silence).
-   Called from run_macro_sequence() in phase 2, replacing _delay_ms(). */
+   Intended replacement for the MACRO_ACTION_WAIT busy-wait in macro.c. */
 void kbd_stage_wait(uint8_t n_sofs)
 { kbd_queue_entry_t entry;
   entry.type      = KBD_QUEUE_WAIT;
@@ -93,23 +92,7 @@ void kbd_stage_wait(uint8_t n_sofs)
   kbd_enqueue(&entry);
 }
 
-/* ════════════════════════════════════════════════════════════════════════
-   Phase 2 — macro.c MACRO_ACTION_WAIT update
-
-   In macro.c, replace the MACRO_ACTION_WAIT case:
-
-     // Phase 1 (remove):
-     for (volatile uint8_t w = action.keycode; w; w--)
-         for (volatile uint16_t d = 0; d < 2400u; d++) {}
-
-     // Phase 2 (replace with):
-     kbd_stage_wait(action.keycode);
-
-   Also add #include "usb_hid.h" to macro.c (or expose kbd_stage_wait
-   via keyboard.h — either is acceptable).
-   ════════════════════════════════════════════════════════════════════════ */
-
-/* Consumer report retains seqlock — unchanged from phase 1 */
+/* Consumer report retains seqlock — staged infrequently, no queue needed */
 void hid_consumer_stage(const hid_consumer_report_t* r)
 { s_con_seq++;
   USB_MEMORY_BARRIER();
@@ -119,21 +102,16 @@ void hid_consumer_stage(const hid_consumer_report_t* r)
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-    hid_flush — call once per SOF from usb_event_sof()
+    hid_flush — call from main loop (before usb_ctrl_poll())
 
     Keyboard: dequeues one entry from kbd_queue.
-      KBD_QUEUE_REPORT: sends report to EP1 IN this SOF.
+      KBD_QUEUE_REPORT: sends report to EP1 IN.
       KBD_QUEUE_WAIT:   decrements wait_sofs; discards when zero,
-                        sending nothing to host this SOF.
-    Consumer: unchanged seqlock path from phase 1.
-    LED OUT: unchanged from phase 1.
-
-    For each IN endpoint:
+                        sending nothing to the host during the countdown.
+    Consumer: seqlock snapshot path.
       1. Read seqlock; skip if odd (write in progress)
       2. Copy report to local stack snapshot
       3. Re-check seqlock; skip if changed (torn read)
-      4. ep_select + ep_in_ready check; if ready, write snapshot
-
     Also polls EP1 OUT for incoming LED reports.
    ════════════════════════════════════════════════════════════════════════ */
 

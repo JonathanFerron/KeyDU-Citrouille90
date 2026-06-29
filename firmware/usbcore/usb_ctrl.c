@@ -56,16 +56,15 @@ static void send_internal_serial(void)
 
   ep_clear_setup();
   ep_write_ctrl_stream(&desc, sizeof(desc));
-  ep_complete_ctrl_status();   /* was missing — bug #12 */
+  ep_complete_ctrl_status();
 }
 
 /* --- Standard request handlers --- */
 
 /* ctrl_get_descriptor
-
-   Bug #12 fix: the original ended with ep_clear_out() and returned without
-   calling ep_complete_ctrl_status().  Both paths (internal serial shortcut
-   and normal descriptor lookup) now complete the status stage.
+   Both paths (internal serial shortcut and normal descriptor lookup) must
+   call ep_complete_ctrl_status() — skipping it leaves EP0 in SETUP state
+   and stalls the next control transfer.
 */
 static void ctrl_get_descriptor(void)
 { //PORTF.OUTTGL = PIN2_bm;  // quick pulse
@@ -96,7 +95,7 @@ static void ctrl_get_descriptor(void)
 
   ep_clear_setup();
   ep_write_ctrl_stream_P(addr, size);
-  ep_complete_ctrl_status();   /* was missing — bug #12 */
+  ep_complete_ctrl_status();
 }
 
 static void ctrl_set_address(void)

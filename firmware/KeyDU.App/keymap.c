@@ -10,9 +10,11 @@
 
    Report access
    -------------
-   encoder_step() manipulates the shared keyboard report exclusively through
-   the kbd_*() API declared in keyboard.h.  It does not access any report
-   struct directly.  This resolves bug #13 (encoder bypassing the seqlock).
+   encoder_step() manipulates the keyboard report exclusively through the
+   kbd_*() API (keyboard.h) rather than accessing any report struct directly.
+   This ensures each encoder step is staged as its own queue entry — direct
+   struct access would bypass hid_kbd_stage() and could let rapid detents
+   overwrite each other before hid_flush() drains them.
 */
 
 #include <avr/pgmspace.h>
@@ -157,8 +159,9 @@ uint16_t keymap_key_to_keycode(uint8_t layer, uint8_t row, uint8_t col)
    keymap_tick()  is called once per 1 kHz tick by keyboard_task().
 
    The shared keyboard report is accessed exclusively through kbd_*() so
-   that all writes go through the seqlock in hid_kbd_stage().  This is the
-   fix for bug #13.
+   that each step enqueues its own report entry via hid_kbd_stage().  Direct
+   struct writes would bypass the queue and allow rapid encoder steps to
+   overwrite each other before hid_flush() can drain them.
    ========================================================================= */
 
 #define ALT_RELEASE_TIMEOUT_MS  600u

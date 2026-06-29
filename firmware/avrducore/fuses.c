@@ -23,11 +23,10 @@
    WDT: off. Enable in a production build if desired.
    BOD: off. AVR64DU32 operates from 1.8–5.5 V; BOD adds quiescent draw.
 
-   The FUSES macro from avr-libc places the fuse data into a special ELF section called .fuse. It will be in your KeyDU.BL.elf already — you can verify:
-   avr-objdump -s -j .fuse KeyDU.BL.elf
-
-   You can verify it made it into the merged HEX:
-   srec_info KeyDU.merged.hex -Intel
+   The FUSES macro places fuse data in the .fuse ELF section (verified present
+   in KeyDU.merged.hex).  To inspect:
+     avr-objdump -s -j .fuse KeyDU.BL.elf
+     srec_info KeyDU.merged.hex -Intel
 */
 
 FUSES =

@@ -40,16 +40,16 @@ typedef enum { HID_PROTO_BOOT = 0, HID_PROTO_REPORT = 1 } hid_protocol_t;
 extern hid_protocol_t hid_protocol[HID_IFACE_COUNT];
 
 /* ════════════════════════════════════════════════════════════════════════
-    Keyboard report queue  (Phase 2)
+    Keyboard report queue
 
-    Replaces the seqlock double-buffer used in phase 1.  kbd_stage()
-    enqueues one entry; hid_flush() dequeues and sends one entry per SOF.
+    kbd_stage() enqueues one entry; hid_flush() dequeues and sends one
+    entry per call (rate-limited by ep_in_ready()).
 
     Design constraints:
       - head and tail are uint8_t — AVR 8-bit R/W is atomic, no lock needed
       - depth must be a power of 2 — index wraps with bitmask, no modulo
       - SPSC: kbd_stage() (main context) writes tail only;
-              hid_flush() (SOF ISR) reads head only
+              hid_flush() (main loop) reads head only
       - full queue: new entry is silently dropped (zero flash overhead)
       - empty queue: hid_flush() checks head==tail before reading any slot
 
@@ -58,11 +58,11 @@ extern hid_protocol_t hid_protocol[HID_IFACE_COUNT];
     sizeof(kbd_queue_entry_t) bytes — see below.
 
     Entry types:
-      KBD_QUEUE_REPORT — normal keyboard report, sent to host this SOF
+      KBD_QUEUE_REPORT — normal keyboard report, sent on next hid_flush()
       KBD_QUEUE_WAIT   — sentinel: hid_flush() decrements wait_sofs each
-                         SOF and discards the entry when it reaches zero,
+                         call and discards the entry when it reaches zero,
                          sending nothing to the host during the countdown.
-                         Replaces MACRO_ACTION_WAIT busy-wait in phase 2.
+                         Intended replacement for MACRO_ACTION_WAIT busy-wait.
    ════════════════════════════════════════════════════════════════════════ */
 
 /* Queue depth — power of 2.  Adjust after counting worst-case sequence. */
@@ -83,7 +83,7 @@ typedef struct
 } kbd_queue_entry_t;
 
 /* The queue itself — defined in usb_hid.c.
-   head: read by hid_flush() (SOF ISR).
+   head: read by hid_flush() (main loop).
    tail: written by kbd_stage() (main context).
    Both are uint8_t — atomic on AVR. */
 extern kbd_queue_entry_t  kbd_queue[KBD_QUEUE_DEPTH];
@@ -106,17 +106,18 @@ void kbd_stage_wait(uint8_t n_sofs);
       hid_kbd_stage()      — latch new keyboard report into back-buffer
       hid_consumer_stage() — latch new consumer report into back-buffer
 
-    Report flush (SOF ISR or tight main loop, before usb_task()):
+    Report flush (main loop, before usb_ctrl_poll()):
       hid_flush()          — push staged reports to USB IN endpoints
 
     LED output report (called from usb_event_config_changed or OUT poll):
       hid_get_led_report() — last LED report received from host
 
     Non-blocking guarantee:
-      hid_kbd_stage() and hid_consumer_stage() MUST NOT block. They write
-      to a back-buffer protected by a seqlock and return immediately. This
-      is required because encoder_step() may call send_keyboard_report()
-      multiple times inline during the 1 ms scan window. (§11.5)
+      hid_kbd_stage() and hid_consumer_stage() MUST NOT block.
+      hid_kbd_stage() enqueues into kbd_queue; hid_consumer_stage() writes
+      to a seqlock-protected back-buffer. Both return immediately.
+      Required because encoder_step() may call kbd_stage() multiple times
+      within a single 1 ms scan tick.
    ════════════════════════════════════════════════════════════════════════ */
 
 /* Configure HID endpoints — call from usb_event_config_changed() */

@@ -15,13 +15,7 @@
    before linking.  If no compose_* function is used at all, this file
    produces no object code.
 
-   Phase 2 note — report queue:
-     When the kbd report queue is implemented in usb_hid.c, kbd_stage()
-     becomes a non-blocking enqueue.  compose_accented() will then enqueue
-     four report entries (press+release for dead key, press+release for
-     letter) which hid_flush() drains one per SOF.  No changes to this
-     file are needed for that migration — send_mod_key() already calls
-     kbd_stage() in the right order.
+
 */
 
 #include "compose_internal.h"

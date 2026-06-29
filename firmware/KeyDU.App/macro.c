@@ -4,7 +4,9 @@
 
    Macro execution.  All report manipulation goes through the kbd_*() API
    declared in keyboard.h.  No report struct is accessed directly here.
-   This resolves bug #7 (send_mod_key() writing keys[0] directly).
+   All callers share one implementation, so queue-correct staging applies
+   uniformly — direct struct writes would let rapid sequences overwrite
+   each other before hid_flush() can drain them.
 
    Two macro styles:
 
@@ -56,12 +58,9 @@ static void release_key(uint8_t kc)
    Sends a clean report at the end to release any keys left pressed by
    a malformed or truncated sequence.
 
-   Phase 2 note — MACRO_ACTION_WAIT:
-     Currently uses _delay_ms() which busy-waits and may interfere with
-     USB SOF timing.  In phase 2, replace with a sentinel queue entry
-     (KBD_QUEUE_WAIT) that hid_flush() counts down — see usb_hid.h.
-     The macro_action_t struct and MACRO_WAIT() macro are unchanged;
-     only run_macro_sequence() needs updating.
+   MACRO_ACTION_WAIT uses a spin loop (~1 ms per count at 24 MHz).
+   kbd_stage_wait() in usb_hid.h is the proper non-blocking replacement —
+   only the MACRO_ACTION_WAIT case body below needs updating.
 */
 
 #define MAX_MACRO_STEPS  32u
@@ -89,12 +88,9 @@ static void __attribute__((unused)) run_macro_sequence(const macro_action_t* seq
         break;
 
       case MACRO_ACTION_WAIT:
-        /* Phase 1: busy-wait — acceptable for infrequent macro use.
-           Phase 2: replace with kbd_stage_wait(action.keycode) which
-           enqueues a KBD_QUEUE_WAIT sentinel — see usb_hid.h. */
+        /* Busy-wait — replace with kbd_stage_wait(action.keycode). */
         for(volatile uint8_t w = action.keycode; w; w--)
-        { /* spin ~1 ms per count at 24 MHz — rough but sufficient
-             for phase 1.  No _delay_ms() dependency needed. */
+        { /* spin ~1 ms per count at 24 MHz */
           for(volatile uint16_t d = 0; d < 2400u; d++) {}
         }
         break;

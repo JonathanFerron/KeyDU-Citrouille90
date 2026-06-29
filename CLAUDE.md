@@ -189,7 +189,7 @@ Main loop: `hid_flush()` ungated every iteration → `usb_ctrl_poll()` ungated �
 | `led.c/.h`      | TCA0 split-mode PWM for two LEDs, layer brightness feedback        |
 | `macro.c/.h`    | PROGMEM macro sequences, `execute_macro()`                         |
 | `compose.c/.h`  | Accented character output via dead-key sequences                   |
-| `usb_hid.c/.h`  | HID report double-buffer (seqlock), EP1 IN/OUT                     |
+| `usb_hid.c/.h`  | SPSC queue for keyboard reports, seqlock for consumer, EP1 IN/OUT  |
 | `usb_desc.c/.h` | USB descriptor tables (composite: boot keyboard + consumer)        |
 | `gpio.h`        | Header-only GPIO HAL — all macros, no `.c` counterpart             |
 
@@ -289,7 +289,7 @@ avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
 
 ## Known bugs (tracked — do not fix silently without discussion)
 
-1. `usb_sof_enable()` is never called after enumeration.
+None at this time.
 
 ---
 

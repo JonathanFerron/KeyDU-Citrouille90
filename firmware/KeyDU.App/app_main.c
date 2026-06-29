@@ -6,7 +6,7 @@
    then TCB0, then all keyboard subsystems.
 
    Main loop: IDLE sleep gated on a TCB0 1 ms tick flag. USB is fully
-   interrupt-driven; no usb_task() polling is needed in the loop body.
+   interrupt-driven; usb_ctrl_poll() handles EP0 control transfers.
    sleep_cpu() wakes on any interrupt (TCB0 overflow, USB SOF, bus events).
 */
 

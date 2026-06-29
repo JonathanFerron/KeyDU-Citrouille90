@@ -16,8 +16,8 @@
    A single hid_kbd_report_t (s_kbd_report) represents the full current
    keyboard state.  All callers — keyboard.c itself, keymap.c (encoder),
    and macro.c — manipulate it exclusively through the kbd_*() API defined
-   in keyboard.h.  kbd_stage() pushes it through hid_kbd_stage() into the
-   seqlock double-buffer; hid_flush() in the SOF ISR sends it to the host.
+   in keyboard.h.  kbd_stage() enqueues via hid_kbd_stage(); hid_flush()
+   in the main loop drains the queue and sends reports to the host.
 
    Consumer reports follow the same pattern via kbd_consumer_set/clear().
 
@@ -161,15 +161,9 @@ void kbd_get_report(hid_kbd_report_t* out)
 /* ============================================================================
    Shared key-send helpers — used by macro.c and compose.c
 
-   Phase 1: two consecutive kbd_stage() calls within one tick may both be
-   consumed by the same SOF flush, causing the host to see only the last
-   staged report.  This is a known limitation documented in the phase 2
-   plan (report queue).
-
-   Phase 2: kbd_stage() becomes a non-blocking enqueue into the kbd report
-   queue.  hid_flush() drains one entry per SOF, so each press and release
-   report reaches the host independently.  No changes to these functions
-   are needed for that migration.
+   kbd_stage() enqueues each report as its own queue entry, so two calls
+   within one tick (press then release) each reach the host independently —
+   hid_flush() drains one entry per call, rate-limited by ep_in_ready().
    ========================================================================= */
 
 /* send_mod_key — press mod+key, stage, release, stage.
