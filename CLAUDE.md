@@ -70,6 +70,7 @@ make clean        # remove build/
 make flash_merged # UPDI: erase + program BL + App (initial bring-up / any BL change)
 make flash_app    # UPDI: -D, App only, BL untouched (development iteration)
 make flash_bl     # UPDI: -D, BL only, App untouched
+make flash_fuses  # UPDI: fuse row only, from BL hex (no erase; run once at bring-up)
 make flash_usb    # USB vendor protocol: send App to running BL
 
 make bear         # regenerate compile_commands.json (run make clean first)
@@ -340,7 +341,11 @@ USB enumeration is currently working. This table is kept for regression referenc
 
 - OS: KUbuntu LTS
 - Editor: Kate (KDE) with LSP via clangd + `compile_commands.json`
-- Programmer: Adafruit AVR UPDI Friend (`/dev/ttyUSB0`)
+- Programmer: Adafruit AVR UPDI Friend — USB-UART bridge chip is CH340E; binds to the
+  `ch341` kernel driver (mainline on Kubuntu LTS, no install needed); enumerates as
+  `/dev/ttyUSB0` (or ttyUSB1, ttyUSB2, … depending on other attached USB-UART devices —
+  check `dmesg | tail` on plug-in and adjust `PROG_PORT` in the makefile accordingly);
+  user must be in the `dialout` group for avrdude access
 - Dev board: Microchip Curiosity Nano EV59F82A (early bring-up / register probing)
 - Build: `make` from `firmware/`; parallelised with `-j$(nproc --ignore=2)`
 

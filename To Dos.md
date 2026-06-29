@@ -12,7 +12,42 @@
    modules that changed significantly in rev 2. Also worth adding a CHANGELOG.md at this
    stage to capture what changed between rev 1 and rev 2 for your own future reference.
 
-2. Implement a flash_fuses target in the makefile so that fuses get programmed by avrdude once we start using it on the real Citrouille90 board. Fuses are present in the merged hex file, and programming the avr64du32 via the cnano programmer / debugger via the mass-storage device approach programs both the flash (BL and App) and the fuses. Avrdude with only the 'flash' command will skip the fuses: we need to also use the fuses command / option / section.
+2. Implement a flash_fuses target in the makefile (for use with the UPDI Friend on the real
+   Citrouille90 PCB — the CNano mass-storage path already programs fuses automatically).
+
+   Exact diff to apply:
+
+   .PHONY line — add flash_fuses:
+     - flash_usb flasher bear format help merged
+     + flash_fuses flash_usb flasher bear format help merged
+
+   After the flash_bl target, add:
+     # UPDI fuses-only — program the fuse row from the BL hex. fuses.c emits the
+     # FUSES struct to the .fuse section at 0x820000 in KeyDU.BL.elf; avrdude 8.x
+     # recognises the multi-memory hex and writes only the fuse segment. Run once
+     # at bring-up and after any fuses.c change. No -D needed: a fuses-only write
+     # performs no flash erase. (Requires avrdude >= 8.0 for multi-memory hex.)
+     flash_fuses: $(BL_HEX)
+         @echo "Flashing fuse row via UPDI..."
+         $(AVRDUDE) -c $(PROG_ID) -p $(MCU) -P $(PROG_PORT) -U fuses:w:$<:i
+
+   In the header comment block, after the flash_bl line:
+     + #   make flash_fuses   — program fuse row via UPDI (from BL hex)
+
+   In the help target echo block, after flash_bl:
+     + @echo "  flash_fuses  Program fuse row only via UPDI (from BL hex)"
+
+   Notes:
+   - Sources fuses from $(BL_HEX), not $(MERGED_HEX) — leaner, and flash_fuses
+     can run after just make bl without building the App.
+   - -D intentionally omitted: it suppresses erase before flash writes; a
+     fuse-only -U touches only the fuse row and needs no erase flag.
+   - To verify after writing: -U fuses:v:$(BL_HEX):i reads the row back and
+     diffs against the hex.
+   - Fuse bytes confirmed correct in the current build (verified June 2026):
+     820000–82000B in the merged hex, decodes to WDTCFG=0x00, BODCFG=0x00,
+     OSCCFG=0x00, SYSCFG0=0xD8, SYSCFG1=0x08, CODESIZE=0x00, BOOTSIZE=0x10,
+     PDICFG=0x0003 — matches fuses.c and the cheatsheet KeyDU column exactly.
 
 3. Stale Report on USB Resume (Phantom Keypresses)
    When the device resumes from USB suspend, the current HID report buffers still hold

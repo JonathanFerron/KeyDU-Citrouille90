@@ -1,16 +1,37 @@
 # KeyDU Development Cheat Sheet
 
-AVR64DU32 · Curiosity Nano (pkobn_updi) · avrdude 8.x
+AVR64DU32 · Curiosity Nano (pkobn_updi) · UPDI Friend (serialupdi) · avrdude 8.x
 
 ---
 
 ## avrdude — Programmer Setup
+
+### Curiosity Nano (development / CNano test bench)
 
 ```
 Programmer : pkobn_updi   (Curiosity Nano nEDBG, UPDI mode)
 Part       : avr64du32
 Port       : usb
 ```
+
+### UPDI Friend (real Citrouille90 PCB)
+
+```
+Programmer : serialupdi
+Part       : avr64du32
+Port       : /dev/ttyUSB0   (or ttyUSB1, ttyUSB2 — check dmesg | tail on plug-in)
+```
+
+Bridge chip: CH340E — binds to the `ch341` kernel driver (mainline on Kubuntu LTS,
+no install needed). Confirm attach: `dmesg | tail` should show
+`ch341-uart converter now attached to ttyUSBx`.
+
+Permissions: user must be in the `dialout` group.
+  `sudo usermod -aG dialout $USER`  then re-login (or `newgrp dialout` for current shell).
+
+Common failure modes:
+- Port not found → charge-only USB cable; try a known-good data cable
+- Permission denied → not in dialout group
 
 ### Flash
 
@@ -232,9 +253,10 @@ xxd -l 32 fuses.bin         # first 32 bytes only
 # Show address ranges and format
 srec_info build/KeyDU.merged.hex -Intel
 
-# Expected output for a good merged hex:
-# Data:   0000 - 02FE    (BL code)
-# Data:   2000 - 25CB    (App code)
+# Expected output for a good merged hex (ranges shift with code size):
+# Data:   000000 - 0011B3   (BL code)
+# Data:   002000 - 003DC7   (App code)
+# Data:   820000 - 82000B   (fuse row — 12 bytes at AVR fuse address)
 ```
 
 ---
