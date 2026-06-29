@@ -524,13 +524,92 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 
 ### 11.7 Bootloader Mode — Vendor Class
 
-- Vendor-defined class, single interface
-- Host tool: C or avrdude (vendor class driver) + LibUSB
-- USB multipacket transfers: design bootloader OUT endpoint to use these: reduces CPU interrupts per 64KB upload and simplifies flashing tool timing
-- Keep in mind max packet size of 64B and page size of 512B
-- consider bulk transfer instead of control transfer
+Vendor-defined class, single interface, EP0-only (no bulk endpoints). Five control-transfer commands (`VCMD_ERASE`, `VCMD_WRITE`, `VCMD_READ`, `VCMD_RESET`, `VCMD_STATUS`). Host tool: `keydu_flasher.c` (LibUSB 1.0). See §12 for full bootloader architecture.
+
+### 11.8 Endpoint Table — FIFOEN=1 Layout
+
+`USB0.CTRLA` is initialised with `FIFOEN` set. This prepends a 32-byte hardware FIFO ring buffer **before** the endpoint pairs in the table struct. `EP[0]` is at `EPPTR+32`, not `EPPTR+0`. The `ep_hw_table_t` struct in `usb_ep.h` models this with a `uint8_t fifo[32]` member at offset 0:
+
+```c
+typedef struct USB_PACKED {
+    uint8_t       fifo[32];              /* transaction-complete FIFO — must be first */
+    USB_EP_PAIR_t endpoints[EP_TABLE_COUNT];
+    uint16_t      frame_num;
+} ep_hw_table_t;
+```
+
+**Do not remove or reorder the `fifo` field.** The hardware FIFO layout is fixed by silicon; the struct must match it exactly.
+
+`EP_TABLE_COUNT` is set per-target via `-DEP_TABLE_COUNT=N` in the makefile (App = 3, BL = 1). This sizes both the hardware table struct and the software FIFO array `ep_fifo_pair_t[EP_TABLE_COUNT]`.
+
+### 11.9 EP0 Control Completion Signaling (FIFOEN=1)
+
+With FIFOEN enabled, transaction-complete signalling for `TYPE=CONTROL` endpoints comes through `STATUS.TRNCOMPL` in the endpoint table entry, not exclusively via `INTFLAGSB`. The `USB0_TRNCOMPL_vect` ISR reads `USB0.FIFORP`, processes the FIFO entry, and latches completion into `usb_ep_trncompl_in` / `usb_ep_trncompl_out` bitmasks. Polling code in `ep_in_ready()` / `ep_out_received()` checks both paths.
+
+Do not write back to `USB0.FIFORP` — hardware auto-manages FIFORP advancement. Process one entry per ISR invocation; hardware re-asserts TRNCOMPL if `FIFOWP != FIFORP` after advancement.
+
+### 11.10 Bus-Reset ISR Requirements
+
+On a USB bus reset, `USB0.INTCTRLB` (which enables TRNCOMPL interrupts) is cleared by hardware. The bus-reset ISR must:
+
+1. Sync `USB0.FIFORP` to `USB0.FIFOWP` — discard stale pre-reset FIFO entries.
+2. Call `ep_configure()` — reinitialise the endpoint table.
+3. Re-enable `USB0.INTCTRLB = USB_TRNCOMPL_bm` after `ep_configure()`.
+
+Omitting step 3 silences all future TRNCOMPL interrupts; EP0 NAKs every subsequent control transfer.
+
+### 11.11 USB Stack Module Responsibilities
+
+| Module            | Owns                                                                 |
+| ----------------- | -------------------------------------------------------------------- |
+| `usb_ep.c`        | Hardware endpoint table, FIFO pairs, primitive read/write            |
+| `usb_ctrl.c`      | EP0 control transfer state machine, `usb_ctrl_poll()`               |
+| `usb_hid.c`       | Non-blocking HID report buffering and EP flush                       |
+| `usb_desc.c`      | All descriptor tables (App); `usb_vendor_desc.c` (BL)               |
 
 ---
+
+## 12. Bootloader Architecture (KeyDU.BL)
+
+### 12.1 Entry Conditions
+
+The bootloader runs only when **both** conditions hold at startup:
+
+1. `RSTCTRL.RSTFR` has `SWRF` set — reset was software-triggered via `RSTCTRL.SWRR`.
+2. EEPROM byte `0x00` equals `BOOT_MAGIC` — written by the `SYS_BOOT` handler in `keyboard.c` before issuing the software reset.
+
+Power-on reset (`PORF`) and external RESET-pin reset (`EXTRF`) jump straight to the application. `RSTFR` is read and cleared before any peripheral init — flags accumulate across resets, so a stale `SWRF` would otherwise survive into a later power-on reset. The EEPROM magic is also cleared on entry so that subsequent resets start clean regardless of which path is taken.
+
+### 12.2 IVSEL Ordering — Load-Bearing Constraint
+
+The bootloader runs from the boot section and must point interrupt vectors to its own table at `0x0000` (`CPUINT.CTRLA.IVSEL = 1`). The ordering is critical:
+
+- `clock_init()` — called first inside `usb_vendor_init()` — writes `CPUINT.CTRLA = 0` as its last line, clearing `IVSEL`.
+- `IVSEL = 1` is therefore set **inside `usb_vendor_init()`, after `clock_init()` and before `usb_init()` / `sei()`**.
+
+Setting `IVSEL` before `usb_vendor_init()` (e.g. in `bl_main.c`) would be silently clobbered by `clock_init()`. With `IVSEL = 0`, USB bus-event interrupts dispatch to the app's vector table at `0x2000`; the BL's `USB0_BUSEVENT_vect` never fires; `usb_device_state` stays `UNATTACHED`; EP0 NAKs every packet (dmesg: `device descriptor read/64, error -110`).
+
+The App is unaffected — it wants `IVSEL = 0` and never sets it; `clock_init()`'s write is the correct final state for the App. Any future boot-section code (e.g. DFU migration) must follow the same ordering.
+
+### 12.3 Vendor Flash Protocol
+
+Five EP0 control-transfer commands (bRequest), defined in `usb_vendor.h`:
+
+| Command       | Code   | Arguments                                          | Effect                                             |
+| ------------- | ------ | -------------------------------------------------- | -------------------------------------------------- |
+| `VCMD_ERASE`  | `0x01` | `wValue` = page-count code, `wIndex` = addr lo16  | Erase N pages starting at address                 |
+| `VCMD_WRITE`  | `0x02` | `wValue` = addr hi16, `wIndex` = addr lo16        | Write 64-byte chunk; auto-commits at page boundary |
+| `VCMD_READ`   | `0x03` | `wValue` = addr hi16, `wIndex` = addr lo16        | Read 64-byte chunk                                 |
+| `VCMD_RESET`  | `0x04` | none                                               | Jump to application after status ACK               |
+| `VCMD_STATUS` | `0x05` | none                                               | Return 1-byte status (`0x00` OK, `0xFF` ERR)       |
+
+Write flow: host issues `VCMD_ERASE` first, then 8 × `VCMD_WRITE` chunks (64 bytes each) to fill a 512-byte page. The BL commits each full page to flash automatically on the 8th chunk. Addresses outside `[APP_START, FLASH_END)` are rejected with `STATUS_ERROR`.
+
+Host tool: `keydu_flasher.c` in `host usb flashing/` (LibUSB 1.0, Linux).
+
+### 12.4 Phase 2 — DFU Migration (Planned)
+
+The vendor-class bootloader is functional but requires a custom host tool. A future phase 2 will migrate to standard DFU (USB class 0xFE / `dfu-util`). The DFU BL is estimated at ~3.8 KB flash, fitting within the current 8 KB boot section. This is deferred until the application firmware is fully stable — see "Keep for phase 2" in `To Dos.md`.
 
 ---
 

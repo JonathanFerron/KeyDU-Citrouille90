@@ -1,4 +1,4 @@
-# Citrouille90 — Fixed / Done
+# Citrouille90 — ChangeLog
 
 ## 1. hid_flush()-in-SOF-ISR vs EP0 Control Transfer Race
 

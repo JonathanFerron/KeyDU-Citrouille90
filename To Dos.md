@@ -5,14 +5,7 @@
 
 ## Next steps:
 
-1. Enhanced Documentation
-   A documentation pass to bring Firmware reference.md current — particularly sections
-   11 (USB stack remarks, currently sparse), 12 (updated with any DFU changes), and 18
-   (open items, now mostly closed) — and to add inline /* rationale */ comments to any
-   modules that changed significantly in rev 2. Also worth adding a CHANGELOG.md at this
-   stage to capture what changed between rev 1 and rev 2 for your own future reference.
-
-2. Implement a flash_fuses target in the makefile (for use with the UPDI Friend on the real
+1. Implement a flash_fuses target in the makefile (for use with the UPDI Friend on the real
    Citrouille90 PCB — the CNano mass-storage path already programs fuses automatically).
 
    Exact diff to apply:
@@ -49,29 +42,7 @@
      OSCCFG=0x00, SYSCFG0=0xD8, SYSCFG1=0x08, CODESIZE=0x00, BOOTSIZE=0x10,
      PDICFG=0x0003 — matches fuses.c and the cheatsheet KeyDU column exactly.
 
-3. Stale Report on USB Resume (Phantom Keypresses)
-   When the device resumes from USB suspend, the current HID report buffers still hold
-   whatever state was staged before suspend. If a key was held at suspend time the host will
-   see it as newly pressed on resume, producing a phantom keypress. The fix is to flush the
-   kbd_queue (reset head/tail to 0) and zero s_con_buf (bumping s_con_seq) inside
-   usb_event_wakeup() in usb_hid.c, then call hid_flush() immediately to push a clean zero
-   report before the first real report arrives.
-
-4. In KeyDU.App, get sleep mode to work properly.
-
-5. Time TCB0_INT_vect to 200us prior to expected SOF arrival (800 us after prior SOF arrival)
-
-6. Get flashing to work from KeyDU.BL using the vendor protocol and custom host side program (libusb supported)
-
-7. Replace MACRO_ACTION_WAIT busy-wait in macro.c with kbd_stage_wait()
-   Infrastructure is ready: kbd_stage_wait() is declared in usb_hid.h and implemented in usb_hid.c.
-   Only the MACRO_ACTION_WAIT case body in run_macro_sequence() needs updating — replace the
-   spin loop with kbd_stage_wait(action.keycode).
-
-8. Test LED out. Note: the CNano's on-board LED is on PF2, which is a matrix column — not
-   suitable for this test. Do on the real Citrouille90 PCB.
-
-9. Extend consumer/system keycodes — add the following missing codes to keycode.h and
+2. Extend consumer/system keycodes — add the following missing codes to keycode.h and
    keyboard.c, then assign them to keys in keymap.c as desired.
 
    A) Consumer page (0x0C) — add CC_ defines to keycode.h and corresponding entries to
@@ -122,6 +93,32 @@
       Note: s_con_report is static in keyboard.c and is not exposed directly — the
       dispatch will need to either use the existing kbd_consumer_set/clear pattern or
       add a dedicated kbd_system_set/clear pair similar to kbd_consumer_set().
+
+3. Replace MACRO_ACTION_WAIT busy-wait in macro.c with kbd_stage_wait()
+   Infrastructure is ready: kbd_stage_wait() is declared in usb_hid.h and implemented in usb_hid.c.
+   Only the MACRO_ACTION_WAIT case body in run_macro_sequence() needs updating — replace the
+   spin loop with kbd_stage_wait(action.keycode).
+
+4. Test LED out. Wire external LEDs with resistors on the CNano breadboard (CNano's on-board
+   LED on PF2 is a matrix column — use separate LEDs on the appropriate TCA0 WO pins instead).
+
+5. Sleep mode — enable AVR IDLE sleep in the main loop. The structure is already staged:
+   - app_main.c lines 62–63: sleep_enable() + set_sleep_mode(SLEEP_MODE_IDLE)
+   - app_main.c line 99: sleep_cpu() call (commented out)
+   Uncomment and verify: MCU should sleep between ticks and wake cleanly on TCB0, USB SOF,
+   and USB bus events. Untested.
+
+6. Stale Report on USB Resume (Phantom Keypresses)
+   When the device resumes from USB suspend, the current HID report buffers still hold
+   whatever state was staged before suspend. If a key was held at suspend time the host will
+   see it as newly pressed on resume, producing a phantom keypress. The fix is to flush the
+   kbd_queue (reset head/tail to 0) and zero s_con_buf (bumping s_con_seq) inside
+   usb_event_wakeup() in usb_hid.c, then call hid_flush() immediately to push a clean zero
+   report before the first real report arrives.
+
+7. Get flashing to work from KeyDU.BL using the vendor protocol and custom host side program (libusb supported)
+
+8. Time TCB0_INT_vect to 200us prior to expected SOF arrival (800 us after prior SOF arrival)
 
 
 ## Nice to have:
