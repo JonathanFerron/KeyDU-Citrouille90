@@ -52,7 +52,7 @@ cleanly with no misses or doubles. Commit: 7ca8281.
 
 keyboard_init() and keyboard_task() were commented out during USB enumeration debugging.
 Re-enabled the full scan path; confirmed the EP1 IN data-toggle, ep_in_ready() behavior,
-and the HID report seqlock queue all work correctly under real keystroke traffic.
+and the HID report queue all work correctly under real keystroke traffic.
 
 ## 5. usb_sof_enable() wiring — keep enabled for planned phase-lock
 

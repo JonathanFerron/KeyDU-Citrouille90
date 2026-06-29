@@ -87,7 +87,7 @@ Dispatch in the key processing loop uses `IS_*` predicate macros and the `0xFF00
 #define IS_MACRO_KEY(kc)     (((kc) & 0xFF00) == 0x0300)
 #define IS_LED_KEY(kc)       (((kc) & 0xFF00) == 0x0400)
 #define IS_SYS_KEY(kc)       (((kc) & 0xFF00) == 0x0500)
-Is_compose...
+#define IS_COMPOSE_KEY(kc)   (((kc) & 0xFF00) == 0x0600)
 #define GET_LAYER(kc)        ((kc) & 0x00FF)
 #define MOD_BIT(kc)          /* converts KC_Lxxx modifier to HID bitmask */
 ```
@@ -106,7 +106,7 @@ Is_compose...
 | `keycode.h`     | All keycode `#define`s, `IS_*` predicates, aliases                         |
 | `led.c/.h`      | TCA0 PWM init and brightness control                                       |
 | `keymap.c/.h`   | PROGMEM keymap array, layer lookup, `encoder_step()` impl, `keymap_tick()` |
-| `macros.c/.h`   | Macro dispatch and PROGMEM sequences                                       |
+| `macro.c/.h`    | Macro dispatch and PROGMEM sequences                                       |
 | `keyboard.c/.h` | Main keyboard logic, `keyboard_task()`, key processing loop                |
 | `main.c`        | Entry point, system init, TCB0 gate loop                                   |
 | `usb_hid.c/.h`  | Non-blocking report buffering, HID report structs, EP management           |
@@ -129,9 +129,9 @@ USB stack shared library (`firmware/usbcore/` — compiled into both App and BL)
 | `flash.c/.h`      | SPM flash write routines                         |
 | `linker.ld`       | Bootloader-specific linker script                |
 
-### 4.3 Not Compiled (`KeyDU-Examples` separate git repo)
+### 4.3 Not Compiled (`KeyDU-Examples` separate git repo — planned, not yet created)
 
-Reference implementations for macros and encoder behaviors. Copy desired functions into `KeyDU.App/macros.c` or `KeyDu.App/encoder.c` and compile from there. No preprocessor flags, no dead code.
+Reference implementations for macros and encoder behaviors. Copy desired functions into `KeyDU.App/macro.c` or `KeyDU.App/encoder.c` and compile from there. No preprocessor flags, no dead code.
 
 ```
 /
@@ -391,7 +391,7 @@ All modifier positions on layers 1 and 2 must be `KC_TRNS`. Add a comment block 
 
 ### 10.1 Structure
 
-- Macro sequences stored in PROGMEM in `macros.c`
+- Macro sequences stored in PROGMEM in `macro.c`
 - Dispatch via `execute_macro(uint16_t mc_keycode)` called from `keyboard.c` key processing loop
 - Simple modifier+key macros use `send_mod_key()` helper
 - Sequence macros use `run_macro_sequence()` stepping through a PROGMEM `macro_action_t` array
@@ -402,7 +402,7 @@ All modifier positions on layers 1 and 2 must be `KC_TRNS`. Add a comment block 
 /* keycode.h */
 #define MC_XL_VBA   (MC_BASE | 0x08)   /* Alt+F8 */
 
-/* macros.c */
+/* macro.c */
 case MC_XL_VBA:
     send_mod_key(MOD_LALT, KC_F8);
     break;
@@ -414,7 +414,7 @@ case MC_XL_VBA:
 /* keycode.h */
 #define MC_XL_PSTSP  (MC_BASE | 0x09)  /* Alt, E, S */
 
-/* macros.c */
+/* macro.c */
 static const macro_action_t PROGMEM macro_excel_paste_special[] = {
     MT(KC_LALT), MT(KC_E), MT(KC_S), MACRO_END
 };
@@ -426,7 +426,7 @@ case MC_XL_PSTSP:
 
 ### 10.4 Private Aliases
 
-If `macros.c` needs temporary short aliases for `KC_` names that would collide with `keycode.h`, define them locally and `#undef` at the end of the file.
+If `macro.c` needs temporary short aliases for `KC_` names that would collide with `keycode.h`, define them locally and `#undef` at the end of the file.
 
 ---
 
@@ -485,7 +485,8 @@ Byte 3 b0:  System Sleep (HID Page 0x01, usage 0x82)
 Byte 3 b1–7: Padding
 ```
 
-Consumer codes to support: Volume Up/Down/Mute, Play/Pause, Stop, Next/Prev Track, Browser Home/Back/Forward/Refresh/Search.### 
+Consumer codes currently implemented: Volume Up/Down/Mute, Play/Pause, Stop, Next/Prev Track.
+Planned (see To Dos): Media Select, Launch Mail/Calculator/My Computer, WWW Search/Home/Back/Forward/Stop/Refresh/Favorites (0x0C page), and System Sleep (GD 0x01:0x82 via the existing system byte in the report).
 
 ### 11.5 SOF Interrupt and Scan Loop Relationship
 
@@ -506,15 +507,18 @@ After USB stack is stable and scan duration is measured on real hardware:
 ```
 TCB0 fires at (SOF_phase - scan_budget):
     → matrix_scan() → encoder_scan() → keymap_tick()
-    → report ready in queue
+    → kbd_stage() puts report in queue
+
+Main loop (continuous):
+    → hid_flush() drains queue to EP1 IN when ep_in_ready()
 
 SOF ISR fires ~scan_budget ms later:
-    → flush queued report to host
+    → snapshot TCB0.CNT for phase measurement (empty for now)
 ```
 
-Phase measurement: snapshot `TCB0.CNT` in `USB_SOF_vect`, average 8–16 samples. Adjust TCB0 compare register. Measure scan budget with GPIO toggle + logic analyzer (target < 0.2 ms / 4800 counts at 24 MHz).
+Phase measurement: snapshot `TCB0.CNT` in `usb_event_sof()`, average 8–16 samples. Adjust TCB0 compare register. Measure scan budget with GPIO toggle + logic analyzer (target < 0.2 ms / 4800 counts at 24 MHz).
 
-**Prerequisites before attempting:** USB stack enumerating and reporting reliably; scan duration measured; `send_keyboard_report()` confirmed non-blocking.
+**Prerequisites:** USB enumeration and basic keystroke reporting are confirmed working. Assume a conservative scan budget of 200 µs (< 0.2 ms) without measuring — tighten later with a GPIO toggle + logic analyzer if needed.
 
 As a first guess, just assume a conservative scan budget of say 200 microseconds.
 
@@ -527,14 +531,6 @@ As a first guess, just assume a conservative scan budget of say 200 microseconds
 - consider bulk transfer instead of control transfer
 
 ---
-
-## 12. USB Stack remarks
-
-USBCore:
-
-USB HID:
-
-USB Vendor:
 
 ---
 
@@ -638,24 +634,24 @@ The three ISR responsibilities are:
 - `UPDI`: never disable — critical for recovery
 - Clock: internal 24 MHz oscillator, no external crystal
 
-## 18. Open Items and Build Sequence
+## 18. Open Items
 
-### 18.1 Immediate — Unblock USB
+### 18.1 Remaining verification
 
-These must happen in order; everything downstream depends on USB working:
+1. **Verify LED output report** — confirm Caps Lock/Num Lock LED state arrives via `SET_REPORT` and EP1 OUT. Test on real Citrouille90 PCB (CNano LED on PF2 conflicts with col 2).
+2. **Verify consumer report** — confirm media keys (CC_MPLY, CC_VOLU, etc.) reach the host on Interface 1.
 
-1. **Verify keyboard reports** — confirm modifiers work, 6KRO rollover correct.
-2. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
-3. **Verify consumer report** — confirm media keys reach host on Interface 1.
+*Keyboard reports (basic keypresses, modifiers, 6KRO rollover) confirmed working. Bootloader entry via SYS_BOOT confirmed working.*
 
-### 18.2 After USB App Firmware is Stable
+### 18.2 Near-term
 
-1. **SOF phase lock** — revisit after scan duration measured and USB stack proven stable.
+1. **SOF phase lock** — TCB0 fires 800 µs after prior SOF (200 µs before next); scan completes; report is in queue by SOF. See §11.6 for design. USB stack and basic reporting are stable — this is ready to attempt.
+2. **Extend consumer/system keycodes** — see To Dos item 9 for full details.
 
 ### 18.3 Deferred (Post-v1)
 
 - USB multipacket for bootloader upload speed
-- Boot mouse interface (eg on Interface 2, EP3 IN, if ever)
+- Boot mouse interface (EP4 IN, if ever)
 - NKRO (not planned — 6KRO is sufficient)
 
 ## 19 Adapting to future changes
