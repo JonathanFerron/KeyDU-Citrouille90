@@ -631,43 +631,15 @@ The three ISR responsibilities are:
 - `UPDI`: never disable — critical for recovery
 - Clock: internal 24 MHz oscillator, no external crystal
 
-
-
-### 17.3 GCC 14 FLMAP Init Workaround
-
-GCC 14 injects a `.init3` startup stub from `libavr64du32.a(flmap_init.o)` that calls `__flmap_init_label` to initialize the NVMCTRL FLMAP bits before `main()`. This stub is intended for AVR devices with more than 64KB of flash where FLMAP configuration is required at startup. The AVR64DU32 has exactly 64KB of flash and does not need this initialization, but GCC 14 injects it regardless — apparently a device classification issue in the toolchain.
-
-The stub's `.init3` section overlaps the `.data` LMA when using a custom linker script with a non-zero flash origin (as required for the application partition starting at `0x2000`), causing a hard linker error.
-
-Both `KeyDU.App.ld` and `KeyDU.BL.ld` contain the following `/DISCARD/` entry to suppress the stub:
-
-```
-/DISCARD/ :
-{
-    *flmap_init*(.init3)
-}
-```
-
-This is intentional and must be preserved. If the toolchain is upgraded and the linker error reappears, verify that `flmap_init.o` is still the source via:
-
-```bash
-avr-nm /usr/lib/avr/lib/avrxmega2/libavr64du32.a | grep flmap
-```
-
-If the object or section name has changed in the newer toolchain, update the pattern in `/DISCARD/` accordingly.
-
-
-
 ## 18. Open Items and Build Sequence
 
 ### 18.1 Immediate — Unblock USB
 
 These must happen in order; everything downstream depends on USB working:
 
-1. **Verify enumeration** on Curiosity Nano — confirm device appears as HID composite, check descriptor with USB descriptor viewer tool (e.g. USB Device Tree Viewer on Windows).
-2. **Verify keyboard reports** — confirm keystrokes reach host, modifiers work, 6KRO rollover correct.
-3. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
-4. **Verify consumer report** — confirm media keys reach host on Interface 1.
+1. **Verify keyboard reports** — confirm modifiers work, 6KRO rollover correct.
+2. **Verify LED output report** — confirm Caps Lock LED state arrives via `SET_REPORT`.
+3. **Verify consumer report** — confirm media keys reach host on Interface 1.
 
 ### 18.2 After USB App Firmware is Stable
 
@@ -696,10 +668,8 @@ If moving to an AVR-DU with more than 32 pins, adapt:
 - `gpio.h` — `GPIO_VPORT_READ` note: verify VPORT availability on new pincount variant
 - `fuses.c` — verify fuse constants still match new device header
 
-If moving to an AVR-DU with more flase or more SRAM, adapt:
+If moving to an AVR-DU with more flash or more SRAM, adapt:
 
-- `KeyDU.App.ld` — `ORIGIN`/`LENGTH` for `flash` and `sram`
-- `KeyDU.BL.ld` — same
 - `fuses.c` — `BOOTSIZE`, `CODESIZE` (flash partition sizes)
 - `flash.h` / `flash.c` — `APP_START`, `FLMAP_SECTION1_ADDR`, `flmap_set()` (FLMAP logic changes if flash exceeds 64KB or sections shift; more sections may be needed)
 - `usb_vendor.h` — `APP_START`, `PAGE_SIZE` if the new device differs
@@ -711,8 +681,6 @@ If you want KeyDU.BL (bootloader) to be larger than 8KB (say 10KB). It's a parti
 
 **Flash partition and linker**
 
-- `KeyDU.BL.ld` — `LENGTH` of flash region (8K → 10K)
-- `KeyDU.App.ld` — `ORIGIN` of flash region (0x2000 → 0x2800), `LENGTH` reduced by 2K
 - `fuses.c` — `BOOTSIZE` value (0x10 → 0x14, i.e. 20 × 512B pages)
 
 ---
