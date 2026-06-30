@@ -19,7 +19,7 @@
 
 #define LED_BRIGHTNESS_MIN      0
 #define LED_BRIGHTNESS_MAX      255
-#define LED_BRIGHTNESS_DEFAULT  128      // 50% on power-up
+#define LED_BRIGHTNESS_DEFAULT  64       // 25% on power-up
 #define LED_BRIGHTNESS_STEP     16       // ~6% per encoder click
 #define LED_BRIGHTNESS_DELTA    48       // Per-layer brightness offset
 
@@ -30,6 +30,7 @@ void led_init(void);
 void led_set(uint8_t brightness);
 void led_step(bool dir, uint8_t step);
 void led_update_layer(uint8_t layer);
+void led_apply_host_report(uint8_t led_report);  /* bit0=NumLock→LED A full, bit1=CapsLock→LED B full */
 void led_off(void);
 void led_on(void);
 

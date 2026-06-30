@@ -90,3 +90,14 @@ void led_on(void)
   led_write(led_level_a, led_level_b);
   TCA0.SPLIT.CTRLB |= TCA_SPLIT_HCMP1EN_bm | TCA_SPLIT_HCMP2EN_bm;
 }
+
+/* Called once per 1 kHz tick after led_update_layer() has set led_level_a/b.
+   Reads those layer-feedback values and overrides with full brightness for any
+   active host lock LED, without disturbing the stored brightness state. */
+void led_apply_host_report(uint8_t led_report)
+{ uint8_t a = led_level_a;
+  uint8_t b = led_level_b;
+  if(led_report & 0x01u) a = LED_BRIGHTNESS_MAX;   /* Num Lock  → LED A full */
+  if(led_report & 0x02u) b = LED_BRIGHTNESS_MAX;   /* Caps Lock → LED B full */
+  if(led_enabled) led_write(a, b);
+}

@@ -258,6 +258,9 @@ void keyboard_task(void)
 
   /* 5. LED layer feedback. */
   led_update_layer(current_layer);
+
+  /* 6. Apply host LED report (Num Lock → LED A full, Caps Lock → LED B full). */
+  led_apply_host_report(hid_get_led_report());
 }
 
 /* ============================================================================
