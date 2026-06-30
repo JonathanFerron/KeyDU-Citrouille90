@@ -3,11 +3,22 @@
 // ============================================================================
 
 #include "led.h"
+#include <avr/pgmspace.h>
 
-uint8_t led_brightness = LED_BRIGHTNESS_DEFAULT;
-static uint8_t led_level_a    = LED_BRIGHTNESS_DEFAULT;
-static uint8_t led_level_b    = LED_BRIGHTNESS_DEFAULT;
-bool    led_enabled    = true;
+/* Perceptual brightness table: I_n = round(8 * 1.162^n), n=0..23, with index 0 = off.
+   Weber fraction k=0.162 → each step is ~1.2× JND at all brightness levels.
+   Index 19→20 (120→140) = 20 PWM step at mid-range. */
+static const uint8_t led_table[LED_TABLE_SIZE] PROGMEM = {
+  0,
+  8,   9,  11,  13,  15,  17,  20,  23,  27,
+ 31,  36,  42,  49,  57,  66,  77,  89, 103,
+120, 140, 162, 189, 219, 255
+};
+
+static uint8_t led_index   = LED_INDEX_DEFAULT;
+static uint8_t led_level_a;
+static uint8_t led_level_b;
+bool           led_enabled = true;
 
 static void led_write(uint8_t a, uint8_t b)
 { TCA0.SPLIT.HCMP1 = a;  // PA4 / WO4 — takes effect at next HCNT underflow
@@ -25,7 +36,9 @@ void led_init(void)
 
   TCA0.SPLIT.HPER = LED_BRIGHTNESS_MAX;  // 8-bit period for high counter
 
-  led_write(led_brightness, led_brightness);
+  led_level_a = pgm_read_byte(&led_table[led_index]);
+  led_level_b = led_level_a;
+  led_write(led_level_a, led_level_b);
 
   TCA0.SPLIT.CTRLB = TCA_SPLIT_HCMP1EN_bm | TCA_SPLIT_HCMP2EN_bm;
 
@@ -33,47 +46,45 @@ void led_init(void)
   TCA0.SPLIT.CTRLA = TCA_SPLIT_CLKSEL_DIV64_gc | TCA_SPLIT_ENABLE_bm;
 }
 
-void led_set(uint8_t brightness)
-{ led_brightness = brightness;
-  led_level_a    = brightness;
-  led_level_b    = brightness;
+void led_set(uint8_t index)
+{ if(index >= LED_TABLE_SIZE) index = LED_TABLE_SIZE - 1;
+  led_index   = index;
+  led_level_a = pgm_read_byte(&led_table[led_index]);
+  led_level_b = led_level_a;
   if(led_enabled) led_write(led_level_a, led_level_b);
 }
 
-void led_step(bool dir, uint8_t step)
+void led_step(bool dir)
 { if(dir)
-  { led_brightness = (led_brightness > LED_BRIGHTNESS_MAX - step)
-                     ? LED_BRIGHTNESS_MAX
-                     : led_brightness + step;
+  { if(led_index < LED_TABLE_SIZE - 1) led_index++;
   }
   else
-  { led_brightness = (led_brightness < LED_BRIGHTNESS_MIN + step)
-                     ? LED_BRIGHTNESS_MIN
-                     : led_brightness - step;
+  { if(led_index > 0) led_index--;
   }
-
-  led_level_a = led_brightness;
-  led_level_b = led_brightness;
+  led_level_a = pgm_read_byte(&led_table[led_index]);
+  led_level_b = led_level_a;
   if(led_enabled) led_write(led_level_a, led_level_b);
 }
 
 void led_update_layer(uint8_t layer)
-{ uint16_t v;
+{ uint8_t base  = pgm_read_byte(&led_table[led_index]);
+  uint8_t bi    = (led_index + LED_DELTA_STEPS < LED_TABLE_SIZE)
+                  ? led_index + LED_DELTA_STEPS
+                  : LED_TABLE_SIZE - 1;
+  uint8_t boost = pgm_read_byte(&led_table[bi]);
 
   switch(layer)
   { case 0:
-      led_level_a = led_brightness;
-      led_level_b = led_brightness;
+      led_level_a = base;
+      led_level_b = base;
       break;
     case 1:
-      v = (uint16_t)led_brightness + LED_BRIGHTNESS_DELTA;
-      led_level_a = (v > LED_BRIGHTNESS_MAX) ? LED_BRIGHTNESS_MAX : (uint8_t)v;
-      led_level_b = led_brightness;
+      led_level_a = boost;
+      led_level_b = base;
       break;
     default:
-      v = (uint16_t)led_brightness + LED_BRIGHTNESS_DELTA;
-      led_level_a = (v > LED_BRIGHTNESS_MAX) ? LED_BRIGHTNESS_MAX : (uint8_t)v;
-      led_level_b = led_level_a;
+      led_level_a = boost;
+      led_level_b = boost;
       break;
   }
   if(led_enabled) led_write(led_level_a, led_level_b);

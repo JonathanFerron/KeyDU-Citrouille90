@@ -19,16 +19,18 @@
 
 #define LED_BRIGHTNESS_MIN      0
 #define LED_BRIGHTNESS_MAX      255
-#define LED_BRIGHTNESS_DEFAULT  64       // 25% on power-up
-#define LED_BRIGHTNESS_STEP     16       // ~6% per encoder click
-#define LED_BRIGHTNESS_DELTA    48       // Per-layer brightness offset
 
-extern uint8_t led_brightness;
-extern bool    led_enabled;
+/* Perceptual brightness table — 30-entry geometric sequence (ratio 1.133, k=0.133 Weber).
+   Each step is one JND (~16 PWM at mid-range).  Index 0 = off, index 29 = full. */
+#define LED_TABLE_SIZE          25
+#define LED_INDEX_DEFAULT       12   // PWM 42 at power-on
+#define LED_DELTA_STEPS          2   // layer feedback: 2 JND steps up from user base
+
+extern bool led_enabled;
 
 void led_init(void);
-void led_set(uint8_t brightness);
-void led_step(bool dir, uint8_t step);
+void led_set(uint8_t index);
+void led_step(bool dir);
 void led_update_layer(uint8_t layer);
 void led_apply_host_report(uint8_t led_report);  /* bit0=NumLock→LED A full, bit1=CapsLock→LED B full */
 void led_off(void);

@@ -413,3 +413,15 @@ col 0 or col 1 cannot be tested on the CNano — test those on the real PCB.
 5. Look up both pins in the breadboard map above.
 6. Short the column pin to the row pin with a seated jumper wire (hold ≥ 4 ms for
    DEBOUNCE_TICKS=4 to commit).
+
+### Dedicated test switches
+
+Two tactile switches are permanently wired on the breadboard for ad-hoc testing:
+
+| Colour | Physical key | Electrical      | Col pin   | Row pin   | Layer 0 keycode |
+|--------|-------------|-----------------|-----------|-----------|-----------------|
+| Blue   | k01         | row 0 / col 7   | PD6 (R4)  | PD0 (L11) | KC_1            |
+| Black  | k00         | row 0 / col 8   | PD7 (R3)  | PD0 (L11) | KC_ESC          |
+
+Both switches share the same row wire (PD0 / L11); only the column wire differs.
+To repurpose them temporarily, edit layer 0 k00/k01 in `keymap.c`.

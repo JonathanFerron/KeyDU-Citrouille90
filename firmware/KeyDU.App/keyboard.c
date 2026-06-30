@@ -282,10 +282,10 @@ static void process_key_press(uint8_t row, uint8_t col)
   if (IS_LED_KEY(keycode))
   { switch (keycode)
     { case LD_BRIU:
-        led_step(true,  LED_BRIGHTNESS_STEP);
+        led_step(true);
         break;
       case LD_BRID:
-        led_step(false, LED_BRIGHTNESS_STEP);
+        led_step(false);
         break;
       default:
         break;
