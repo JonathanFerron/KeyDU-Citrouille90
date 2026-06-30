@@ -718,14 +718,12 @@ The three ISR responsibilities are:
 ### 18.1 Remaining verification
 
 1. **Verify LED output report** — confirm Caps Lock/Num Lock LED state arrives via `SET_REPORT` and EP1 OUT. Test on real Citrouille90 PCB (CNano LED on PF2 conflicts with col 2).
-2. **Verify consumer report** — confirm media keys (CC_MPLY, CC_VOLU, etc.) reach the host on Interface 1.
 
-*Keyboard reports (basic keypresses, modifiers, 6KRO rollover) confirmed working. Bootloader entry via SYS_BOOT confirmed working.*
+*Keyboard reports (basic keypresses, modifiers, 6KRO rollover) confirmed working. Bootloader entry via SYS_BOOT confirmed working. Consumer reports (CC_VOLU / CC_VOLD) confirmed working on CNano breadboard — Interface 1, EP2 IN, cc_to_hid_usage() lookup, and Linux HID driver all verified June 2026.*
 
 ### 18.2 Near-term
 
 1. **SOF phase lock** — TCB0 fires 800 µs after prior SOF (200 µs before next); scan completes; report is in queue by SOF. See §11.6 for design. USB stack and basic reporting are stable — this is ready to attempt.
-2. **Extend consumer/system keycodes** — see To Dos item 9 for full details.
 
 ### 18.3 Deferred (Post-v1)
 

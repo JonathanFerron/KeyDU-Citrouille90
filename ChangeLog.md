@@ -1,5 +1,14 @@
 # Citrouille90 — ChangeLog
 
+## 8. Consumer report pipeline — verified on CNano breadboard (June 2026)
+
+CC_VOLU and CC_VOLD temporarily mapped to layer-0 k00/k01 (ESC/1 positions,
+elec row 0 col 8/7, breadboard L11×R3 and L11×R4). Tested with two push buttons.
+Linux volume changed immediately on press and released on release. Confirms:
+Interface 1 descriptor, EP2 IN data path, cc_to_hid_usage() PROGMEM lookup,
+and the Linux HID driver all working end-to-end. Keymap reverted after test
+(CC_VOLU/CC_VOLD remain on layer 1 at k14/k15 = R/T keys).
+
 ## 1. hid_flush()-in-SOF-ISR vs EP0 Control Transfer Race
 
 hid_flush() was called from usb_event_sof(), which runs inside USB0_BUSEVENT_vect.
