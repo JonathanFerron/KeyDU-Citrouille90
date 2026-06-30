@@ -717,9 +717,12 @@ The three ISR responsibilities are:
 
 ### 18.1 Remaining verification
 
-1. **Verify LED output report** — confirm Caps Lock/Num Lock LED state arrives via `SET_REPORT` and EP1 OUT. Test on real Citrouille90 PCB (CNano LED on PF2 conflicts with col 2).
+All planned verification complete. Confirmed working:
 
-*Keyboard reports (basic keypresses, modifiers, 6KRO rollover) confirmed working. Bootloader entry via SYS_BOOT confirmed working. Consumer reports (CC_VOLU / CC_VOLD) confirmed working on CNano breadboard — Interface 1, EP2 IN, cc_to_hid_usage() lookup, and Linux HID driver all verified June 2026.*
+- Keyboard reports (keypresses, modifiers, 6KRO rollover)
+- Bootloader entry via SYS_BOOT
+- Consumer reports — Interface 1, EP2 IN, cc_to_hid_usage() lookup (June 2026, CNano breadboard)
+- LED output report — Caps Lock / Num Lock SET_REPORT path drives LED PWM; verified with xset q and visible LED change (June 2026, CNano breadboard with external LEDs on PA4/PA5)
 
 ### 18.2 Near-term
 

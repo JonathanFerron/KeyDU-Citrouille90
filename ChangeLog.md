@@ -1,5 +1,18 @@
 # Citrouille90 — ChangeLog
 
+## 9. LED output report — implemented and verified on CNano breadboard (June 2026)
+
+led_apply_host_report() added to led.c: reads the host LED report from
+hid_get_led_report() and overrides LED A (Num Lock, PA4/R9) or LED B
+(Caps Lock, PA5/R8) to full brightness on top of normal layer feedback.
+Called once per 1 kHz tick in keyboard_task() after led_update_layer().
+
+Tested with external LEDs (yellow on R9, white on R8) and KC_CAPS /
+KC_NLCK mapped to k00/k01 (L11×R3, L11×R4). xset q and visible LED
+brightness change both confirmed for each lock key, individually and
+in combination. Both SET_REPORT (EP0) and EP1 OUT paths share the same
+s_led_report store — both implicitly verified.
+
 ## 8. Consumer report pipeline — verified on CNano breadboard (June 2026)
 
 CC_VOLU and CC_VOLD temporarily mapped to layer-0 k00/k01 (ESC/1 positions,
