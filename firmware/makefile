@@ -110,7 +110,7 @@ APP_C_SRC = \
 APP_S_SRC = \
     avrducore/ccp.S
 
-APP_CFLAGS  = $(COMMON_CFLAGS) $(APP_INC) -DEP_TABLE_COUNT=3   # EP0 + EP1 kbd + EP2 consumer; update to 6 for v2
+APP_CFLAGS  = $(COMMON_CFLAGS) $(APP_INC) -DEP_TABLE_COUNT=3 -MMD -MP   # EP0 + EP1 kbd + EP2 consumer; update to 6 for v2
 APP_ASFLAGS = $(COMMON_ASFLAGS) $(APP_INC)
 APP_LDFLAGS = $(COMMON_LDFLAGS) -Wl,--section-start=.text=0x2000
 
@@ -144,7 +144,7 @@ BL_C_SRC = \
 BL_S_SRC = \
     avrducore/ccp.S
 
-BL_CFLAGS  = $(COMMON_CFLAGS) $(BL_INC) -DEP_TABLE_COUNT=1   # EP0 only; DFU BL will also need only 1
+BL_CFLAGS  = $(COMMON_CFLAGS) $(BL_INC) -DEP_TABLE_COUNT=1 -MMD -MP   # EP0 only; DFU BL will also need only 1
 BL_ASFLAGS = $(COMMON_ASFLAGS) $(BL_INC)
 BL_LDFLAGS = $(COMMON_LDFLAGS)
 
@@ -153,6 +153,11 @@ BL_S_OBJ = $(patsubst %.S,  $(BL_OUT)/%.o, $(BL_S_SRC))
 BL_OBJ   = $(BL_C_OBJ) $(BL_S_OBJ)
 
 MERGED_HEX = $(BUILD)/KeyDU.merged.hex
+
+# Include GCC-generated header dependency files (-MMD -MP).
+# The leading dash silently skips missing files (first build, after make clean).
+-include $(APP_C_OBJ:.o=.d)
+-include $(BL_C_OBJ:.o=.d)
 
 # =============================================================================
 # Top-level targets

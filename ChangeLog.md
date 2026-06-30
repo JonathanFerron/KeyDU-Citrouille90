@@ -1,5 +1,18 @@
 # Citrouille90 — ChangeLog
 
+## 10. LED brightness control — verified on CNano breadboard (June 2026)
+
+LD_BRIU / LD_BRID mapped to layer-0 k00/k01 (L11×R3, L11×R4) for testing.
+External LEDs (385 Ω / 383 Ω, targeting 7.5 mA) on PA4 (R9) and PA5 (R8).
+led_step() confirmed: 4 presses down from default 64 reach 0 (off), steps
+of 16 each. LED_BRIGHTNESS_DEFAULT changed from 128 to 64 (25% duty cycle).
+Keymap reverted after test.
+
+Also fixed: makefile lacked header dependency tracking — led.o was not
+recompiled when led.h changed (LED_BRIGHTNESS_DEFAULT appeared stuck at 128).
+Added -MMD -MP to APP_CFLAGS and BL_CFLAGS; added -include of generated .d
+files. Future header changes now automatically trigger correct recompilation.
+
 ## 9. LED output report — implemented and verified on CNano breadboard (June 2026)
 
 led_apply_host_report() added to led.c: reads the host LED report from
