@@ -150,13 +150,24 @@
 // Prefix: CC_ (Consumer Control)
 // ============================================================================
 #define CC_BASE         0x0100
-#define CC_MUTE         (CC_BASE | 0x01)
+#define CC_MUTE         (CC_BASE | 0x01)  // Mute
 #define CC_VOLU         (CC_BASE | 0x02)  // Volume Up
 #define CC_VOLD         (CC_BASE | 0x03)  // Volume Down
-#define CC_MNXT         (CC_BASE | 0x04)  // Next track
-#define CC_MPRV         (CC_BASE | 0x05)  // Previous track
+#define CC_MNXT         (CC_BASE | 0x04)  // Next Track
+#define CC_MPRV         (CC_BASE | 0x05)  // Previous Track
 #define CC_MPLY         (CC_BASE | 0x06)  // Play/Pause
 #define CC_MSTP         (CC_BASE | 0x07)  // Stop
+#define CC_MSEL         (CC_BASE | 0x08)  // Media Select
+#define CC_MAIL         (CC_BASE | 0x09)  // Launch Mail
+#define CC_CALC         (CC_BASE | 0x0A)  // Launch Calculator
+#define CC_MYPC         (CC_BASE | 0x0B)  // My Computer
+#define CC_WSCH         (CC_BASE | 0x0C)  // WWW Search
+#define CC_WHOM         (CC_BASE | 0x0D)  // WWW Home
+#define CC_WBAK         (CC_BASE | 0x0E)  // WWW Back
+#define CC_WFWD         (CC_BASE | 0x0F)  // WWW Forward
+#define CC_WSTP         (CC_BASE | 0x10)  // WWW Stop
+#define CC_WRFR         (CC_BASE | 0x11)  // WWW Refresh
+#define CC_WFAV         (CC_BASE | 0x12)  // WWW Favorites
 
 // ============================================================================
 // Layer switching keys - Range 0x0200-0x02FF
@@ -195,6 +206,7 @@
 #define SYS_BASE        0x0500
 #define SYS_RST         (SYS_BASE | 0x01)  // Soft reset
 #define SYS_BOOT        (SYS_BASE | 0x02)  // Enter bootloader
+#define SYS_SLEEP       (SYS_BASE | 0x03)  // System Sleep (GD page 0x01, usage 0x82)
 
 // Compose Keys - Range 0x0600 - 0x06FF
 // Prefit: CP_ (ComPose)

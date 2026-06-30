@@ -79,6 +79,17 @@ static const cc_usage_entry_t cc_usage_table[] PROGMEM =
   { 0x05, 0x00B6 },   /* CC_MPRV  — Scan Prev Track   */
   { 0x06, 0x00CD },   /* CC_MPLY  — Play/Pause        */
   { 0x07, 0x00B7 },   /* CC_MSTP  — Stop              */
+  { 0x08, 0x0183 },   /* CC_MSEL  — Media Select      */
+  { 0x09, 0x018A },   /* CC_MAIL  — Launch Mail       */
+  { 0x0A, 0x0192 },   /* CC_CALC  — Launch Calculator */
+  { 0x0B, 0x0194 },   /* CC_MYPC  — My Computer       */
+  { 0x0C, 0x0221 },   /* CC_WSCH  — WWW Search        */
+  { 0x0D, 0x0223 },   /* CC_WHOM  — WWW Home          */
+  { 0x0E, 0x0224 },   /* CC_WBAK  — WWW Back          */
+  { 0x0F, 0x0225 },   /* CC_WFWD  — WWW Forward       */
+  { 0x10, 0x0226 },   /* CC_WSTP  — WWW Stop          */
+  { 0x11, 0x0227 },   /* CC_WRFR  — WWW Refresh       */
+  { 0x12, 0x022A },   /* CC_WFAV  — WWW Favorites     */
 };
 
 #define CC_TABLE_LEN  (sizeof(cc_usage_table) / sizeof(cc_usage_table[0]))
@@ -293,6 +304,11 @@ static void process_key_press(uint8_t row, uint8_t col)
         ccp_write_ioreg((void*)&RSTCTRL.SWRR, RSTCTRL_SWRST_bm);
         while (1);
         break;
+      case SYS_SLEEP:
+        s_con_report.system |= 0x01u;
+        hid_consumer_stage(&s_con_report);
+        track_pressed_key(row, col, keycode);
+        break;
       default:
         break;
     }
@@ -349,6 +365,18 @@ static void process_key_release(uint8_t row, uint8_t col)
 
   if(IS_CONSUMER_KEY(keycode))
   { kbd_consumer_clear();
+    return;
+  }
+
+  if(IS_SYSTEM_KEY(keycode))
+  { switch(keycode)
+    { case SYS_SLEEP:
+        s_con_report.system &= ~0x01u;
+        hid_consumer_stage(&s_con_report);
+        break;
+      default:
+        break;
+    }
     return;
   }
 
