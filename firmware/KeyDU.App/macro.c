@@ -58,9 +58,9 @@ static void release_key(uint8_t kc)
    Sends a clean report at the end to release any keys left pressed by
    a malformed or truncated sequence.
 
-   MACRO_ACTION_WAIT uses a spin loop (~1 ms per count at 24 MHz).
-   kbd_stage_wait() in usb_hid.h is the proper non-blocking replacement —
-   only the MACRO_ACTION_WAIT case body below needs updating.
+   MACRO_ACTION_WAIT enqueues a KBD_QUEUE_WAIT sentinel via kbd_stage_wait()
+   (usb_hid.h) — non-blocking; the delay is realised later as hid_flush()
+   drains the queue, one SOF tick per count.
 */
 
 #define MAX_MACRO_STEPS  32u
@@ -88,11 +88,7 @@ static void __attribute__((unused)) run_macro_sequence(const macro_action_t* seq
         break;
 
       case MACRO_ACTION_WAIT:
-        /* Busy-wait — replace with kbd_stage_wait(action.keycode). */
-        for(volatile uint8_t w = action.keycode; w; w--)
-        { /* spin ~1 ms per count at 24 MHz */
-          for(volatile uint16_t d = 0; d < 2400u; d++) {}
-        }
+        kbd_stage_wait(action.keycode);
         break;
 
       case MACRO_ACTION_END:

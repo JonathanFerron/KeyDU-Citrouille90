@@ -57,6 +57,16 @@ Bare-metal AVR64DU32 USB keyboard firmware. Two build targets sharing common per
 
 ---
 
+## To Dos.md / ChangeLog.md workflow
+
+`To Dos.md` (repo root) tracks pending work. `ChangeLog.md` (repo root) records completed
+work with root-cause and verification detail, newest entry first, numbered continuing up
+from the previous highest number. When a to-do item is completed: remove it from
+`To Dos.md` and add a new top entry in `ChangeLog.md` describing what changed and why —
+do not leave a "done" marker inside `To Dos.md`.
+
+---
+
 ## Build commands (run from `firmware/`)
 
 ```bash

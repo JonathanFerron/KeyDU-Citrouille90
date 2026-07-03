@@ -1,5 +1,18 @@
 # Citrouille90 — ChangeLog
 
+## 11. MACRO_ACTION_WAIT busy-wait replaced with kbd_stage_wait() (July 2026)
+
+The MACRO_ACTION_WAIT case in run_macro_sequence() (macro.c) used a busy-wait spin loop
+(~1 ms per count at 24 MHz) to implement macro delays. Replaced with a call to
+kbd_stage_wait(action.keycode), which enqueues a KBD_QUEUE_WAIT sentinel into the existing
+non-blocking HID report queue (usb_hid.c/.h) — the delay is now realised later as
+hid_flush() drains the queue, one SOF tick per count, instead of blocking the scan loop.
+
+Note: this path is currently dead code. run_macro_sequence() is still
+`__attribute__((unused))`, and its only callers (the MC_XL_* cases in execute_macro())
+are commented out, with no keymap entries referencing them. The fix is correct and in
+place, but not yet exercised at runtime until a sequence macro is wired into the keymap.
+
 ## 10. LED brightness control — verified on CNano breadboard (June 2026)
 
 LD_BRIU / LD_BRID mapped to layer-0 k00/k01 (L11×R3, L11×R4) for testing.

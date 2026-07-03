@@ -5,11 +5,6 @@
 
 ## Next steps:
 
-1. Replace MACRO_ACTION_WAIT busy-wait in macro.c with kbd_stage_wait()
-   Infrastructure is ready: kbd_stage_wait() is declared in usb_hid.h and implemented in usb_hid.c.
-   Only the MACRO_ACTION_WAIT case body in run_macro_sequence() needs updating — replace the
-   spin loop with kbd_stage_wait(action.keycode).
-
 2. Sleep mode — enable AVR IDLE sleep in the main loop. The structure is already staged:
    - app_main.c lines 62–63: sleep_enable() + set_sleep_mode(SLEEP_MODE_IDLE)
    - app_main.c line 99: sleep_cpu() call (commented out)
