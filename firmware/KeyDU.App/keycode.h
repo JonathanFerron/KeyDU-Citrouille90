@@ -121,6 +121,8 @@
 #define KC_P9           0x61  // Keypad 9
 #define KC_P0           0x62  // Keypad 0
 #define KC_PDOT         0x63  // Keypad .
+#define KC_NUBS         0x64  // Non-US \ and | (ISO key between LShift and Z; <LSGT> in XKB)
+#define KC_APP          0x65  // Application / Menu key
 
 // Modifiers
 #define KC_LCTL         0xE0  // Left Control
