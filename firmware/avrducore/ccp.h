@@ -23,7 +23,7 @@
    The only caveat: if an ISR could modify the same register between your read and the CCP write, disable interrupts around the pair.
    For `CPUINT.CTRLA` that's typically not a concern (you're usually doing this before `sei()` anyway), but it's worth keeping in mind for registers touched by ISRs.
 
-   */
+*/
 extern void ccp_write_io(void* addr, uint8_t magic, uint8_t value);
 
 static inline void ccp_write_ioreg(void* addr, uint8_t value)

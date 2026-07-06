@@ -5,13 +5,12 @@
 
 ## Next steps:
 
-4. Stale Report on USB Resume (Phantom Keypresses)
-   When the device resumes from USB suspend, the current HID report buffers still hold
-   whatever state was staged before suspend. If a key was held at suspend time the host will
-   see it as newly pressed on resume, producing a phantom keypress. The fix is to flush the
-   kbd_queue (reset head/tail to 0) and zero s_con_buf (bumping s_con_seq) inside
-   usb_event_wakeup() in usb_hid.c, then call hid_flush() immediately to push a clean zero
-   report before the first real report arrives.
+4. Verify the USB suspend/resume fix (ChangeLog #13) on real hardware.
+   Build-verified only so far (`make merged`, no warnings). Needs an actual USB
+   selective-suspend/resume cycle on the CNano or real PCB — e.g. hold a key, force the host
+   to suspend the device (Linux: `echo suspend > /sys/bus/usb/devices/<dev>/power/level` or
+   let the host idle-suspend it), then resume and confirm no phantom keypress/release is seen
+   by the host (`evtest` or similar) and normal typing resumes cleanly afterward.
 
 5. Get flashing to work from KeyDU.BL using the vendor protocol and custom host side program (libusb supported)
 

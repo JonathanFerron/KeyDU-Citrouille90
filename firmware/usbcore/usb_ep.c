@@ -16,7 +16,7 @@ volatile uint8_t usb_ep_trncompl_out = 0;
 /* --- Status register RMW helpers --- */
 
 static inline void ep_status_clr(uint8_t bits)
-{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm){}
+{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm) {}
 
   if(usb_ep_selected & EP_DIR_IN)
     USB0.STATUS[usb_ep_selected & EP_NUM_MASK].INCLR  = bits;
@@ -25,7 +25,7 @@ static inline void ep_status_clr(uint8_t bits)
 }
 
 static inline void ep_status_set(uint8_t bits)
-{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm){}
+{ while(USB0.INTFLAGSB & USB_RMWBUSY_bm) {}
 
   if(usb_ep_selected & EP_DIR_IN)
     USB0.STATUS[usb_ep_selected & EP_NUM_MASK].INSET  = bits;
@@ -123,8 +123,7 @@ bool ep_configure_table(const ep_table_entry_t* table, uint8_t count)
 }
 
 void ep_clear_all(void)
-{
-  ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
+{ ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
   for(uint8_t i = 0; i < EP_TABLE_COUNT; i++)
   { tbl->endpoints[i].IN.CTRL  = 0;
     tbl->endpoints[i].OUT.CTRL = 0;
@@ -173,7 +172,7 @@ bool ep_setup_received(void)
 { ep_select((uint8_t)(usb_ep_selected & ~EP_DIR_IN));
 
   /* DIAGNOSTIC — latch LED solid-ON the first time each condition is seen.
-   *  Read by eye: if LED comes on and stays on, that condition fired. */
+      Read by eye: if LED comes on and stays on, that condition fired. */
   // if(USB0.INTFLAGSB & USB_SETUP_bm)
   // { PORTF.OUTCLR = PIN2_bm;        /* LED ON (Cnano LED is active-low) — SETUP via INTFLAGSB */
   //   for(;;) { }                    /* freeze so we know exactly which path hit */

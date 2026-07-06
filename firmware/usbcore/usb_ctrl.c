@@ -269,20 +269,20 @@ void usb_ctrl_poll(void)
   if(ep_setup_received())
   { /* Longer pulse — about 60 ms */
     /*
-    PORTF.OUTTGL = (1 << 2);
-    for(volatile uint32_t d = 0; d < 240000UL; d++) {}
-    PORTF.OUTTGL = (1 << 2);
-    for(volatile uint32_t d = 0; d < 240000UL; d++) {}
+      PORTF.OUTTGL = (1 << 2);
+      for(volatile uint32_t d = 0; d < 240000UL; d++) {}
+      PORTF.OUTTGL = (1 << 2);
+      for(volatile uint32_t d = 0; d < 240000UL; d++) {}
     */
     usb_process_ctrl_request();
   }
 
   /* Short pulse — about 30 ms */
   /*
-  PORTF.OUTTGL = (1 << 2);
-  for(volatile uint32_t d = 0; d < 120000UL; d++) {}
-  PORTF.OUTTGL = (1 << 2);
-  for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+    PORTF.OUTTGL = (1 << 2);
+    for(volatile uint32_t d = 0; d < 120000UL; d++) {}
+    PORTF.OUTTGL = (1 << 2);
+    for(volatile uint32_t d = 0; d < 120000UL; d++) {}
   */
 
   ep_select(saved);
@@ -357,7 +357,7 @@ void usb_reset_interface(void)
   /* Reset: disable then re-enable the controller */
   USB0.CTRLA &= ~USB_ENABLE_bm;
   USB0.CTRLA |=  USB_ENABLE_bm;
-  while (!(CLKCTRL.USBPLLSTATUS & CLKCTRL_PLLS_bm));  /* wait for USB PLL to lock */
+  while(!(CLKCTRL.USBPLLSTATUS & CLKCTRL_PLLS_bm));   /* wait for USB PLL to lock */
   usb_init_device();
 }
 
@@ -413,16 +413,15 @@ ISR(USB0_BUSEVENT_vect)
 
 
 ISR(USB0_TRNCOMPL_vect)
-{
-  ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
+{ ep_hw_table_t* tbl = (ep_hw_table_t*)usb_ep_table;      /* was (ep_hw_table_t*)USB0.EPPTR */
 
   /* Read FIFORP exactly once — hardware auto-manages FIFORP advancement.
-   *      Do NOT write back to USB0.FIFORP. Process one entry per invocation;
-   *      hardware re-asserts TRNCOMPL if FIFOWP != FIFORP after advancement. */
+          Do NOT write back to USB0.FIFORP. Process one entry per invocation;
+          hardware re-asserts TRNCOMPL if FIFOWP != FIFORP after advancement. */
   uint8_t rp = USB0.FIFORP;
 
   if(USB0.FIFOWP != rp)
-  {   uint8_t entry  = tbl->fifo[rp & 0x1Fu];
+  { uint8_t entry  = tbl->fifo[rp & 0x1Fu];
     uint8_t ep_num = (uint8_t)((entry & USB_EPNUM_gm) >> USB_EPNUM_gp);
     if(entry & USB_DIR_bm)
       usb_ep_trncompl_in  |= (uint8_t)(1u << ep_num);

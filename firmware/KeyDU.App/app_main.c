@@ -29,8 +29,7 @@
 static volatile uint8_t s_tick_flag;
 
 ISR(TCB0_INT_vect)
-{
-  s_tick_flag++; // Increment instead of setting to 1, for debugging only
+{ s_tick_flag++; // Increment instead of setting to 1, for debugging only
   TCB0.INTFLAGS = TCB_CAPT_bm;    /* clear interrupt flag */
 
 } // ISR TCB0
@@ -45,12 +44,12 @@ int main(void)
 { wdt_disable();
 
   /* clock_init() MUST be first: sets MCLKTIMEBASE=24, required by USB
-   a nd TCA0 PWM.  TCB0 CCMP is also computed from *F_CPU so the clock
-   must be stable before the timer is configured.  */
+    a nd TCA0 PWM.  TCB0 CCMP is also computed from *F_CPU so the clock
+    must be stable before the timer is configured.  */
   clock_init();
 
   /* TCB0: periodic interrupt, 1 ms period, CLK_PER (24 MHz), no prescaler.
-   CCMP = (F_CPU / 1000) - 1 = 23999.             *                    */
+    CCMP = (F_CPU / 1000) - 1 = 23999.             *                    */
   TCB0.CCMP    = (F_CPU / 1000UL) - 1;
   TCB0.INTCTRL = TCB_CAPT_bm;
   TCB0.CTRLA   = TCB_CLKSEL_DIV1_gc | TCB_ENABLE_bm;
@@ -74,8 +73,7 @@ int main(void)
 
 
     if(s_tick_flag)
-    {
-      s_tick_flag = 0;
+    { s_tick_flag = 0;
 
       keyboard_task();
 

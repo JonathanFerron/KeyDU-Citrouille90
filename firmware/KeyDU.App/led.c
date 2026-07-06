@@ -8,11 +8,11 @@
 /* Perceptual brightness table: I_n = round(8 * 1.162^n), n=0..23, with index 0 = off.
    Weber fraction k=0.162 → each step is ~1.2× JND at all brightness levels.
    Index 19→20 (120→140) = 20 PWM step at mid-range. */
-static const uint8_t led_table[LED_TABLE_SIZE] PROGMEM = {
-  0,
+static const uint8_t led_table[LED_TABLE_SIZE] PROGMEM =
+{ 0,
   8,   9,  11,  13,  15,  17,  20,  23,  27,
- 31,  36,  42,  49,  57,  66,  77,  89, 103,
-120, 140, 162, 189, 219, 255
+  31,  36,  42,  49,  57,  66,  77,  89, 103,
+  120, 140, 162, 189, 219, 255
 };
 
 static uint8_t led_index   = LED_INDEX_DEFAULT;

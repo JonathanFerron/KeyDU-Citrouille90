@@ -40,6 +40,13 @@ volatile uint8_t   kbd_queue_tail = 0;
 static volatile uint8_t       s_con_seq;
 static hid_consumer_report_t  s_con_buf;
 
+/* Set by usb_event_wakeup() (ISR context), consumed by hid_flush() (main
+   loop). kbd_queue_head/tail are single-writer (hid_flush()/kbd_stage()
+   respectively) by design — an ISR resetting them directly could tear a
+   flush_kbd() call already in progress. Deferring the reset to hid_flush()
+   keeps that invariant intact. */
+static volatile bool s_wakeup_pending;
+
 /* ════════════════════════════════════════════════════════════════════════
     hid_configure — call from usb_event_config_changed()
    ════════════════════════════════════════════════════════════════════════ */
@@ -161,11 +168,52 @@ static void poll_led_out(void)
   ep_clear_out();
 }
 
+/* Discards state staged before/during suspend and forces one clean zero
+   report to the front of kbd_queue, so the host's first post-resume report
+   is a known-good release rather than whatever was staged before the bus
+   went idle. Runs in main-loop context only — see s_wakeup_pending. */
+static void handle_wakeup(void)
+{ if(!s_wakeup_pending) return;
+  s_wakeup_pending = false;
+
+  kbd_queue_head = 0;
+  kbd_queue_tail = 0;
+  kbd_queue_entry_t zero_entry;
+  zero_entry.type = KBD_QUEUE_REPORT;
+  memset(&zero_entry.report, 0, sizeof(zero_entry.report));
+  kbd_enqueue(&zero_entry);
+
+  /* Consumer report has no queue, just a seqlock-protected back-buffer —
+     same staleness risk as kbd_queue applies to whatever was staged there
+     before suspend, so clear it the same way flush_consumer() reads it:
+     bump seq odd, overwrite, bump seq even. flush_consumer() always sends
+     the current buffer (no change-detection), so this zeroed report goes
+     out on the next hid_flush() the same as a fresh KBD_QUEUE_REPORT. */
+  s_con_seq++;
+  USB_MEMORY_BARRIER();
+  memset(&s_con_buf, 0, sizeof(s_con_buf));
+  s_con_buf.report_id = 0x01;
+  USB_MEMORY_BARRIER();
+  s_con_seq++;
+}
+
 void hid_flush(void)
-{ if(usb_device_state != USB_STATE_CONFIGURED) return;
+{ handle_wakeup();
+  if(usb_device_state != USB_STATE_CONFIGURED) return;
   flush_kbd();
   flush_consumer();
   poll_led_out();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+    usb_event_wakeup — overrides weak stub in usb_ctrl.c
+
+    Called from USB0_BUSEVENT_vect on bus resume. Only sets a flag here —
+    see handle_wakeup() for why the actual reset is deferred to hid_flush()
+    in the main loop rather than done inline in this ISR.
+   ════════════════════════════════════════════════════════════════════════ */
+void usb_event_wakeup(void)
+{ s_wakeup_pending = true;
 }
 
 hid_led_report_t hid_get_led_report(void)
@@ -268,21 +316,21 @@ void usb_event_ctrl_request(void)
 } // usb_event_ctrl_request
 
 /* Called from USB0_BUSEVENT_vect once per 1 ms SOF when the bus is active.
- I ntentionally EMPTY for now — but the SOF interrupt is de*liberately left
- ENABLED (usb_sof_enable() in usb_event_config_changed()). This handler is the
- planned integration point for the TCB0/SOF phase-lock: snapshot TCB0.CNT here
- across several frames and nudge TCB0 to fire ~200 us before the next SOF.
+  I ntentionally EMPTY for now — but the SOF interrupt is de*liberately left
+  ENABLED (usb_sof_enable() in usb_event_config_changed()). This handler is the
+  planned integration point for the TCB0/SOF phase-lock: snapshot TCB0.CNT here
+  across several frames and nudge TCB0 to fire ~200 us before the next SOF.
 
- Do NOT remove usb_sof_enable() as a dead-handler cleanup — the empty body is
- expected, not leftover.
+  Do NOT remove usb_sof_enable() as a dead-handler cleanup — the empty body is
+  expected, not leftover.
 
- Do NOT move hid_flush() back into this ISR: ep_select() here clobbers the EP0
- control-transfer globals mid-flight (the enumeration race fixed by moving
- hid_flush() to the main loop). Anything added here must stay off the EP0 path.
+  Do NOT move hid_flush() back into this ISR: ep_select() here clobbers the EP0
+  control-transfer globals mid-flight (the enumeration race fixed by moving
+  hid_flush() to the main loop). Anything added here must stay off the EP0 path.
 
- Caveat for the future phase-lock code: if USB_OPT_BUS_INT_HIGH is ever set,
- this vector runs at LVL1 and the TCB0 ISR can be masked during the CNT read
- window — account for that when sampling TCB0.CNT here. */
+  Caveat for the future phase-lock code: if USB_OPT_BUS_INT_HIGH is ever set,
+  this vector runs at LVL1 and the TCB0 ISR can be masked during the CNT read
+  window — account for that when sampling TCB0.CNT here. */
 void usb_event_sof(void)
 { /* phase-lock hook goes here later */
 }

@@ -29,8 +29,7 @@ ep_ready_result_t ep_write_stream(const void* buf, uint16_t length,
 
 /* --- Control endpoint stream helpers --- */
 ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
-{
-  //PORTF.OUTTGL = PIN2_bm;  // quick pulse
+{ //PORTF.OUTTGL = PIN2_bm;  // quick pulse
   //PORTF.OUTTGL = PIN2_bm;
 
   const uint8_t* p   = (const uint8_t*)buf;
@@ -40,10 +39,9 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
     rem = usb_ctrl_req.w_length;
 
   while(rem)
-  {
-    /* Wait for endpoint ready.
-     *          Iteration 1: BUSNAK=1 from ep_configure_prv → immediate.
-     *          Iteration 2+: hardware sets BUSNAK=1 when MCNT=CNT (batch done). */
+  { /* Wait for endpoint ready.
+                Iteration 1: BUSNAK=1 from ep_configure_prv → immediate.
+                Iteration 2+: hardware sets BUSNAK=1 when MCNT=CNT (batch done). */
     while(!ep_in_ready())
     { if(usb_device_state == USB_STATE_UNATTACHED) return EP_READY_DISCONNECTED;
       if(ep_setup_received())                      return EP_READY_OK;
@@ -55,15 +53,15 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
       usb_ep_fifo->data[i] = pgm_read_byte(p++);
 
     /* Commit: CNT = batch, MCNT = 0.  MULTIPKT sends in BUFSIZE-byte
-     *          sub-packets with auto-toggle until MCNT == CNT, then BUSNAK=1. */
+                sub-packets with auto-toggle until MCNT == CNT, then BUSNAK=1. */
     usb_ep_fifo->position = batch;
     ep_clear_in();
 
     rem -= batch;
     /* Do NOT wait here for batch completion:
-     *          - If rem > 0: next ep_in_ready() call blocks until BUSNAK=1.
-     *          - If rem == 0: ep_complete_ctrl_status() naturally waits for the
-     *            host STATUS ZLP, which only arrives after all IN data is received. */
+                - If rem > 0: next ep_in_ready() call blocks until BUSNAK=1.
+                - If rem == 0: ep_complete_ctrl_status() naturally waits for the
+                  host STATUS ZLP, which only arrives after all IN data is received. */
   }
 
   // led toggle test
@@ -87,8 +85,7 @@ ep_ready_result_t ep_write_ctrl_stream_P(const void* buf, uint16_t length)
 }
 
 ep_ready_result_t ep_write_ctrl_stream(const void* buf, uint16_t length)
-{
-  const uint8_t* p   = (const uint8_t*)buf;
+{ const uint8_t* p   = (const uint8_t*)buf;
   uint16_t       rem = length;
 
   if(rem > usb_ctrl_req.w_length)

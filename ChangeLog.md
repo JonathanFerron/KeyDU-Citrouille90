@@ -1,5 +1,35 @@
 # Citrouille90 — ChangeLog
 
+## 13. Stale HID report on USB resume fixed (July 2026)
+
+`keyboard_task()` runs unconditionally off the TCB0 1 ms tick regardless of `usb_device_state`,
+so matrix scanning and `kbd_stage()` kept enqueueing reports into `kbd_queue` while the bus was
+suspended. `hid_flush()` bails out early whenever `usb_device_state != USB_STATE_CONFIGURED`,
+so none of that backlog drained during suspend. On resume, `hid_flush()` would start draining
+the queue from the head, sending stale pre-suspend key state to the host as if it had just
+happened — a phantom keypress if the physical key state had since changed.
+
+Fixed by adding `usb_event_wakeup()` (overrides the weak stub in `usb_ctrl.c`) in `usb_hid.c`.
+It only sets a `volatile bool s_wakeup_pending` flag — `usb_event_wakeup()` runs inside
+`USB0_BUSEVENT_vect`, the same ISR `usb_event_sof()` documents as unsafe for `hid_flush()`
+(`ep_select()` can clobber an in-flight EP0 control transfer), and `kbd_queue_head`/`tail` are
+single-writer by design (head: `hid_flush()`; tail: `kbd_stage()`), so resetting them directly
+from the ISR could tear a `flush_kbd()` call already in progress on the main loop. The new
+`handle_wakeup()`, called from `hid_flush()` on the main loop, does the actual work when the
+flag is set: resets `kbd_queue` to empty, enqueues one zeroed `KBD_QUEUE_REPORT` so it is the
+very next thing sent, and clears `s_con_buf` through its existing seqlock (bump odd, memset,
+restore `report_id`, bump even) so `flush_consumer()` sends a clean report too. This guarantees
+the host's first post-resume report is a known-good all-zero baseline rather than whatever was
+staged before or during suspend.
+
+Build verified clean via `make merged` (App: 7924 B flash / 1392 B data), no new warnings.
+Not yet verified against an actual USB suspend/resume cycle on hardware — the CNano/host
+selective-suspend test is still pending.
+
+(Unrelated to this fix: this commit also carries `make format`/astyle output on several files
+with pre-existing style drift — `app_main.c`, `keyboard.c`, `led.c`, `bl_main.c`, `ccp.h`,
+`usb_ctrl.c`, `usb_ep.c`, `usb_ep_stream.c` — no logic changes in those files.)
+
 ## 12. MCU IDLE sleep re-enabled in App main loop (July 2026)
 
 Uncommented the staged `set_sleep_mode(SLEEP_MODE_IDLE)` + `sleep_enable()` (app_main.c,
