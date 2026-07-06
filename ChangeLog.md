@@ -1,5 +1,26 @@
 # Citrouille90 — ChangeLog
 
+## 12. MCU IDLE sleep re-enabled in App main loop (July 2026)
+
+Uncommented the staged `set_sleep_mode(SLEEP_MODE_IDLE)` + `sleep_enable()` (app_main.c,
+before the main loop) and `sleep_cpu()` (bottom of `while(1)`, after the tick-gated block).
+This was left commented out pending USB enumeration and HID I/O being proven — both now
+work (device→host keyboard reports, host→device status LEDs), so the sleep path was
+re-enabled and verified.
+
+IDLE sleep only stops the CPU core clock; all peripheral clocks (USB, TCB0, TCA0) keep
+running, so USB enumeration, HID traffic, and PWM are unaffected — this is CPU idle
+between interrupts, not USB suspend. Wake sources are TCB0's 1 ms tick interrupt
+(unconditionally enabled, guarantees a wake within 1 ms so the CPU can never sleep
+indefinitely), USB bus events (enabled unconditionally), and USB SOF (enabled once
+configured). All are LVL0 interrupts, which wake the core from IDLE.
+
+Build verified clean via `make merged` (App: 7828 B flash / 1392 B data). Verified on
+the CNano breadboard: clean enumeration, k00/k01 test switches and status LEDs both
+still working, and correct wake after 30 s idle (blue k01 switch registered KC_1 on
+first press with no dropped or phantom keystroke). Current-draw measurement
+intentionally skipped (would require an inline ammeter on the CNano's USB 5V line).
+
 ## 11. MACRO_ACTION_WAIT busy-wait replaced with kbd_stage_wait() (July 2026)
 
 The MACRO_ACTION_WAIT case in run_macro_sequence() (macro.c) used a busy-wait spin loop

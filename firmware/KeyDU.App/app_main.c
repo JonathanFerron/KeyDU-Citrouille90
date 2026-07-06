@@ -59,8 +59,8 @@ int main(void)
 
   usb_init(USB_OPT_VREG_ENABLE);
 
-  //set_sleep_mode(SLEEP_MODE_IDLE);
-  //sleep_enable();
+  set_sleep_mode(SLEEP_MODE_IDLE);
+  sleep_enable();
 
   sei(); // enable global interrupts
 
@@ -96,7 +96,7 @@ int main(void)
 
 
     } // if(s_tick_flag)
-    //sleep_cpu();    // IDLE: wakes on TCB0, USB SOF, USB bus events
+    sleep_cpu();    // IDLE: wakes on TCB0, USB SOF, USB bus events
   } // while
 
 } // main

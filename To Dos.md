@@ -5,12 +5,6 @@
 
 ## Next steps:
 
-2. Sleep mode — enable AVR IDLE sleep in the main loop. The structure is already staged:
-   - app_main.c lines 62–63: sleep_enable() + set_sleep_mode(SLEEP_MODE_IDLE)
-   - app_main.c line 99: sleep_cpu() call (commented out)
-   Uncomment and verify: MCU should sleep between ticks and wake cleanly on TCB0, USB SOF,
-   and USB bus events. Untested.
-
 4. Stale Report on USB Resume (Phantom Keypresses)
    When the device resumes from USB suspend, the current HID report buffers still hold
    whatever state was staged before suspend. If a key was held at suspend time the host will
