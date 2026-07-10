@@ -100,6 +100,8 @@ Programmer: `serialupdi` on `/dev/ttyUSB0` (Adafruit UPDI Friend). Adjust `PROG_
 - LSP: `bear` generates `compile_commands.json` for clangd / Kate LSP
 - Format: `astyle` reads `firmware/.astylerc` via `--project` flag
 
+**clangd diagnostics are unreliable — navigation only.** Clang's AVR backend is far less complete than avr-gcc's, so clangd throws confirmed false positives on legitimate register/builtin code: `SREG = sreg;` (the standard save/restore-status-register idiom) is flagged as "expression is not assignable", and `__builtin_avr_nop()` is flagged as an unknown builtin. Both compile cleanly under avr-gcc. These aren't isolated — confirmed present in `usbcore/usb_ctrl.c` and `KeyDU.App/matrix.c`, and any code touching raw SFRs or GCC-specific AVR builtins is at risk of the same false alarms. Treat `avr-gcc`/`make` as the only authoritative compiler diagnostic; use clangd for go-to-definition, references, and completion, not for correctness signal.
+
 ---
 
 ## Coding conventions
